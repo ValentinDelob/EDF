@@ -8,7 +8,8 @@ public static partial class SuburbBuilder
     /// <summary>Arbre d'alignement (feuillu de forêt réduit) avec grille d'arbre et tronc solide.</summary>
     private static void StreetTree(Ctx c, Vector3 p, int v, float scale, float yaw, bool grate)
     {
-        c.Props.Add(Props.Broadleaf(v, true), p, yaw, null, 320, true, scale);
+        var dead = DeadTreeAt(p);
+        c.Props.Add(dead ?? Props.Broadleaf(v, true), p, yaw, null, 320, true, dead != null ? scale * 0.85f : scale);
         c.Body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.4f * scale, Height = 6f }, Position = p + Vector3.Up * 3f });
         if (!grate) return;
         var k = c.Ground.At(p);

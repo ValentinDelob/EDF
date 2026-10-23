@@ -189,6 +189,7 @@ public static partial class SuburbBuilder
         root.AddChild(c.Body);
         // Sol de jeu plat (y = 0) : une seule boîte de collision ; le visuel est le maillage de terrain.
         CityBuilder.AddWall(c.Body, new Vector3(0, -0.5f, -30), new Vector3(Half * 2 + 120, 1f, 470));
+        BeginRuins(c);
 
         BuildRoadNetwork(c);
         MarkRiverAndForest(c);
@@ -208,6 +209,7 @@ public static partial class SuburbBuilder
         BuildRiver(c);
         BuildTerrain(c);
         BuildForest(c);
+        DressSuburb(c);
 
         c.Ground.Flush(root, "SuburbGround", false, 0f);
         c.Solid.Flush(root, "SuburbSolid", true, 0f, c.Body);
@@ -490,6 +492,7 @@ public static partial class SuburbBuilder
         b.MaxHealth = b.Health = hp;
         c.Root.AddChild(b);
         c.Res.Buildings.Add(b);
+        _houseStyles.Add((b, st)); // pour l'habillage des ruines (pavillons incendiés)
         c.Mask.Fill(center.X - size.X / 2 - 0.5f, center.Z - size.Z / 2 - 0.5f, center.X + size.X / 2 + 0.5f, center.Z + size.Z / 2 + 0.5f, BuiltC, false);
         return b;
     }
@@ -750,7 +753,12 @@ public static partial class SuburbBuilder
 
     private static void GardenTree(Ctx c, RandomNumberGenerator rng, Vector3 q)
     {
-        c.Props.Add(Props.GardenTree(rng.RandiRange(0, 4)), q, rng.RandfRange(0, Mathf.Tau), new Color(1, 1, 1) * rng.RandfRange(0.88f, 1.1f), 240, true, rng.RandfRange(0.8f, 1.15f));
+        var v = rng.RandiRange(0, 4);
+        var yaw = rng.RandfRange(0, Mathf.Tau);
+        var tint = new Color(1, 1, 1) * rng.RandfRange(0.88f, 1.1f);
+        var scale = rng.RandfRange(0.8f, 1.15f);
+        var dead = DeadTreeAt(q); // arbre mort une fois sur trois
+        c.Props.Add(dead ?? Props.GardenTree(v), q, yaw, tint, 240, true, dead != null ? scale * 0.62f : scale);
         c.Body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.25f, Height = 3f }, Position = q + Vector3.Up * 1.5f });
     }
 
@@ -854,6 +862,7 @@ public static partial class SuburbBuilder
     private static void AddCar(Ctx c, Vector3 p, float yaw, Props.VehicleType type, Color paint, float len, RandomNumberGenerator rng)
     {
         if (type == Props.VehicleType.Van && rng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
+        if (RuinCar(c, p, yaw, type, ref paint, len)) return; // épave calcinée à la place
         var mesh = Props.Vehicle(type, paint, len);
         c.Root.AddChild(new MeshInstance3D { Mesh = mesh, Position = p, Rotation = new Vector3(0, yaw, 0), VisibilityRangeEnd = 260f });
         c.Body.AddChild(CityBuilder.VehicleShape(mesh, type, len, p, yaw));
