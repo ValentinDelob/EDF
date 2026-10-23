@@ -803,6 +803,7 @@ public partial class Player : CharacterBody3D
 
     private void BotAim(float dt)
     {
+        BotDodge(dt);
         var e = World.NearestEnemy(GlobalPosition, 140f);
         _botFire = false;
         if (e == null) return;
@@ -819,6 +820,28 @@ public partial class Player : CharacterBody3D
             if (!Overheated && Energy > 60) Input.ActionPress("jump");
             else if (Energy < 25 || Overheated) Input.ActionRelease("jump");
         }
+    }
+
+    private float _botStrafeT;
+    private int _botStrafe;
+
+    /// <summary>Le bot esquive comme un joueur : pas chassés réguliers, sprint hors de la zone du canon de la forteresse.</summary>
+    private void BotDodge(float dt)
+    {
+        if (Vehicle != null) return;
+        var danger = false;
+        foreach (var e in World.EnemiesById.Values)
+            if (e.CannonZone is Vector3 z && new Vector2(z.X - GlobalPosition.X, z.Z - GlobalPosition.Z).Length() < 12f) { danger = true; break; }
+        _botStrafeT -= dt;
+        if (_botStrafeT <= 0)
+        {
+            _botStrafeT = danger ? 2.5f : (float)GD.RandRange(1.2, 2.6);
+            _botStrafe = danger ? (GD.Randf() < 0.5f ? -1 : 1) : GD.RandRange(-1, 1);
+        }
+        if (danger && _botStrafe == 0) _botStrafe = 1;
+        if (_botStrafe < 0) Input.ActionPress("move_left"); else Input.ActionRelease("move_left");
+        if (_botStrafe > 0) Input.ActionPress("move_right"); else Input.ActionRelease("move_right");
+        if (danger) Input.ActionPress("sprint"); else Input.ActionRelease("sprint");
     }
 
     /// <summary>Bot en hélicoptère : tient ~25 m d'altitude, avance vers les ennemis lointains, tire des roquettes.</summary>

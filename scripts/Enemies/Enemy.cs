@@ -131,6 +131,8 @@ public partial class Enemy : CharacterBody3D
         : GlobalPosition + Vector3.Up * (Def.Flying ? 0 : 1.1f * Def.Size);
 
     private bool IsFortress => Def.Type == EnemyType.Fortress;
+    /// <summary>Zone visée par le canon principal pendant sa charge (hôte uniquement), sinon null.</summary>
+    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : null;
 
     private void AnimateModel(float dt, float speed, float attack)
     {

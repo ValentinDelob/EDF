@@ -1135,6 +1135,7 @@ public partial class World : Node3D
         if (Ended) return;
         Ended = true;
         Elapsed = elapsed;
+        GD.Print($"[mission] {(success ? "victoire" : "échec")} en {elapsed:0} s, {TeamKills} éliminations, difficulté {(int)Difficulty}");
         if (Paused) TogglePause();
         GetTree().Paused = false;
         Input.MouseMode = Input.MouseModeEnum.Visible;
