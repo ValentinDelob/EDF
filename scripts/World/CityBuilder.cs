@@ -425,16 +425,29 @@ public static class CityBuilder
     {
         // Les fourgons sont surtout blancs ; les camions portent une bande de couleur sur leur caisse.
         if (type == Props.VehicleType.Van && vrng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
-        var size = Props.VehicleSize(type, len);
+        var mesh = Props.Vehicle(type, paint, len);
         root.AddChild(new MeshInstance3D
         {
-            Mesh = Props.Vehicle(type, paint, len),
+            Mesh = mesh,
             Position = p,
             Rotation = new Vector3(0, yaw, 0),
             VisibilityRangeEnd = 260f,
         });
-        var shape = new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = p + new Vector3(0, size.Y / 2 + 0.05f, 0), Rotation = new Vector3(0, yaw, 0) };
-        body.AddChild(shape);
+        body.AddChild(VehicleShape(mesh, type, len, p, yaw));
+    }
+
+    /// <summary>Collision exacte d'un véhicule garé (carrosserie, cabine, roues), partagée par les véhicules du même modèle.</summary>
+    public static CollisionShape3D VehicleShape(Mesh mesh, Props.VehicleType type, float len, Vector3 p, float yaw)
+    {
+        if (MeshKit.ShapeOf(mesh) is { } exact) return new CollisionShape3D { Shape = exact, Position = p, Rotation = new Vector3(0, yaw, 0) };
+        var size = Props.VehicleSize(type, len);
+        return new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = p + new Vector3(0, size.Y / 2 + 0.05f, 0), Rotation = new Vector3(0, yaw, 0) };
+    }
+
+    /// <summary>Ajoute la collision exacte des triangles solides d'un assemblage (repère <paramref name="at"/>).</summary>
+    public static void AddSolid(StaticBody3D body, MeshKit kit, Vector3 at = default)
+    {
+        if (kit.SolidShape() is { } s) body.AddChild(new CollisionShape3D { Shape = s, Position = at });
     }
 
     private static void BuildLamp(Node3D root, StaticBody3D body, PropScatter props, Vector3 p, float yaw, bool night)
@@ -612,7 +625,7 @@ public static class CityBuilder
         }
 
         // Garde-corps de la promenade (ouvert face aux rues et au ponton pour descendre sur la plage).
-        var kit = new MeshKit();
+        var kit = new MeshKit { Record = true };
         var metal = Mats.DetailMetal();
         kit.Col = new Color(0.78f, 0.8f, 0.8f);
         var openings = new List<(float, float)>();
@@ -629,6 +642,7 @@ public static class CityBuilder
         kit.Col = new Color(0.66f, 0.64f, 0.6f);
         kit.BoxMinMax(Mats.Detail(), new Vector3(-Half, -0.6f, BeachStart - 0.3f), new Vector3(Half, 0.2f, BeachStart + 0.05f));
         root.AddChild(new MeshInstance3D { Name = "Railing", Mesh = kit.Commit(), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        AddSolid(body, kit);
     }
 
     /// <summary>Garde-corps tubulaire : poteaux tous les 2 m, main courante et lisse intermédiaire.</summary>
@@ -681,7 +695,7 @@ public static class CityBuilder
     /// <summary>Poste de secours sur pilotis avec rampe, drapeau et bouée.</summary>
     private static void BuildLifeguardTower(Node3D root, StaticBody3D body, Vector3 p)
     {
-        var k = new MeshKit();
+        var k = new MeshKit { Record = true };
         var d = Mats.Detail();
         var wood = Mats.Planks();
         k.Col = new Color(0.85f, 0.84f, 0.8f);
@@ -721,13 +735,13 @@ public static class CityBuilder
         k.Cylinder(d, new Vector3(-1.45f, 3.0f, 0.8f), 0.28f, 0.28f, 0.1f, 10, true, new Basis(Vector3.Back, -Mathf.Pi / 2));
 
         root.AddChild(new MeshInstance3D { Name = "LifeguardTower", Mesh = k.Commit(), Position = p });
-        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(2.8f, 2.1f, 2.2f) }, Position = p + new Vector3(0, 3.65f, -0.35f) });
+        AddSolid(body, k, p);
     }
 
     /// <summary>Ponton décoratif en bois sur pilotis, prolongeant une rue jusqu'au large.</summary>
     private static void BuildPier(Node3D root, StaticBody3D body, bool night)
     {
-        var k = new MeshKit();
+        var k = new MeshKit { Record = true };
         var wood = Mats.Planks();
         var d = Mats.Detail();
         var metal = Mats.DetailMetal();
@@ -785,11 +799,8 @@ public static class CityBuilder
         k.Col = new Color(0.12f, 0.3f, 0.45f);
         k.Frustum(d, new Vector3(PierX, yTop + 2.8f, z1 - 4f), new Vector2(4.2f, 4.2f), new Vector2(0.3f, 0.3f), 1.3f);
         root.AddChild(new MeshInstance3D { Name = "Pier", Mesh = k.Commit() });
-
-        // Seule la partie accessible (avant le mur invisible) est solide.
-        var walkEnd = SeaStart + 10;
-        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(w, 0.2f, rampLen / Mathf.Cos(ang)) }, Position = rampC, Basis = rampBasis });
-        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(w, 0.2f, walkEnd - zRamp) }, Position = new Vector3(PierX, yTop - 0.1f, (zRamp + walkEnd) / 2) });
+        // Platelage, garde-corps, lampadaires et kiosque : collision exacte (au-delà du mur invisible, hors d'atteinte).
+        AddSolid(body, k);
     }
 
     // ───────────────────────── Terrains vagues ─────────────────────────
@@ -836,7 +847,7 @@ public static class CityBuilder
     /// <summary>Petite place : pelouses plantées, fontaine centrale, bancs.</summary>
     private static void BuildPlaza(Node3D root, StaticBody3D body, PropScatter props, Rect2 lot, RandomNumberGenerator deco)
     {
-        var k = new MeshKit();
+        var k = new MeshKit { Record = true };
         var c = lot.GetCenter();
         var hx = lot.Size.X / 2;
         var hz = lot.Size.Y / 2;
@@ -870,7 +881,7 @@ public static class CityBuilder
         k.Col = Colors.White;
         k.Cylinder(Mats.Painted(new Color(0.08f, 0.16f, 0.17f), 0.03f, 0.1f), fc + Vector3.Up * 0.5f, 2.0f, 2.0f, 0.01f, 20);
         root.AddChild(new MeshInstance3D { Name = "Plaza", Mesh = k.Commit() });
-        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 2.2f, Height = 0.5f }, Position = fc + Vector3.Up * 0.25f });
+        AddSolid(body, k);
     }
 
     // ───────────────────────── Chantiers ─────────────────────────
@@ -879,7 +890,7 @@ public static class CityBuilder
     private static void BuildWorksite(Node3D root, StaticBody3D body, PropScatter props, Rect2 lot, RandomNumberGenerator deco)
     {
         var c = lot.GetCenter();
-        var k = new MeshKit();
+        var k = new MeshKit { Record = true };
         var inset = 1.4f;
         var min = lot.Position + Vector2.One * inset;
         var max = lot.End - Vector2.One * inset;
@@ -896,7 +907,7 @@ public static class CityBuilder
         k.Col = contCol.Darkened(0.3f);
         for (var i = 0; i < 12; i++) k.Box(Mats.DetailMetal(), cp + new Vector3(-2.75f + i * 0.5f, 1.3f, 1.24f), new Vector3(0.12f, 2.5f, 0.04f));
         root.AddChild(new MeshInstance3D { Name = "Worksite", Mesh = k.Commit() });
-        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(6f, 2.6f, 2.45f) }, Position = cp + Vector3.Up * 1.3f });
+        AddSolid(body, k);
 
         // Barrières le long du périmètre (ouverture au milieu d'un côté), cônes devant.
         void Fence(Vector2 a, Vector2 b, bool gap)

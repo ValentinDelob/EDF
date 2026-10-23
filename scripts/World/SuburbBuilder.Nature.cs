@@ -185,24 +185,7 @@ public static partial class SuburbBuilder
                 k.Box(stone, new Vector3(sx * (w / 2 - 0.22f), top + 0.13f + 0.6f, sz * (lc / 2 + 0.3f)), new Vector3(0.7f, 1.2f, 0.7f));
         }
         k.Xf = Transform3D.Identity;
-
-        // Collision : tablier, rampes inclinées, parapets.
-        var body = c.Body;
-        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(w, top + 0.2f, lc) }, Position = xf * new Vector3(0, top / 2 - 0.1f, 0), Basis = basis });
-        var ang = Mathf.Atan2(top, ramp);
-        var len = Mathf.Sqrt(top * top + ramp * ramp);
-        foreach (var sz in new[] { -1f, 1f })
-        {
-            var mid = new Vector3(0, top / 2 - 0.15f, sz * (lc / 2 + ramp / 2));
-            body.AddChild(new CollisionShape3D
-            {
-                Shape = new BoxShape3D { Size = new Vector3(w, 0.3f, len) },
-                Position = xf * mid,
-                Basis = basis * new Basis(Vector3.Right, sz * ang),
-            });
-        }
-        foreach (var sx in new[] { -1f, 1f })
-            body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.5f, 1.1f, lc) }, Position = xf * new Vector3(sx * (w / 2 - 0.22f), top + 0.13f + 0.55f, 0), Basis = basis });
+        // Collision exacte (tablier, rampes, trottoirs, parapets, piles) : secteur solide.
     }
 
     // ───────────────────────── Terrain ─────────────────────────

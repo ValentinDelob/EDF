@@ -42,7 +42,7 @@ public partial class Enemy : CharacterBody3D
 
     // Interpolation côté client
     private Vector3 _netPos;
-    private float _netYaw;
+    private Quaternion _netRot = Quaternion.Identity;
     private Vector3 _prevPos;
 
     public static Enemy Create(World world, int id, EnemyType type, Vector3 pos, float yaw, float hpMul)
@@ -120,8 +120,10 @@ public partial class Enemy : CharacterBody3D
         e.Position = pos;
         e._yaw = yaw;
         e.Rotation = new Vector3(0, yaw, 0);
+        e._fwd = new Vector3(Mathf.Sin(yaw), 0, Mathf.Cos(yaw));
         e._netPos = e._prevPos = pos;
-        e._netYaw = yaw;
+        e._netRot = e.Quaternion;
+        e.LandingPoint = new Vector3(pos.X, 0, pos.Z);
         e._altitude = (float)GD.RandRange(12, 22);
         e._orbit = (float)GD.RandRange(0, Mathf.Tau);
         e._attackCd = (float)GD.RandRange(0.5, 1.5) * def.AttackCooldown;
@@ -140,8 +142,9 @@ public partial class Enemy : CharacterBody3D
         }
     }
 
+    /// <summary>Centre du corps (au-dessus des pattes, selon la normale de la surface pour les grimpeurs).</summary>
     public Vector3 Center => IsFortress ? GlobalPosition + Vector3.Up * BugModel.FortHullY
-        : GlobalPosition + Vector3.Up * (Def.Flying ? 0 : (_segShapes != null ? 0.65f : 1.1f) * Def.Size);
+        : GlobalPosition + (Def.Flying ? Vector3.Zero : Basis.Y * ((_segShapes != null ? 0.65f : 1.1f) * Def.Size));
 
     private bool IsFortress => Def.Type == EnemyType.Fortress;
     /// <summary>Zone visée par le canon principal pendant sa charge (hôte uniquement), sinon null.</summary>
@@ -250,42 +253,55 @@ public partial class Enemy : CharacterBody3D
             }
         }
 
-        var toGoal = goal - pos;
+        var climbs = Climbs;
+        var toGoal3 = goal - pos;
+        var toGoal = toGoal3;
         toGoal.Y = 0;
         var dist = toGoal.Length();
+        // Grimpeurs : distance réelle (un joueur sur un toit n'est pas à portée depuis le pied du mur).
+        var reachDist = climbs ? toGoal3.Length() : dist;
 
-        // Araignée : bonds paraboliques vers la cible.
+        // Araignée : bonds paraboliques vers la cible, atterrissage sur la surface visée (toits compris).
         if (Def.Type == EnemyType.Spider)
         {
             if (_leapT >= 0)
             {
                 _leapT += dt / 0.9f;
                 var k = Mathf.Min(_leapT, 1f);
-                var p = _leapFrom.Lerp(_leapTo, k);
-                p.Y = Mathf.Sin(k * Mathf.Pi) * 9f;
+                var p = _leapFrom.Lerp(_leapTo, k) + Vector3.Up * (Mathf.Sin(k * Mathf.Pi) * 9f);
                 GlobalPosition = p;
                 _speedNow = 0;
-                if (_leapT >= 1f) { _leapT = -1f; GlobalPosition = new Vector3(_leapTo.X, 0, _leapTo.Z); Sfx.At("hit", _leapTo, -2f, 0.6f); }
+                OrientOnSurface(toGoal, dt);
+                if (_leapT >= 1f) { _leapT = -1f; GlobalPosition = _leapTo; _probeDist = 1f; Sfx.At("hit", _leapTo, -2f, 0.6f); }
                 return;
             }
-            if (_specialCd <= 0 && dist > 8f && dist < 60f)
+            if (_specialCd <= 0 && dist > 8f && dist < 60f && _up.Y > 0.7f && !_falling)
             {
                 _specialCd = (float)GD.RandRange(4, 7);
-                _leapFrom = pos;
                 var land = pos + toGoal.Normalized() * Mathf.Min(dist - 5f, 28f);
-                if (!_world.Flow.IsBlocked(land)) { _leapTo = land; _leapT = 0f; Sfx.At("screech", pos, -2f, 1.4f); return; }
+                var top = new Vector3(land.X, Mathf.Max(pos.Y, goal.Y) + 30f, land.Z);
+                if (Ray(top, top + Vector3.Down * 80f, out var lp, out var ln) && ln.Y > 0.7f)
+                {
+                    _leapFrom = pos;
+                    _leapTo = lp;
+                    _surfN = ln;
+                    _leapT = 0f;
+                    Sfx.At("screech", pos, -2f, 1.4f);
+                    return;
+                }
             }
         }
         var reach = Def.AttackRange * (Def.Ranged ? 0.85f : 1f) + (Def.Boss ? 2f : 0);
         var desired = Vector3.Zero;
-        var attacking = goal == target && dist <= reach;
+        var attacking = goal == target && reachDist <= reach;
 
         if (!attacking)
         {
-            if (dist < 14f || Def.Boss) desired = toGoal / Mathf.Max(dist, 0.01f);
+            if (dist < 14f || Def.Boss) desired = (climbs ? toGoal3 : toGoal) / Mathf.Max(climbs ? reachDist : dist, 0.01f);
             else
             {
-                desired = _world.Flow.Direction(pos);
+                // Les grimpeurs passent par-dessus les immeubles quand c'est plus court (champ pondéré).
+                desired = climbs ? _world.Flow.ClimbDirection(pos) : _world.Flow.Direction(pos);
                 if (desired == Vector3.Zero) desired = toGoal / Mathf.Max(dist, 0.01f);
             }
         }
@@ -295,20 +311,30 @@ public partial class Enemy : CharacterBody3D
         if (move.LengthSquared() > 1) move = move.Normalized();
         _moveDir = _moveDir.Lerp(move, Mathf.Clamp(dt * 6f, 0, 1));
         var speed = Def.Speed * (attacking ? 0.15f : 1f);
-        var step = _moveDir * speed * dt;
-        var next = pos + step;
-        if (!Def.Boss && _world.Flow.IsBlocked(next) && !_world.Flow.IsBlocked(pos)) next = pos; // ne traverse pas les immeubles
-        next.Y = 0;
-        _speedNow = (next - pos).Length() / Mathf.Max(dt, 0.0001f);
-        GlobalPosition = next;
-
-        // Orientation
-        var face = attacking || dist < 20 ? toGoal : _moveDir;
-        if (face.LengthSquared() > 0.01f)
+        if (climbs)
         {
-            var targetYaw = Mathf.Atan2(face.X, face.Z);
-            _yaw = Mathf.LerpAngle(_yaw, targetYaw, Mathf.Clamp(dt * (Def.Boss ? 2f : 7f), 0, 1));
-            Rotation = new Vector3(0, _yaw, 0);
+            var dir = SurfaceDir(_moveDir, _surfN);
+            ClimbStep(dir, dir == Vector3.Zero ? 0f : speed * dt * Mathf.Min(_moveDir.Length() * 1.5f, 1f), dt);
+            // Sur une paroi, le corps regarde où il marche (vers le haut quand il escalade).
+            OrientOnSurface(attacking || dist < 20 && _up.Y > 0.7f || dir == Vector3.Zero ? toGoal3 : dir, dt);
+        }
+        else
+        {
+            var step = _moveDir * speed * dt;
+            var next = pos + step;
+            if (!Def.Boss && _world.Flow.IsBlocked(next) && !_world.Flow.IsBlocked(pos)) next = pos; // ne traverse pas les immeubles
+            next.Y = 0;
+            _speedNow = (next - pos).Length() / Mathf.Max(dt, 0.0001f);
+            GlobalPosition = next;
+
+            // Orientation
+            var face = attacking || dist < 20 ? toGoal : _moveDir;
+            if (face.LengthSquared() > 0.01f)
+            {
+                var targetYaw = Mathf.Atan2(face.X, face.Z);
+                _yaw = Mathf.LerpAngle(_yaw, targetYaw, Mathf.Clamp(dt * (Def.Boss ? 2f : 7f), 0, 1));
+                Rotation = new Vector3(0, _yaw, 0);
+            }
         }
 
         // Mille-pattes : courte giclée d'acide sur une cible à mi-distance, entre deux morsures.
@@ -391,12 +417,17 @@ public partial class Enemy : CharacterBody3D
         State = EnemyState.Moving;
     }
 
+    /// <summary>Taille d'un ennemi dans l'instantané : id (4), position 3 × 16 bits, normale et regard octaédriques (2 + 2), état, PV, attaque, vitesse.</summary>
+    public const int SnapshotBytes = 18;
+
     public void PackSnapshot(System.IO.BinaryWriter w)
     {
-        var p = GlobalPosition;
         w.Write(Id);
-        w.Write(p.X); w.Write(p.Y); w.Write(p.Z);
-        w.Write((short)(Mathf.Wrap(_yaw, -Mathf.Pi, Mathf.Pi) * 10000f));
+        PackPos(w, GlobalPosition);
+        // Orientation complète (murs, toits) : normale de la surface + direction du regard.
+        var b = Basis.Orthonormalized();
+        w.Write(PackDir(b.Y));
+        w.Write(PackDir(b.Z));
         w.Write((byte)State);
         w.Write((byte)Mathf.Clamp(Health / MaxHealth * 255f, 0, 255));
         w.Write((byte)Mathf.Clamp(_attackAnim * 255f, 0, 255));
@@ -405,11 +436,11 @@ public partial class Enemy : CharacterBody3D
 
     // ---------------- Client ----------------
 
-    public void ApplySnapshot(Vector3 pos, float yaw, EnemyState state, float hpFrac, float attack, float speed)
+    public void ApplySnapshot(Vector3 pos, Vector3 up, Vector3 fwd, EnemyState state, float hpFrac, float attack, float speed)
     {
         _prevPos = GlobalPosition;
         _netPos = pos;
-        _netYaw = yaw;
+        _netRot = BasisFrom(up, fwd).GetRotationQuaternion();
         if (State != EnemyState.Dead) State = state;
         Health = hpFrac * MaxHealth;
         _attackAnim = Mathf.Max(_attackAnim, attack);
@@ -428,8 +459,12 @@ public partial class Enemy : CharacterBody3D
         var p = GlobalPosition;
         if (p.DistanceSquaredTo(_netPos) > 400) GlobalPosition = _netPos;
         else GlobalPosition = p.Lerp(_netPos, Mathf.Clamp(dt * 12f, 0, 1));
-        _yaw = Mathf.LerpAngle(_yaw, _netYaw, Mathf.Clamp(dt * 10f, 0, 1));
-        Rotation = new Vector3(0, _yaw, 0);
+        // Orientation interpolée sur la sphère (passage sol → mur → toit sans à-coup).
+        var q = Quaternion.Normalized();
+        Quaternion = q.Dot(_netRot) < 0 ? q.Slerp(-_netRot, Mathf.Clamp(dt * 10f, 0, 1)) : q.Slerp(_netRot, Mathf.Clamp(dt * 10f, 0, 1));
+        _up = Basis.Y;
+        _fwd = Basis.Z;
+        _yaw = Mathf.Atan2(_fwd.X, _fwd.Z);
         _attackAnim = Mathf.Max(0, _attackAnim - dt * 3f);
         AnimateModel(dt, _speedNow, _attackAnim);
     }
@@ -455,10 +490,23 @@ public partial class Enemy : CharacterBody3D
         if (Def.Type == EnemyType.Nest || Def.Boss) Effects.Explosion(_world, pos, Def.Boss ? 14 : 9, 0);
         Sfx.At("death_bug", pos, Def.Boss ? 10 : 0, Def.Boss ? 0.5f : (float)GD.RandRange(0.8, 1.2), 30);
         if (Def.Type != EnemyType.Nest) Model.DeathPose();
+        // Le cadavre tombe sur la surface en dessous (pied du mur, toit, sol) et se remet à plat.
+        LandingPoint = Def.Static ? GlobalPosition : GroundBelow(GlobalPosition);
         var tw = CreateTween();
         if (Def.Flying)
         {
-            tw.TweenProperty(this, "global_position:y", 0.3f, Mathf.Max(0.3f, GlobalPosition.Y / 25f)).SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
+            tw.TweenProperty(this, "global_position:y", LandingPoint.Y + 0.3f, Mathf.Max(0.3f, (GlobalPosition.Y - LandingPoint.Y) / 25f)).SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
+        }
+        else if (Climbs && (GlobalPosition.DistanceTo(LandingPoint) > 0.2f || Basis.Y.Y < 0.95f))
+        {
+            var h = new Vector3(_fwd.X, 0, _fwd.Z);
+            if (h.LengthSquared() < 0.01f) h = new Vector3(_up.X, 0, _up.Z);
+            var upright = new Basis(Vector3.Up, h.LengthSquared() > 1e-4f ? Mathf.Atan2(h.X, h.Z) : _yaw).GetRotationQuaternion();
+            var fall = Mathf.Clamp(Mathf.Sqrt(2f * Mathf.Max(GlobalPosition.Y - LandingPoint.Y, 0.1f) / 25f), 0.2f, 1.6f);
+            tw.SetParallel();
+            tw.TweenProperty(this, "global_position", LandingPoint, fall).SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
+            tw.TweenProperty(this, "quaternion", upright, Mathf.Min(fall, 0.5f));
+            tw.SetParallel(false);
         }
         tw.TweenInterval(Def.Boss ? 10f : 3.5f);
         tw.TweenProperty(Model, "position:y", -3f * Def.Size, 1.5f);

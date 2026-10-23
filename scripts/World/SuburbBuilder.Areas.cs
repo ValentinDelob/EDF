@@ -62,7 +62,7 @@ public static partial class SuburbBuilder
         foreach (var sx in new[] { -1f, 1f })
         foreach (var sz in new[] { -1f, 1f })
             s.Cylinder(Mats.DetailMetal(), mp + new Vector3(sx * 2.2f, 0, sz * 2.2f), 0.06f, 0.06f, 0.7f, 6);
-        c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(2.4f, 3f, 2.4f) }, Position = mp + Vector3.Up * 1.5f });
+        // Collision exacte : secteur solide (socle à degrés, obélisque, potelets).
     }
 
     private static void BuildCemetery(Ctx c)
@@ -80,7 +80,6 @@ public static partial class SuburbBuilder
             var size = alongX ? new Vector3(len, 1.8f, 0.45f) : new Vector3(0.45f, 1.8f, len);
             s.Box(stone, (a + b) / 2 + Vector3.Up * 0.9f, size);
             s.Box(stone, (a + b) / 2 + Vector3.Up * 1.85f, size + new Vector3(alongX ? 0 : 0.15f, -1.7f, alongX ? 0.15f : 0));
-            c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = (a + b) / 2 + Vector3.Up * 0.9f });
         }
         Wall(new Vector3(x0, 0, z0), new Vector3(x1, 0, z0));
         Wall(new Vector3(x0, 0, z1), new Vector3(x1, 0, z1));
@@ -234,7 +233,6 @@ public static partial class SuburbBuilder
             var yaw = r.RandfRange(0, Mathf.Tau);
             s.Col = new Color(0.72f, 0.62f, 0.36f);
             s.Cylinder(Mats.Fabric(new Color(0.75f, 0.66f, 0.42f)), p + new Basis(Vector3.Up, yaw) * new Vector3(-0.6f, 0.75f, 0), 0.75f, 0.75f, 1.2f, 14, true, new Basis(Vector3.Up, yaw) * new Basis(Vector3.Back, -Mathf.Pi / 2));
-            c.Body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.75f, Height = 1.2f }, Position = p + Vector3.Up * 0.75f, Basis = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Back, -Mathf.Pi / 2) });
         }
     }
 

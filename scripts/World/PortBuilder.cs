@@ -154,13 +154,19 @@ public static class PortBuilder
             root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.4f, 34f, 1.4f), Material = paint }, Position = p + new Vector3(dx, 17f, dz) });
             body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.4f, 34f, 1.4f) }, Position = p + new Vector3(dx, 17f, dz) });
         }
-        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(2.5f, 3f, 70f), Material = paint }, Position = p + new Vector3(-9f, 35f, 10f) });
-        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(2.5f, 3f, 70f), Material = paint }, Position = p + new Vector3(9f, 35f, 10f) });
-        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(20f, 2.5f, 3f), Material = paint }, Position = p + new Vector3(0, 33f, -7f) });
-        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(20f, 2.5f, 3f), Material = paint }, Position = p + new Vector3(0, 33f, 7f) });
-        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(6f, 5f, 6f), Material = Mats.Painted(new Color(0.9f, 0.9f, 0.88f), 0.5f) }, Position = p + new Vector3(0, 31f, 22f) }); // chariot
+        // Poutres, chariot et conteneur suspendu : chaque boîte visible est solide (on peut marcher sur les poutres).
+        void Solid(Vector3 size, Vector3 at, Material m)
+        {
+            root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size, Material = m }, Position = p + at });
+            body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = p + at });
+        }
+        Solid(new Vector3(2.5f, 3f, 70f), new Vector3(-9f, 35f, 10f), paint);
+        Solid(new Vector3(2.5f, 3f, 70f), new Vector3(9f, 35f, 10f), paint);
+        Solid(new Vector3(20f, 2.5f, 3f), new Vector3(0, 33f, -7f), paint);
+        Solid(new Vector3(20f, 2.5f, 3f), new Vector3(0, 33f, 7f), paint);
+        Solid(new Vector3(6f, 5f, 6f), new Vector3(0, 31f, 22f), Mats.Painted(new Color(0.9f, 0.9f, 0.88f), 0.5f)); // chariot
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.06f, Height = 20f, Material = dark }, Position = p + new Vector3(0, 18.5f, 22f) });
-        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(12.2f, 2.6f, 2.6f), Material = ContainerMat(ContainerColors[1]) }, Position = p + new Vector3(0, 7.5f, 22f) }); // conteneur suspendu
+        Solid(new Vector3(12.2f, 2.6f, 2.6f), new Vector3(0, 7.5f, 22f), ContainerMat(ContainerColors[1])); // conteneur suspendu
     }
 
     private static void BuildTank(Node3D root, StaticBody3D body, Vector3 p, float r)
@@ -169,7 +175,14 @@ public static class PortBuilder
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r, BottomRadius = r, Height = 16f, RadialSegments = 32, Material = white }, Position = p + new Vector3(0, 8f, 0) });
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r * 0.2f, BottomRadius = r, Height = 2.5f, RadialSegments = 32, Material = white }, Position = p + new Vector3(0, 17.2f, 0) });
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r + 0.05f, BottomRadius = r + 0.05f, Height = 0.6f, RadialSegments = 32, Material = Mats.Painted(new Color(0.7f, 0.15f, 0.1f), 0.6f) }, Position = p + new Vector3(0, 12f, 0) });
-        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = r, Height = 18f }, Position = p + new Vector3(0, 9f, 0) });
+        // Fût, ceinture rouge et toit conique : mêmes volumes que le visuel (le toit n'est pas un cylindre plein).
+        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = r, Height = 16f }, Position = p + new Vector3(0, 8f, 0) });
+        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = r + 0.05f, Height = 0.6f }, Position = p + new Vector3(0, 12f, 0) });
+        body.AddChild(new CollisionShape3D
+        {
+            Shape = new CylinderMesh { TopRadius = r * 0.2f, BottomRadius = r, Height = 2.5f, RadialSegments = 32 }.CreateConvexShape(),
+            Position = p + new Vector3(0, 17.2f, 0),
+        });
     }
 
     private static void BuildMast(Node3D root, StaticBody3D body, Vector3 p, bool night)
@@ -179,6 +192,11 @@ public static class PortBuilder
         root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(3f, 0.8f, 0.8f), Material = night ? Mats.Glow(new Color(1f, 0.92f, 0.75f), 5f) : metal }, Position = p + new Vector3(0, 24.2f, 0) });
         if (night)
             root.AddChild(new OmniLight3D { Position = p + new Vector3(0, 22f, 0), LightColor = new Color(1f, 0.9f, 0.72f), LightEnergy = 4f, OmniRange = 45f, OmniAttenuation = 1.1f });
-        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.35f, Height = 24f }, Position = p + new Vector3(0, 12f, 0) });
+        body.AddChild(new CollisionShape3D
+        {
+            Shape = new CylinderMesh { TopRadius = 0.2f, BottomRadius = 0.35f, Height = 24f, RadialSegments = 8 }.CreateConvexShape(),
+            Position = p + new Vector3(0, 12f, 0),
+        });
+        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(3f, 0.8f, 0.8f) }, Position = p + new Vector3(0, 24.2f, 0) });
     }
 }

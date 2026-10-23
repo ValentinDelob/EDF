@@ -31,8 +31,43 @@ public class MeshKit
 
     public bool Empty => _order.Count == 0;
 
+    /// <summary>
+    /// Enregistre aussi les triangles solides (forme de collision exacte du visuel) ; désactivé par défaut.
+    /// Le feuillage n'est jamais solide.
+    /// </summary>
+    public bool Record;
+
+    /// <summary>Les primitives suivantes sont solides (si <see cref="Record"/>) : à couper pour le décor traversable.</summary>
+    public bool Solid = true;
+
+    private readonly List<Vector3> _solid = new();
+    private bool _curSolid;
+
+    /// <summary>Triangles solides par maillage produit (repère du maillage), pour les formes de collision.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Mesh, Vector3[]> SolidFaces = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Mesh, ConcavePolygonShape3D> SolidShapes = new();
+
+    /// <summary>Triangles solides d'un maillage produit avec <see cref="Record"/> (vide sinon).</summary>
+    public static Vector3[] FacesOf(Mesh m) => m != null && SolidFaces.TryGetValue(m, out var f) ? f : System.Array.Empty<Vector3>();
+
+    /// <summary>Forme de collision exacte (triangles, deux faces) partagée par toutes les instances du maillage, ou null.</summary>
+    public static ConcavePolygonShape3D ShapeOf(Mesh m)
+    {
+        if (m == null) return null;
+        if (SolidShapes.TryGetValue(m, out var s)) return s;
+        var f = FacesOf(m);
+        s = f.Length == 0 ? null : new ConcavePolygonShape3D { Data = f, BackfaceCollision = true };
+        SolidShapes.AddOrUpdate(m, s);
+        return s;
+    }
+
+    /// <summary>Forme de collision des triangles solides enregistrés jusqu'ici (null si aucun).</summary>
+    public ConcavePolygonShape3D SolidShape() =>
+        _solid.Count == 0 ? null : new ConcavePolygonShape3D { Data = _solid.ToArray(), BackfaceCollision = true };
+
     private Surf S(Material m)
     {
+        _curSolid = Record && Solid && m != Mats.Foliage();
         if (_st.TryGetValue(m, out var st)) return st;
         st = new Surf();
         _st[m] = st;
@@ -42,6 +77,7 @@ public class MeshKit
 
     private void V(Surf st, Vector3 p, Vector3 n, Vector2 uv)
     {
+        if (_curSolid) _solid.Add(p);
         st.Pos.Add(p);
         st.Nrm.Add(n);
         st.Col.Add(Col);
@@ -275,6 +311,7 @@ public class MeshKit
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, m);
         }
+        if (Record && _solid.Count > 0) SolidFaces.AddOrUpdate(mesh, _solid.ToArray());
         return mesh;
     }
 }

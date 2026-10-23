@@ -29,6 +29,9 @@ public partial class Building
         /// <summary>Couleur de sommet courante du MeshKit sous-jacent.</summary>
         public void Col(Color c) => _k.Col = c;
 
+        /// <summary>Les boîtes suivantes comptent dans la collision (les reliefs de quelques centimètres n'y entrent pas).</summary>
+        public void Solid(bool s) => _k.Solid = s;
+
         public Vector3 At(float a, float y, float n) => S.Start + S.Along * a + Vector3.Up * y + S.Normal * n;
 
         public void Box(Material m, float a, float y, float n, float sa, float sy, float sn) =>
@@ -49,7 +52,7 @@ public partial class Building
 
     private static ArrayMesh BuildHouseMesh(Vector3 s, BuildingStyle st, RandomNumberGenerator rng, out Shape3D roofShape)
     {
-        var kit = new MeshKit();
+        var kit = new MeshKit { Record = true };
         roofShape = null;
         switch (st.Use)
         {
@@ -190,6 +193,8 @@ public partial class Building
         // Vitre (éclairée la nuit), encadrement, meneau, appui.
         var paneMat = lit ? Mats.Lamps() : Pane();
         if (lit) f.Col(new Color(1f, 0.78f, 0.5f));
+        // Vitre, châssis et volets ne saillent que de quelques centimètres : hors collision (appui et coffre y sont).
+        f.Solid(false);
         f.Box(paneMat, a, y0 + hgt / 2, 0.01f, w, hgt, 0.03f);
         f.Col(frame);
         f.Box(d, a, y0 + hgt + 0.03f, 0.04f, w + 0.12f, 0.07f, 0.08f);
@@ -199,7 +204,9 @@ public partial class Building
         if (!bay && hgt > 1f) f.Box(d, a, y0 + hgt * 0.68f, 0.04f, w, 0.04f, 0.05f);
         // Appui en pierre.
         f.Col(new Color(0.82f, 0.8f, 0.75f));
+        f.Solid(true);
         f.Box(d, a, y0 - 0.04f, 0.09f, w + 0.3f, 0.08f, 0.2f);
+        f.Solid(false);
         if (shutters)
         {
             // Volets battants ouverts de part et d'autre, avec barres horizontales.
@@ -218,7 +225,9 @@ public partial class Building
         {
             // Coffre de volet roulant et tablier à moitié descendu.
             f.Col(frame.Lerp(new Color(0.8f, 0.8f, 0.78f), 0.5f));
+            f.Solid(true);
             f.Box(d, a, y0 + hgt + 0.17f, 0.08f, w + 0.1f, 0.22f, 0.18f);
+            f.Solid(false);
             var drop = rng.Randf() < 0.5f ? 0f : rng.RandfRange(0.15f, 0.7f);
             if (drop > 0)
             {
@@ -226,6 +235,7 @@ public partial class Building
                 f.Box(d, a, y0 + hgt - hgt * drop / 2, 0.035f, w, hgt * drop, 0.03f);
             }
         }
+        f.Solid(true);
     }
 
 
@@ -802,6 +812,13 @@ public partial class Building
     {
         var w = text.Length * 6 * px - px;
         var x0 = a - w / 2;
+        f.Solid(false); // lettres en léger relief : hors collision
+        try { PixelGlyphs(f, text, x0, y, n, m, px); }
+        finally { f.Solid(true); }
+    }
+
+    private static void PixelGlyphs(Facade f, string text, float x0, float y, float n, Material m, float px)
+    {
         for (var ci = 0; ci < text.Length; ci++)
         {
             if (!Font.TryGetValue(text[ci], out var rows)) continue;

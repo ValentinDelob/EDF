@@ -536,7 +536,7 @@ void fragment() {
         if (_fpsLog <= 0 && Screenshot.CmdArg("fps") != null)
         {
             _fpsLog = 3f;
-            GD.Print($"FPS {Engine.GetFramesPerSecond()} ennemis {World.EnemiesById.Count} t={World.Elapsed:0}");
+            GD.Print($"FPS {Engine.GetFramesPerSecond()} ennemis {World.EnemiesById.Count} t={World.Elapsed:0} {Enemy.ClimbStats(World.EnemiesById.Values)}");
         }
     }
 }

@@ -36,6 +36,10 @@ public partial class Player : CharacterBody3D
     public Vehicle Vehicle;
     /// <summary>Mode automatique pour les tests : vise et tire seul sur l'ennemi le plus proche.</summary>
     public static bool Bot;
+    /// <summary>Test : le soldat ne subit aucun dégât (--god), pour des mesures de performance stables.</summary>
+    public static bool God;
+    /// <summary>Test : le bot vise sans tirer (--holdfire) et reste sur place (--roof).</summary>
+    public static bool BotHoldFire, BotStill;
     private bool _botFire;
 
     private Node3D _camYaw, _camPitch;
@@ -728,7 +732,7 @@ public partial class Player : CharacterBody3D
 
     public void TakeDamage(float dmg, Vector3 from)
     {
-        if (Downed || World.Ended) return;
+        if (Downed || World.Ended || God) return;
         if (Vehicle != null)
         {
             // Le blindage encaisse à la place du soldat.
@@ -812,7 +816,7 @@ public partial class Player : CharacterBody3D
         var pitch = Mathf.Atan2(to.Y, new Vector2(to.X, to.Z).Length());
         _yaw = Mathf.LerpAngle(_yaw, yaw, Mathf.Clamp(dt * 5f, 0, 1));
         _pitch = Mathf.Lerp(_pitch, pitch, Mathf.Clamp(dt * 5f, 0, 1));
-        _botFire = Mathf.Abs(Mathf.AngleDifference(_yaw, yaw)) < 0.15f;
+        _botFire = !BotHoldFire && Mathf.Abs(Mathf.AngleDifference(_yaw, yaw)) < 0.15f;
         if (Weapon.Ammo == 0 && !Weapon.Reloading) Reload();
         // Le bot du Commando aéroporté vole par intermittence (teste vol, énergie et surchauffe).
         if (Def.Id == SoldierClass.Airborne)
@@ -828,7 +832,7 @@ public partial class Player : CharacterBody3D
     /// <summary>Le bot esquive comme un joueur : pas chassés réguliers, sprint hors de la zone du canon de la forteresse.</summary>
     private void BotDodge(float dt)
     {
-        if (Vehicle != null) return;
+        if (Vehicle != null || BotStill) return;
         var danger = false;
         foreach (var e in World.EnemiesById.Values)
             if (e.CannonZone is Vector3 z && new Vector2(z.X - GlobalPosition.X, z.Z - GlobalPosition.Z).Length() < 12f) { danger = true; break; }
