@@ -95,17 +95,17 @@ public partial class LobbyMenu : MenuScreen
         {
             var idx = m.Index;
             var locked = !MissionUnlocked(idx);
-            var b = UiKit.Button("", () => { Net.I.SetLobbyMission(idx, Net.I.LobbyDifficulty); Refresh(); }, "Row", 64);
+            var b = UiKit.Button("", () => { Net.I.SetLobbyMission(idx, Net.I.LobbyDifficulty); Refresh(); }, "Row", 54);
             b.ToggleMode = true;
             b.SetPressedNoSignal(Net.I.LobbyMission == idx);
             b.Disabled = !host || locked;
             var v = UiKit.VBox(0);
             v.MouseFilter = MouseFilterEnum.Ignore;
             UiKit.FillRect(v);
-            v.OffsetLeft = 22; v.OffsetTop = 9;
+            v.OffsetLeft = 22; v.OffsetTop = 5;
             if (locked)
             {
-                v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 24, UiKit.Dim, true));
+                v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 21, UiKit.Dim, true));
                 v.AddChild(UiKit.Label(idx >= 3 ? "Mission bonus · terminez « La reine »" : "Verrouillée · terminez la mission précédente", 14, UiKit.Dim));
                 b.AddChild(v);
                 _col.AddChild(b);
@@ -113,7 +113,7 @@ public partial class LobbyMenu : MenuScreen
             }
             var cleared = Enumerable.Range(0, 5).Where(d => Profile.I.IsCleared(idx, (Difficulty)d)).Select(d => Difficulties.Names[d]).LastOrDefault();
             var sel = Net.I.LobbyMission == idx;
-            v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 24, sel ? UiKit.Text : UiKit.Muted, true));
+            v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 21, sel ? UiKit.Text : UiKit.Muted, true));
             var goal = m.Goal switch { MissionGoal.Exterminate => "Extermination", MissionGoal.DestroyNests => "Destruction de nids", _ => "Boss" };
             var time = m.Time switch { TimeOfDay.Day => "Jour", TimeOfDay.Dusk => "Crépuscule", _ => "Nuit" };
             v.AddChild(UiKit.Label($"{goal} · {time}" + (cleared != null ? $" · ✓ {cleared}" : ""), 14, cleared != null && sel ? UiKit.Good : UiKit.Muted));
