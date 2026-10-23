@@ -17,6 +17,7 @@ public class MissionReport
     public readonly List<(WeaponInstance weapon, bool upgraded, int stat)> Weapons = new();
     public string MissionName;
     public int XpGained;
+    public List<(string name, string cls, int kills, bool downed, bool me)> Squad = new();
     public int LevelBefore, LevelAfter;
     public Difficulty Difficulty;
 
@@ -67,6 +68,7 @@ public class MissionReport
         }
         profile.Data.PityCounter = pity;
         // Expérience de classe : éliminations de l'équipe + bonus de victoire, selon la difficulté.
+        r.Squad = w.ScoreRows();
         r.LevelBefore = profile.Level(cls);
         r.XpGained = (int)((r.Kills * 8 + (success ? 600 + 250 * w.Mission.Index : 150)) * Difficulties.XpMul[(int)w.Difficulty]);
         profile.AddXp(cls, r.XpGained);

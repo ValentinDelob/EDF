@@ -35,6 +35,9 @@ public partial class World : Node3D
 
     // Butin d'équipe ramassé pendant la mission.
     public readonly int[] CratesCollected = new int[4];
+    /// <summary>Éliminations par joueur (0 = alliés PNJ et décor). Tenu par l'hôte, diffusé à tous.</summary>
+    public readonly Dictionary<long, int> KillsBy = new();
+    private float _scoreTimer;
     public int TeamKills;
     public string ObjectiveText = "";
     public int EnemiesRemaining;
@@ -279,6 +282,12 @@ public partial class World : Node3D
             Net.I.BroadcastObjective(ObjectiveText, EnemiesRemaining, BossHealth, BossName);
         }
         if (!Ended && AllPlayersDown() && Elapsed > 3f) EndMission(false);
+        _scoreTimer -= dt;
+        if (_scoreTimer <= 0)
+        {
+            _scoreTimer = 2f;
+            Net.I.BroadcastScores(ScoresString());
+        }
     }
 
     private void SendSnapshots()
@@ -580,7 +589,12 @@ public partial class World : Node3D
         if (e.Def.Type == EnemyType.Nest) dmg *= 0.35f;
         e.Health -= dmg;
         if (by != Net.I.MyId) Net.I.BroadcastEnemyHit(id, at);
-        if (e.Health <= 0) KillEnemy(e);
+        if (e.Health <= 0)
+        {
+            KillsBy.TryGetValue(by, out var k);
+            KillsBy[by] = k + 1;
+            KillEnemy(e);
+        }
     }
 
     public void HostExplosion(Vector3 pos, float radius, float dmg, int kind, long by)
@@ -971,9 +985,43 @@ public partial class World : Node3D
         BossName = bossName;
     }
 
+    private string ScoresString()
+    {
+        var parts = new List<string>();
+        foreach (var (id, k) in KillsBy) parts.Add($"{id}:{k}");
+        return string.Join(";", parts);
+    }
+
+    public void OnScores(string data)
+    {
+        if (Net.I.IsHost) return;
+        KillsBy.Clear();
+        foreach (var part in data.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split(':');
+            if (kv.Length == 2 && long.TryParse(kv[0], out var id) && int.TryParse(kv[1], out var k)) KillsBy[id] = k;
+        }
+    }
+
+    /// <summary>Lignes du tableau des scores : nom, classe, éliminations, état.</summary>
+    public List<(string name, string cls, int kills, bool downed, bool me)> ScoreRows()
+    {
+        var rows = new List<(string, string, int, bool, bool)>();
+        foreach (var p in Net.I.Players.Values.OrderBy(p => p.Id))
+        {
+            KillsBy.TryGetValue(p.Id, out var k);
+            var downed = p.Id == Net.I.MyId ? LocalPlayer?.Downed ?? false : Remotes.TryGetValue(p.Id, out var r) && r.Downed;
+            rows.Add((p.Name, Classes.Get(p.Class).Name, k, downed, p.Id == Net.I.MyId));
+        }
+        KillsBy.TryGetValue(0, out var npc);
+        if (Allies != null && Allies.ById.Count > 0) rows.Add(("Escouades alliées", $"{Allies.Alive} en vie", npc, false, false));
+        return rows;
+    }
+
     public void EndMission(bool success)
     {
         if (Ended) return;
+        Net.I.BroadcastScores(ScoresString());
         Net.I.BroadcastMissionEnd(success, Elapsed);
     }
 

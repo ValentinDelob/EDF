@@ -569,6 +569,11 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 4)]
     private void Objective(string text, int remaining, float bossHp, string bossName) => W?.OnObjective(text, remaining, bossHp, bossName);
 
+    public void BroadcastScores(string data) => ToAll(MethodName.Scores, data);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void Scores(string data) => W?.OnScores(data);
+
     public void BroadcastMissionEnd(bool success, float elapsed) => ToAll(MethodName.MissionEnd, success, elapsed);
 
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

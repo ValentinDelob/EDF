@@ -84,10 +84,10 @@ public partial class Ally : Node3D
             _pitch = Mathf.Atan2(aim.Y, new Vector2(aim.X, aim.Z).Length());
             if (_fireCd <= 0)
             {
-                _fireCd = (float)GD.RandRange(0.12, 0.2);
+                _fireCd = (float)GD.RandRange(0.25, 0.45);
                 var hit = _target.Center + new Vector3((float)GD.RandRange(-0.8, 0.8), (float)GD.RandRange(-0.5, 0.8), (float)GD.RandRange(-0.8, 0.8));
                 var from = Model.Muzzle.GlobalPosition;
-                if (GD.Randf() < 0.75f) w.HostDamageEnemy(_target.Id, 5f * (1f + 0.25f * (int)w.Difficulty), hit, 0, false);
+                if (GD.Randf() < 0.5f) w.HostDamageEnemy(_target.Id, 4f * (1f + 0.25f * (int)w.Difficulty), hit, 0, false);
                 Shot(w, from, hit);
                 Net.I.BroadcastAllyShot(Id, hit);
             }

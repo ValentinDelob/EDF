@@ -325,6 +325,8 @@ void fragment() {
     }
 
     private float _squadRefresh;
+    private PanelContainer _board;
+    private VBoxContainer _boardRows;
     private Label _fps;
     private float _fpsLog;
 
@@ -465,6 +467,49 @@ void fragment() {
             ? (Net.I.IsSolo && !p.SecondChanceUsed ? "À TERRE — UN INFIRMIER ARRIVE" : "À TERRE — ATTENDEZ UN ÉQUIPIER")
             : "";
         _crosshair.Visible = !p.Downed;
+
+        // Tableau des scores (maintenir Tab).
+        var showBoard = Input.IsActionPressed("scoreboard") && !World.Paused;
+        if (showBoard && _board == null)
+        {
+            _board = new PanelContainer();
+            _board.AddThemeStyleboxOverride("panel", UiKit.Box(new Color(UiKit.Bg, 0.85f), default, 0, 0, 28, 22));
+            var v = UiKit.VBox(10);
+            _board.AddChild(v);
+            v.AddChild(UiKit.Label(World.Mission.Name.ToUpperInvariant(), 28, UiKit.Text, true));
+            _boardRows = UiKit.VBox(6);
+            _boardRows.CustomMinimumSize = new Vector2(560, 0);
+            v.AddChild(_boardRows);
+            Anchor(_board, Control.LayoutPreset.Center, Vector2.Zero);
+            _board.GrowHorizontal = Control.GrowDirection.Both;
+            _board.GrowVertical = Control.GrowDirection.Both;
+        }
+        if (_board != null)
+        {
+            _board.Visible = showBoard;
+            if (showBoard)
+            {
+                foreach (var c in _boardRows.GetChildren()) c.QueueFree();
+                var head = UiKit.HBox(16);
+                foreach (var (t, w) in new[] { ("SOLDAT", 220), ("CLASSE", 200), ("ÉLIM.", 80) }) { var l = UiKit.Eyebrow(t); l.CustomMinimumSize = new Vector2(w, 0); head.AddChild(l); }
+                _boardRows.AddChild(head);
+                foreach (var row in World.ScoreRows())
+                {
+                    var h = UiKit.HBox(16);
+                    var n = UiKit.Label(row.name + (row.downed ? "  (à terre)" : ""), 17, row.me ? UiKit.Accent : row.downed ? UiKit.Danger : UiKit.Text);
+                    n.CustomMinimumSize = new Vector2(220, 0);
+                    var c = UiKit.Label(row.cls, 15, UiKit.Muted);
+                    c.CustomMinimumSize = new Vector2(200, 0);
+                    var k = UiKit.Label(row.kills.ToString(), 17, UiKit.Text, true);
+                    h.AddChild(n);
+                    h.AddChild(c);
+                    h.AddChild(k);
+                    _boardRows.AddChild(h);
+                }
+                _boardRows.AddChild(UiKit.Rule());
+                _boardRows.AddChild(UiKit.Label($"Butin : {World.CratesCollected[0]} armes · {World.CratesCollected[1]} armures · {World.CratesCollected[3]} crédits   ·   {UiKit.Time(World.Elapsed)}", 14, UiKit.Muted));
+            }
+        }
 
         // Compteur d'images (F3) et journal pour les tests (--fps).
         if (Input.IsKeyPressed(Key.F3) && _fps == null)

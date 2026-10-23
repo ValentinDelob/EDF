@@ -51,6 +51,27 @@ public partial class ResultsScreen : CanvasLayer
         _card.GrowVertical = Control.GrowDirection.Both;
         _card.Position += new Vector2(0, 10);
 
+        // Escouade (multijoueur) : éliminations par soldat, en haut à gauche.
+        if (Report.Squad.Count > 1)
+        {
+            var sq = UiKit.VBox(6);
+            sq.Position = new Vector2(UiKit.ScreenX, 220);
+            sq.AddChild(UiKit.Eyebrow("Escouade"));
+            foreach (var row in Report.Squad)
+            {
+                var h = UiKit.HBox(12);
+                var n = UiKit.Label(row.name, 16, row.me ? UiKit.Accent : UiKit.Text);
+                n.CustomMinimumSize = new Vector2(170, 0);
+                h.AddChild(n);
+                var k = UiKit.Label($"{row.kills}", 16, UiKit.Text, true);
+                k.CustomMinimumSize = new Vector2(40, 0);
+                h.AddChild(k);
+                h.AddChild(UiKit.Label(row.cls, 13, UiKit.Muted));
+                sq.AddChild(h);
+            }
+            root.AddChild(sq);
+        }
+
         _strip = UiKit.HBox(8);
         root.AddChild(_strip);
         _strip.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom);

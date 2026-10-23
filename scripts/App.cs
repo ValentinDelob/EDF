@@ -189,6 +189,20 @@ public static class AutoTest
             Shot(15f, app.ShowJoin, "menu_join");
         }
 
+        // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
+        if (Screenshot.CmdArg("end-after") is { } ea && float.TryParse(ea, NumberStyles.Float, CultureInfo.InvariantCulture, out var endAfter))
+            app.GetTree().CreateTimer(endAfter).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w == null) return;
+                w.CratesCollected[(int)CrateType.Weapon] += 6;
+                w.CratesCollected[(int)CrateType.Armor] += 14;
+                w.CratesCollected[(int)CrateType.Credits] += 3;
+                w.EndMission(true);
+            };
+        // --board=N : affiche le tableau des scores (Tab) à partir de N secondes.
+        if (Screenshot.CmdArg("board") is { } bd && float.TryParse(bd, NumberStyles.Float, CultureInfo.InvariantCulture, out var boardAt))
+            app.GetTree().CreateTimer(boardAt).Timeout += () => Input.ActionPress("scoreboard");
         // Test LAN : --autohost=2 (attend 2 joueurs puis lance) / --autojoin=127.0.0.1
         Player.Bot = Screenshot.CmdArg("bot") != null;
         if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
@@ -269,17 +283,6 @@ public static class AutoTest
                 if (w?.LocalPlayer == null) return;
                 w.LocalPlayer.GlobalPosition = new Vector3(14, 1, 17);
                 Net.I.RequestTankSeat(1, true);
-            };
-        // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
-        if (Screenshot.CmdArg("end-after") is { } ea && float.TryParse(ea, NumberStyles.Float, CultureInfo.InvariantCulture, out var endAfter))
-            app.GetTree().CreateTimer(endAfter).Timeout += () =>
-            {
-                var w = app.CurrentWorld;
-                if (w == null) return;
-                w.CratesCollected[(int)CrateType.Weapon] += 6;
-                w.CratesCollected[(int)CrateType.Armor] += 14;
-                w.CratesCollected[(int)CrateType.Credits] += 3;
-                w.EndMission(true);
             };
         ScheduleShots(app, dir, $"mission{mission}");
     }
