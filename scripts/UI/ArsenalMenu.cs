@@ -174,6 +174,27 @@ public partial class ArsenalMenu : MenuScreen
             _detail.AddChild(UiKit.Label($"Comparaison avec {current.T.Name} Nv.{current.Level}", 14, UiKit.Dim));
         }
 
+        // Atelier : +1 étoile sur la statistique la plus faible contre des crédits.
+        var weakest = Enumerable.Range(0, 5).OrderBy(i => w.Stars[i]).First();
+        if (w.Stars[weakest] < 5)
+        {
+            var cost = 300 + w.Level * 20 + w.TotalStars * 40;
+            var can = Profile.I.Data.Credits >= cost;
+            var up = UiKit.Button($"Améliorer {WeaponInstance.StatNames[weakest].ToLowerInvariant()} · {cost} cr.", () =>
+            {
+                if (Profile.I.Data.Credits < cost) return;
+                Profile.I.Data.Credits -= cost;
+                w.Stars[weakest]++;
+                Profile.I.Save();
+                Sfx.Ui("pickup_weapon", -2f);
+                HeaderRight.Text = $"{Profile.I.Data.Credits} crédits";
+                Rebuild();
+            }, null, 60);
+            up.Disabled = !can;
+            up.TooltipText = can ? "Atelier : ajoute une étoile à la statistique la plus faible." : "Crédits insuffisants.";
+            FooterRight.AddChild(up);
+        }
+
         // Action principale : équiper dans un emplacement
         for (var i = 0; i < Classes.Get(_cls).WeaponSlots; i++)
         {
