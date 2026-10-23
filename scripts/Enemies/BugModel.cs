@@ -1,26 +1,30 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
 namespace Rempart;
 
-/// <summary>Modèle d'insecte géant construit à partir de primitives, avec démarche procédurale.</summary>
+/// <summary>
+/// Modèle d'insecte géant procédural : segments du corps en lofts arrondis (InsectMesh), pattes articulées
+/// (hanche, fémur, tibia + tarse) animées par cinématique inverse, démarche en trépied.
+/// Les maillages sont construits une seule fois par type puis partagés entre toutes les instances.
+/// </summary>
 public partial class BugModel : Node3D
 {
     private class Leg
     {
-        public Node3D Hip;
-        public Node3D Knee;
-        public float Phase;
-        public float Side;
-        public float BaseYaw;
+        public Node3D Hip, Femur, Knee;
+        public float Phase, Side, Fwd, Swing, Lf, Lt, Reach, HipY, Drop, Lift;
     }
 
     private readonly List<Leg> _legs = new();
     private readonly List<Node3D> _wings = new();
+    private readonly List<Node3D> _antennae = new();
     private Node3D _head, _gaster, _mandL, _mandR, _bodyPivot;
     private float _gait;
     private float _t;
-    private bool _flying;
+    private float _pivotY;
+    private bool _flying, _drone, _dead;
     public EnemyType Type;
 
     public static BugModel Create(EnemyType type)
@@ -41,292 +45,196 @@ public partial class BugModel : Node3D
         return m;
     }
 
-    private static MeshInstance3D Ellipsoid(Material mat, Vector3 scale, Vector3 pos, int seg = 18)
+    // ---------------- Matériaux et cache de maillages ----------------
+
+    private static readonly Dictionary<string, ArrayMesh> MeshCache = new();
+    private static StandardMaterial3D _chitin, _eye, _wingMat, _metal, _flashMat;
+
+    /// <summary>Chitine neutre teintée par les couleurs de sommets (un seul matériau pour tous les insectes).</summary>
+    private static StandardMaterial3D Chitin()
     {
-        return new MeshInstance3D
-        {
-            Mesh = new SphereMesh { Radius = 0.5f, Height = 1f, RadialSegments = seg, Rings = seg / 2, Material = mat },
-            Scale = scale,
-            Position = pos,
-        };
+        if (_chitin != null) return _chitin;
+        _chitin = (StandardMaterial3D)Mats.Chitin(new Color(0.93f, 0.93f, 0.93f)).Duplicate();
+        _chitin.VertexColorUseAsAlbedo = true;
+        _chitin.VertexColorIsSrgb = true;
+        return _chitin;
     }
 
-    private static MeshInstance3D Segment(Material mat, float length, float r0, float r1)
+    /// <summary>Yeux composés : vernis très brillant.</summary>
+    private static StandardMaterial3D Eye() => _eye ??= new StandardMaterial3D
     {
-        var m = new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = r1, BottomRadius = r0, Height = length, RadialSegments = 7, Rings = 1, Material = mat },
-            // Niveau de détail : les segments fins disparaissent au loin et ne projettent pas d'ombre.
-            VisibilityRangeEnd = 90f,
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        };
-        m.Position = new Vector3(0, -length / 2, 0);
-        return m;
-    }
-
-    private void BuildAnt(Color color, float size, float legScale, bool acid = false, bool queen = false)
-    {
-        var mat = Mats.Chitin(color);
-        var dark = Mats.Chitin(color.Darkened(0.5f));
-        var eye = Mats.Painted(new Color(0.02f, 0.02f, 0.02f), 0.05f, 0.3f);
-        Scale = Vector3.One * size;
-        _bodyPivot = new Node3D { Position = new Vector3(0, 1.05f, 0) };
-        AddChild(_bodyPivot);
-
-        _bodyPivot.AddChild(Ellipsoid(mat, new Vector3(0.85f, 0.7f, 1.3f), new Vector3(0, 0, 0.1f)));        // thorax
-        _bodyPivot.AddChild(Ellipsoid(dark, new Vector3(0.35f, 0.35f, 0.5f), new Vector3(0, 0, -0.75f)));     // pétiole
-        _gaster = new Node3D { Position = new Vector3(0, 0.15f, -1.0f) };
-        _bodyPivot.AddChild(_gaster);
-        var gs = queen ? new Vector3(1.6f, 1.3f, 2.6f) : new Vector3(1.35f, 1.1f, 1.85f);
-        _gaster.AddChild(Ellipsoid(mat, gs, new Vector3(0, 0.15f, -gs.Z * 0.45f), 22));
-        if (acid)
-            _gaster.AddChild(Ellipsoid(Mats.Glow(new Color(0.75f, 0.95f, 0.15f), 1.2f), new Vector3(0.5f, 0.4f, 0.5f), new Vector3(0, 0.0f, -gs.Z * 0.9f)));
-        _head = new Node3D { Position = new Vector3(0, 0.15f, 0.95f) };
-        _bodyPivot.AddChild(_head);
-        _head.AddChild(Ellipsoid(mat, new Vector3(0.95f, 0.8f, 0.9f), new Vector3(0, 0, 0.35f)));
-        _head.AddChild(Ellipsoid(eye, new Vector3(0.22f, 0.3f, 0.28f), new Vector3(0.42f, 0.12f, 0.45f), 10));
-        _head.AddChild(Ellipsoid(eye, new Vector3(0.22f, 0.3f, 0.28f), new Vector3(-0.42f, 0.12f, 0.45f), 10));
-        _mandL = new Node3D { Position = new Vector3(0.22f, -0.15f, 0.75f) };
-        _mandR = new Node3D { Position = new Vector3(-0.22f, -0.15f, 0.75f) };
-        _head.AddChild(_mandL);
-        _head.AddChild(_mandR);
-        foreach (var (mand, s) in new[] { (_mandL, 1f), (_mandR, -1f) })
-        {
-            var blade = new MeshInstance3D
-            {
-                Mesh = new PrismMesh { Size = new Vector3(0.12f, 0.12f, 0.75f), Material = dark },
-                Position = new Vector3(-0.1f * s, 0, 0.3f),
-                RotationDegrees = new Vector3(90, 0, 0),
-            };
-            mand.AddChild(blade);
-        }
-        // Antennes
-        foreach (var s in new[] { 1f, -1f })
-        {
-            var ant = new Node3D { Position = new Vector3(0.2f * s, 0.3f, 0.6f), RotationDegrees = new Vector3(-50, 25 * s, 0) };
-            _head.AddChild(ant);
-            var seg = Segment(dark, 1.1f, 0.04f, 0.03f);
-            seg.Position = new Vector3(0, 0.55f, 0);
-            ant.AddChild(seg);
-            var tip = new Node3D { Position = new Vector3(0, 1.1f, 0), RotationDegrees = new Vector3(70, 0, 0) };
-            ant.AddChild(tip);
-            var seg2 = Segment(dark, 0.8f, 0.03f, 0.02f);
-            seg2.Position = new Vector3(0, 0.4f, 0);
-            tip.AddChild(seg2);
-        }
-        if (queen)
-        {
-            foreach (var s in new[] { 1f, -1f })
-            {
-                var wing = new MeshInstance3D
-                {
-                    Mesh = new BoxMesh { Size = new Vector3(1.6f, 0.02f, 0.8f), Material = WingMat() },
-                    Position = new Vector3(0.9f * s, 0.45f, -0.2f),
-                    RotationDegrees = new Vector3(0, -30 * s, 10 * s),
-                };
-                _bodyPivot.AddChild(wing);
-            }
-        }
-        // Pattes (3 paires) attachées au thorax.
-        for (var i = 0; i < 3; i++)
-        foreach (var side in new[] { 1f, -1f })
-        {
-            var z = 0.45f - i * 0.45f;
-            var yaw = (35f - i * 35f) * side;
-            var hip = new Node3D { Position = new Vector3(0.35f * side, -0.1f, z), RotationDegrees = new Vector3(0, yaw, 0) };
-            _bodyPivot.AddChild(hip);
-            var upperLen = 0.95f * legScale;
-            var lowerLen = 1.6f * legScale;
-            var upperPivot = new Node3D { RotationDegrees = new Vector3(0, 0, -70 * side) };
-            hip.AddChild(upperPivot);
-            var upper = Segment(mat, upperLen, 0.09f, 0.07f);
-            upper.Position = new Vector3(0, upperLen / 2, 0);
-            upper.RotationDegrees = Vector3.Zero;
-            upperPivot.AddChild(upper);
-            // Genou : le tibia repart vers l'extérieur et le bas jusqu'au sol.
-            var knee = new Node3D { Position = new Vector3(0, upperLen, 0), RotationDegrees = new Vector3(0, 0, -85 * side) };
-            upperPivot.AddChild(knee);
-            var lower = Segment(dark, lowerLen, 0.07f, 0.03f);
-            lower.Position = new Vector3(0, lowerLen / 2, 0);
-            knee.AddChild(lower);
-            _legs.Add(new Leg { Hip = hip, Knee = upperPivot, Phase = (i % 2 == 0 ? 0 : Mathf.Pi) + (side > 0 ? 0 : Mathf.Pi), Side = side, BaseYaw = yaw });
-        }
-        // Ombres seulement pour les grosses pièces (corps), pas pour les pattes ni les antennes.
-        foreach (var n in FindChildren("*", "MeshInstance3D", true, false))
-        {
-            var mi = (MeshInstance3D)n;
-            if (mi.Mesh is SphereMesh && mi.Scale.X > 0.5f) mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
-            else if (mi.Mesh is not CylinderMesh) { mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off; mi.VisibilityRangeEnd = 60f; }
-        }
-    }
-
-    private static StandardMaterial3D _wingMat;
-
-    private static StandardMaterial3D WingMat() => _wingMat ??= new StandardMaterial3D
-    {
-        AlbedoColor = new Color(0.75f, 0.8f, 0.85f, 0.35f),
-        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-        Roughness = 0.1f,
-        CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        VertexColorUseAsAlbedo = true,
+        VertexColorIsSrgb = true,
+        Roughness = 0.06f,
+        Metallic = 0.35f,
+        ClearcoatEnabled = true,
+        Clearcoat = 1f,
         RimEnabled = true,
-        Rim = 0.6f,
+        Rim = 0.3f,
     };
 
-    private void BuildWasp()
+    /// <summary>Membrane alaire translucide (alpha par sommet).</summary>
+    private static StandardMaterial3D WingMat() => _wingMat ??= new StandardMaterial3D
     {
-        _flying = true;
-        var yellow = Mats.Chitin(new Color(0.8f, 0.6f, 0.08f));
-        var black = Mats.Chitin(new Color(0.06f, 0.05f, 0.04f));
-        Scale = Vector3.One * 0.9f;
-        _bodyPivot = new Node3D();
-        AddChild(_bodyPivot);
-        _bodyPivot.AddChild(Ellipsoid(black, new Vector3(0.9f, 0.85f, 1.1f), Vector3.Zero));
-        _head = new Node3D { Position = new Vector3(0, 0.05f, 0.75f) };
-        _bodyPivot.AddChild(_head);
-        _head.AddChild(Ellipsoid(yellow, new Vector3(0.8f, 0.75f, 0.6f), Vector3.Zero));
-        _head.AddChild(Ellipsoid(Mats.Painted(new Color(0.15f, 0.05f, 0.02f), 0.05f), new Vector3(0.3f, 0.45f, 0.3f), new Vector3(0.32f, 0.08f, 0.15f), 10));
-        _head.AddChild(Ellipsoid(Mats.Painted(new Color(0.15f, 0.05f, 0.02f), 0.05f), new Vector3(0.3f, 0.45f, 0.3f), new Vector3(-0.32f, 0.08f, 0.15f), 10));
-        _gaster = new Node3D { Position = new Vector3(0, -0.1f, -0.7f), RotationDegrees = new Vector3(-20, 0, 0) };
-        _bodyPivot.AddChild(_gaster);
-        for (var i = 0; i < 4; i++)
-        {
-            var r = 1.05f - i * 0.18f;
-            _gaster.AddChild(Ellipsoid(i % 2 == 0 ? yellow : black, new Vector3(r, r * 0.9f, 0.7f), new Vector3(0, 0, -0.45f * i - 0.2f)));
-        }
-        _gaster.AddChild(new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = 0f, BottomRadius = 0.08f, Height = 0.6f, Material = black },
-            Position = new Vector3(0, 0, -2.05f),
-            RotationDegrees = new Vector3(-90, 0, 0),
-        });
-        foreach (var s in new[] { 1f, -1f })
-        for (var k = 0; k < 2; k++)
-        {
-            var hinge = new Node3D { Position = new Vector3(0.3f * s, 0.4f, 0.1f - k * 0.35f) };
-            _bodyPivot.AddChild(hinge);
-            hinge.AddChild(new MeshInstance3D
-            {
-                Mesh = new BoxMesh { Size = new Vector3(2.2f - k * 0.5f, 0.02f, 0.7f), Material = WingMat() },
-                Position = new Vector3(1.1f * s - 0.25f * k * s, 0, -0.1f),
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            });
-            _wings.Add(hinge);
-        }
-        for (var i = 0; i < 3; i++)
-        foreach (var side in new[] { 1f, -1f })
-        {
-            var hip = new Node3D { Position = new Vector3(0.3f * side, -0.35f, 0.25f - i * 0.25f), RotationDegrees = new Vector3(30, 0, 30 * side) };
-            _bodyPivot.AddChild(hip);
-            var seg = Segment(black, 1.1f, 0.05f, 0.025f);
-            hip.AddChild(seg);
-        }
+        VertexColorUseAsAlbedo = true,
+        VertexColorIsSrgb = true,
+        Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+        Roughness = 0.12f,
+        CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        RimEnabled = true,
+        Rim = 0.5f,
+    };
+
+    private static StandardMaterial3D Metal()
+    {
+        if (_metal != null) return _metal;
+        _metal = (StandardMaterial3D)Mats.Metal(new Color(1f, 1f, 1f), 0.32f).Duplicate();
+        _metal.VertexColorUseAsAlbedo = true;
+        _metal.VertexColorIsSrgb = true;
+        return _metal;
     }
 
-    /// <summary>Araignée géante : petit céphalothorax, gros abdomen velu, huit longues pattes.</summary>
-    private void BuildSpider()
+    /// <summary>Pièce rigide : maillage fusionné, construit une fois par type et partagé.</summary>
+    private MeshInstance3D Part(Node3D parent, string key, Action<InsectMesh> build, bool shadow = true, float range = 0f)
     {
-        var body = Mats.Chitin(new Color(0.16f, 0.11f, 0.08f));
-        var marks = Mats.Chitin(new Color(0.55f, 0.32f, 0.12f));
-        var eye = Mats.Glow(new Color(0.9f, 0.15f, 0.08f), 1.5f);
-        Scale = Vector3.One * 1.05f;
-        _bodyPivot = new Node3D { Position = new Vector3(0, 1.15f, 0) };
-        AddChild(_bodyPivot);
-        _bodyPivot.AddChild(Ellipsoid(body, new Vector3(1.1f, 0.7f, 1.2f), new Vector3(0, 0, 0.3f)));
-        _gaster = new Node3D { Position = new Vector3(0, 0.25f, -0.4f) };
-        _bodyPivot.AddChild(_gaster);
-        _gaster.AddChild(Ellipsoid(body, new Vector3(1.9f, 1.5f, 2.1f), new Vector3(0, 0.2f, -0.9f), 22));
-        _gaster.AddChild(Ellipsoid(marks, new Vector3(0.6f, 0.15f, 1.2f), new Vector3(0, 0.95f, -0.9f), 12));
-        _head = new Node3D { Position = new Vector3(0, 0.05f, 0.9f) };
-        _bodyPivot.AddChild(_head);
-        for (var i = 0; i < 4; i++)
-            _head.AddChild(Ellipsoid(eye, Vector3.One * (i < 2 ? 0.17f : 0.11f), new Vector3((i % 2 == 0 ? 0.16f : -0.16f) * (i < 2 ? 1 : 1.8f), 0.18f + (i < 2 ? 0 : 0.08f), 0.12f), 8));
-        _mandL = new Node3D { Position = new Vector3(0.15f, -0.15f, 0.2f) };
-        _mandR = new Node3D { Position = new Vector3(-0.15f, -0.15f, 0.2f) };
-        _head.AddChild(_mandL);
-        _head.AddChild(_mandR);
-        foreach (var mand in new[] { _mandL, _mandR })
-            mand.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.0f, BottomRadius = 0.09f, Height = 0.45f, Material = body }, RotationDegrees = new Vector3(110, 0, 0), Position = new Vector3(0, -0.1f, 0.15f) });
-        for (var i = 0; i < 4; i++)
-        foreach (var side in new[] { 1f, -1f })
+        key = $"{Type}/{key}";
+        if (!MeshCache.TryGetValue(key, out var mesh))
         {
-            var yaw = (55f - i * 36f) * side;
-            var hip = new Node3D { Position = new Vector3(0.4f * side, 0f, 0.55f - i * 0.25f), RotationDegrees = new Vector3(0, yaw, 0) };
-            _bodyPivot.AddChild(hip);
-            var upperPivot = new Node3D { RotationDegrees = new Vector3(0, 0, -45 * side) };
-            hip.AddChild(upperPivot);
-            var upper = Segment(body, 1.5f, 0.09f, 0.07f);
-            upper.Position = new Vector3(0, 0.75f, 0);
-            upperPivot.AddChild(upper);
-            var knee = new Node3D { Position = new Vector3(0, 1.5f, 0), RotationDegrees = new Vector3(0, 0, -110 * side) };
-            upperPivot.AddChild(knee);
-            var lower = Segment(body, 1.9f, 0.07f, 0.025f);
-            lower.Position = new Vector3(0, 0.95f, 0);
-            knee.AddChild(lower);
-            _legs.Add(new Leg { Hip = hip, Knee = upperPivot, Phase = (i % 2 == 0 ? 0 : Mathf.Pi) + (side > 0 ? 0 : Mathf.Pi), Side = side, BaseYaw = yaw });
+            var b = new InsectMesh();
+            build(b);
+            mesh = b.Commit();
+            MeshCache[key] = mesh;
         }
-        _spiderLegs = true;
-    }
-
-    /// <summary>Drone d'attaque extraterrestre : disque métallique, rotors, œil laser.</summary>
-    private void BuildDrone()
-    {
-        _flying = true;
-        var hull = Mats.Metal(new Color(0.42f, 0.44f, 0.47f), 0.3f);
-        var dark = Mats.Metal(new Color(0.1f, 0.1f, 0.12f), 0.5f);
-        _bodyPivot = new Node3D();
-        AddChild(_bodyPivot);
-        _bodyPivot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.9f, BottomRadius = 1.3f, Height = 0.5f, RadialSegments = 16, Material = hull } });
-        _bodyPivot.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.7f, Height = 0.8f, IsHemisphere = true, Material = dark }, Position = new Vector3(0, 0.25f, 0) });
-        _bodyPivot.AddChild(Ellipsoid(Mats.Glow(new Color(1f, 0.12f, 0.08f), 4f), new Vector3(0.35f, 0.25f, 0.2f), new Vector3(0, -0.1f, 1.15f), 10));
-        _head = new Node3D();
-        _bodyPivot.AddChild(_head);
-        for (var i = 0; i < 4; i++)
+        var mi = new MeshInstance3D
         {
-            var a = i * Mathf.Pi / 2 + Mathf.Pi / 4;
-            var arm = new Node3D { Position = new Vector3(Mathf.Cos(a) * 1.6f, 0.1f, Mathf.Sin(a) * 1.6f) };
-            _bodyPivot.AddChild(arm);
-            arm.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.2f, 0.12f, 0.2f), Material = dark }, Position = new Vector3(-Mathf.Cos(a) * 0.6f, 0, -Mathf.Sin(a) * 0.6f), RotationDegrees = new Vector3(0, -Mathf.RadToDeg(a), 0) });
-            var rotor = new Node3D();
-            arm.AddChild(rotor);
-            rotor.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.7f, BottomRadius = 0.7f, Height = 0.03f, Material = WingMat() }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-            _wings.Add(rotor);
-        }
-        _drone = true;
-        AddChild(new OmniLight3D { Position = new Vector3(0, -0.3f, 1.2f), LightColor = new Color(1f, 0.15f, 0.1f), LightEnergy = 1f, OmniRange = 6f });
-    }
-
-    private bool _spiderLegs, _drone;
-
-    private void BuildNest()
-    {
-        var dirt = Mats.Dirt();
-        var mound = new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = 2.5f, BottomRadius = 9f, Height = 4.5f, RadialSegments = 14, Rings = 3, Material = dirt },
-            Position = new Vector3(0, 2.2f, 0),
+            Mesh = mesh,
+            CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
         };
-        AddChild(mound);
-        var rng = new RandomNumberGenerator { Seed = 99 };
-        for (var i = 0; i < 9; i++)
-        {
-            var a = i / 9f * Mathf.Tau;
-            AddChild(Ellipsoid(dirt, new Vector3(rng.RandfRange(2, 4), rng.RandfRange(1, 2.5f), rng.RandfRange(2, 4)),
-                new Vector3(Mathf.Cos(a) * 6.5f, 0.5f, Mathf.Sin(a) * 6.5f), 10));
-        }
-        AddChild(new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = 2.1f, BottomRadius = 1.4f, Height = 0.5f, Material = Mats.Painted(new Color(0.01f, 0.01f, 0.01f), 1f) },
-            Position = new Vector3(0, 4.3f, 0),
-        });
-        AddChild(new MeshInstance3D
-        {
-            Mesh = new TorusMesh { InnerRadius = 2.0f, OuterRadius = 2.35f, Material = Mats.Glow(new Color(0.65f, 0.85f, 0.2f), 1.5f) },
-            Position = new Vector3(0, 4.45f, 0),
-        });
-        AddChild(new OmniLight3D { Position = new Vector3(0, 5.5f, 0), LightColor = new Color(0.65f, 0.9f, 0.3f), LightEnergy = 1.5f, OmniRange = 14 });
+        if (range > 0) mi.VisibilityRangeEnd = range;
+        parent.AddChild(mi);
+        return mi;
     }
 
-    private static StandardMaterial3D _flashMat;
+    /// <summary>Nombre de triangles du modèle (diagnostic).</summary>
+    public int TriangleCount()
+    {
+        var n = 0;
+        foreach (var node in FindChildren("*", "MeshInstance3D", true, false))
+        {
+            var mesh = ((MeshInstance3D)node).Mesh;
+            if (mesh == null) continue;
+            for (var s = 0; s < mesh.GetSurfaceCount(); s++)
+            {
+                var arr = mesh.SurfaceGetArrays(s);
+                var idx = arr[(int)Mesh.ArrayType.Index].AsInt32Array();
+                n += idx.Length > 0 ? idx.Length / 3 : arr[(int)Mesh.ArrayType.Vertex].AsVector3Array().Length / 3;
+            }
+        }
+        return n;
+    }
+
+    public override void _Ready()
+    {
+        // Variante élite : chitine dorée (Enemy ne trouve plus de SphereMesh à recolorer).
+        if (GetParent() is Enemy { Elite: true })
+        {
+            var gold = Mats.Chitin(new Color(0.78f, 0.58f, 0.14f));
+            var chitin = Chitin();
+            foreach (var node in FindChildren("*", "MeshInstance3D", true, false))
+            {
+                var mi = (MeshInstance3D)node;
+                if (mi.Mesh == null) continue;
+                for (var s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+                    if (mi.Mesh.SurfaceGetMaterial(s) == chitin) mi.SetSurfaceOverrideMaterial(s, gold);
+            }
+        }
+    }
+
+    // ---------------- Outils de forme ----------------
+
+    /// <summary>Loft d'un segment du corps le long de Z (clés : largeur, dessus, dessous ; t de z0 à z1).</summary>
+    private static void BodyLoft(InsectMesh m, float z0, float z1, float[] width, float[] top, float[] bottom, IList<float> ts, int radial, Color col,
+        float sq = 2.3f, Func<float, float> mod = null, Func<float, float, Vector3, Color, Color> paint = null, float xOff = 0f)
+    {
+        var rings = new InsectMesh.Ring[ts.Count];
+        for (var i = 0; i < ts.Count; i++)
+        {
+            var t = ts[i];
+            var w = InsectMesh.Spline(width, t);
+            var tp = InsectMesh.Spline(top, t);
+            var bt = InsectMesh.Spline(bottom, t);
+            var k = mod?.Invoke(t) ?? 1f;
+            var end = i == 0 || i == ts.Count - 1;
+            rings[i] = new InsectMesh.Ring(new Vector3(xOff, (tp + bt) / 2, Mathf.Lerp(z0, z1, t)), Vector3.Right, Vector3.Up,
+                end ? 0 : Mathf.Max(w, 0.001f) * k, end ? 0 : Mathf.Max((tp - bt) / 2, 0.001f) * k, col);
+        }
+        Func<int, float, Vector3, Color, Color> p = null;
+        if (paint != null) p = (i, th, pos, c) => paint(ts[i], th, pos, c);
+        m.Loft(rings, radial, sq, 0f, p);
+    }
+
+    private static List<float> Steps(int n, params float[] extra)
+    {
+        var l = new List<float>();
+        for (var i = 0; i <= n; i++) l.Add(i / (float)n);
+        foreach (var e in extra) l.Add(e);
+        l.Sort();
+        return l;
+    }
+
+    /// <summary>Cinématique inverse à deux os dans le plan de la patte (genou vers le haut).</summary>
+    private static void Ik(float lf, float lt, float x, float y, out float e, out float k)
+    {
+        var d = Mathf.Clamp(Mathf.Sqrt(x * x + y * y), Mathf.Abs(lf - lt) + 0.02f, lf + lt - 0.02f);
+        var phi = Mathf.Atan2(y, x);
+        var a = Mathf.Acos(Mathf.Clamp((lf * lf + d * d - lt * lt) / (2 * lf * d), -1, 1));
+        var b = Mathf.Acos(Mathf.Clamp((lf * lf + lt * lt - d * d) / (2 * lf * lt), -1, 1));
+        e = phi + a;
+        k = -(Mathf.Pi - b);
+    }
+
+    /// <summary>
+    /// Patte articulée : hanche (lacet) → fémur (élévation) → genou (flexion) → tibia + tarse.
+    /// Les maillages sont construits pour le côté droit (+X) et mis en miroir pour le côté gauche.
+    /// </summary>
+    private Leg AddLeg(string key, Vector3 hipPos, float side, float fwdDeg, float lf, float lt, float ls, float reach, float gammaDeg,
+        Action<InsectMesh, float> femur, Action<InsectMesh, float, float> tibia, float swing = 18f, float lift = 0.35f)
+    {
+        var hipY = hipPos.Y;
+        var gamma = Mathf.DegToRad(gammaDeg);
+        var drop = ls * Mathf.Sin(gamma);
+        Ik(lf, lt, reach, -(_pivotY + hipY) + drop, out var e0, out var k0);
+        var tau = -gamma - (e0 + k0);
+        var sideKey = side > 0 ? "R" : "L";
+        var hip = new Node3D { Position = hipPos, Rotation = new Vector3(0, -Mathf.DegToRad(fwdDeg) * side, 0) };
+        _bodyPivot.AddChild(hip);
+        var fem = new Node3D();
+        hip.AddChild(fem);
+        Part(fem, $"{key}F{sideKey}", m => { m.Mirror = side < 0; femur(m, lf); }, false, 90f);
+        var knee = new Node3D { Position = new Vector3(lf * side, 0, 0) };
+        fem.AddChild(knee);
+        Part(knee, $"{key}T{sideKey}", m => { m.Mirror = side < 0; tibia(m, lt, tau); }, false, 90f);
+        var leg = new Leg
+        {
+            Hip = hip, Femur = fem, Knee = knee, Side = side, Fwd = fwdDeg, Swing = swing, Lf = lf, Lt = lt,
+            Reach = reach, HipY = hipY, Drop = drop, Lift = lift,
+        };
+        _legs.Add(leg);
+        PoseLeg(leg, 0f, 0f);
+        return leg;
+    }
+
+    private void PoseLeg(Leg l, float fa, float lift)
+    {
+        l.Hip.Rotation = new Vector3(0, -Mathf.DegToRad(l.Fwd + fa * l.Swing) * l.Side, 0);
+        var h = (_bodyPivot?.Position.Y ?? _pivotY) + l.HipY;
+        Ik(l.Lf, l.Lt, l.Reach * (1f - lift * 0.08f), -h + l.Drop + lift * l.Lift, out var e, out var k);
+        l.Femur.Rotation = new Vector3(0, 0, e * l.Side);
+        l.Knee.Rotation = new Vector3(0, 0, k * l.Side);
+    }
+
+    // ---------------- Retour visuel, animation, mort ----------------
+
     private List<GeometryInstance3D> _meshes;
     private float _flashT = -1f;
 
@@ -362,6 +270,7 @@ public partial class BugModel : Node3D
             _flashT -= dt;
             if (was > 0 && _flashT <= 0 && _meshes != null) foreach (var m in _meshes) m.MaterialOverlay = null;
         }
+        if (_dead) return;
         if (Type == EnemyType.Nest)
         {
             Scale = Vector3.One * (1f + Mathf.Sin(_t * 1.5f) * 0.015f);
@@ -376,43 +285,78 @@ public partial class BugModel : Node3D
         if (_flying)
         {
             foreach (var w in _wings)
-                w.RotationDegrees = new Vector3(0, 0, Mathf.Sin(_t * 70f) * 35f * Mathf.Sign(w.Position.X));
-            if (_bodyPivot != null) _bodyPivot.Position = new Vector3(0, Mathf.Sin(_t * 3f) * 0.25f, 0);
-            if (_gaster != null) _gaster.RotationDegrees = new Vector3(-20 - attack * 50f, 0, 0);
+                w.RotationDegrees = new Vector3(0, 0, (Mathf.Sin(_t * 70f) * 38f + 8f) * Mathf.Sign(w.Position.X));
+            if (_bodyPivot != null)
+            {
+                _bodyPivot.Position = new Vector3(0, Mathf.Sin(_t * 3f) * 0.25f, 0);
+                _bodyPivot.Rotation = new Vector3(Mathf.Sin(_t * 1.7f) * 0.05f, 0, Mathf.Sin(_t * 1.1f) * 0.06f);
+            }
+            if (_gaster != null) _gaster.RotationDegrees = new Vector3(-20 - attack * 50f + Mathf.Sin(_t * 5f) * 3f, 0, 0);
+            if (_head != null) _head.RotationDegrees = new Vector3(Mathf.Sin(_t * 2.3f) * 4f, Mathf.Sin(_t * 1.3f) * 8f, 0);
             return;
         }
-        var scaleLen = Scale.X;
-        _gait += dt * speed * 2.4f / Mathf.Max(scaleLen, 0.5f);
-        foreach (var l in _legs)
-        {
-            var s = Mathf.Sin(_gait + l.Phase);
-            var lift = Mathf.Max(0, Mathf.Cos(_gait + l.Phase)) * Mathf.Min(speed, 6f) / 6f;
-            l.Hip.RotationDegrees = new Vector3(0, l.BaseYaw + s * 22f * Mathf.Min(speed, 6f) / 6f, 0);
-            l.Knee.RotationDegrees = new Vector3(0, 0, ((_spiderLegs ? -45 : -70) + lift * 16f) * l.Side);
-        }
+        var amp = Mathf.Clamp(speed, 0f, 6f) / 6f;
+        _gait += dt * speed * 2.4f / Mathf.Max(Scale.X, 0.5f);
         if (_bodyPivot != null)
         {
-            // Bond vers l'avant pendant la morsure.
+            // Léger tangage à chaque appui, roulis alterné, bond vers l'avant pendant la morsure.
             var lunge = Mathf.Sin(Mathf.Clamp(attack, 0, 1) * Mathf.Pi);
-            _bodyPivot.Position = new Vector3(0, 1.05f + Mathf.Abs(Mathf.Sin(_gait * 2)) * 0.05f * Mathf.Min(speed, 6) / 6f + lunge * 0.15f, lunge * 0.6f);
-            _bodyPivot.Rotation = new Vector3(lunge * 0.18f, 0, 0);
+            var bob = (1f - Mathf.Abs(Mathf.Sin(_gait))) * 0.06f * amp;
+            _bodyPivot.Position = new Vector3(0, _pivotY + bob + lunge * 0.15f, lunge * 0.6f);
+            _bodyPivot.Rotation = new Vector3(lunge * 0.18f + Mathf.Sin(_gait * 2f) * 0.015f * amp, 0, Mathf.Sin(_gait) * 0.03f * amp);
+        }
+        foreach (var l in _legs)
+        {
+            var u = Mathf.PosMod(_gait + l.Phase, Mathf.Tau) / Mathf.Tau;
+            float fa, lift = 0f;
+            if (u < 0.5f) fa = 1f - 4f * u; // appui : le pied glisse vers l'arrière
+            else
+            {
+                var w = (u - 0.5f) * 2f; // transfert : le pied se lève et revient vers l'avant
+                fa = -1f + 2f * w * w * (3f - 2f * w);
+                lift = Mathf.Sin(w * Mathf.Pi);
+            }
+            PoseLeg(l, fa * amp, lift * amp);
         }
         if (_head != null) _head.RotationDegrees = new Vector3(-attack * 25f + Mathf.Sin(_t * 2f) * 3f, Mathf.Sin(_t * 1.3f) * 6f, 0);
+        for (var i = 0; i < _antennae.Count; i++)
+        {
+            var s = i == 0 ? 1f : -1f;
+            _antennae[i].Rotation = new Vector3(Mathf.Sin(_t * 2.1f + i * 1.7f) * 0.15f + attack * 0.35f, Mathf.Sin(_t * 1.4f + i) * 0.18f * s, Mathf.Sin(_t * 1.7f + i * 2.3f) * 0.08f);
+        }
         if (_mandL != null)
         {
-            var open = 15f + attack * 35f + Mathf.Sin(_t * 9f) * 4f;
+            // Claquements répétés pendant l'attaque.
+            var open = 6f + Mathf.Sin(_t * 3f) * 3f + attack * 40f * Mathf.Abs(Mathf.Sin(_t * 9f));
             _mandL.RotationDegrees = new Vector3(0, open, 0);
             _mandR.RotationDegrees = new Vector3(0, -open, 0);
         }
         if (_gaster != null)
-            _gaster.RotationDegrees = new Vector3(Type == EnemyType.AcidAnt ? -attack * 70f : Mathf.Sin(_t * 1.7f) * 3f, 0, 0);
+        {
+            if (Type == EnemyType.AcidAnt)
+            {
+                // Le gastre se replie sous le corps et pompe l'acide.
+                _gaster.RotationDegrees = new Vector3(-attack * 70f, 0, 0);
+                var pump = 1f + attack * 0.07f * Mathf.Sin(_t * 16f);
+                _gaster.Scale = new Vector3(pump, pump, 1f + (pump - 1f) * 0.5f);
+            }
+            else if (Type == EnemyType.Spider) _gaster.RotationDegrees = new Vector3(Mathf.Sin(_t * 1.2f) * 2f, Mathf.Sin(_t * 0.8f) * 2f, 0);
+            else _gaster.RotationDegrees = new Vector3(Mathf.Sin(_t * 1.7f) * 3f + Mathf.Sin(_gait * 2f) * 2f * amp, 0, 0);
+        }
     }
 
     /// <summary>Pose de mort : retourné, pattes repliées.</summary>
     public void DeathPose()
     {
-        foreach (var l in _legs) l.Knee.RotationDegrees = new Vector3(0, 0, -30 * l.Side);
+        _dead = true;
+        foreach (var l in _legs)
+        {
+            l.Hip.Rotation = new Vector3(0, -Mathf.DegToRad(l.Fwd * 0.6f) * l.Side, 0);
+            l.Femur.Rotation = new Vector3(0, 0, -0.5f * l.Side);
+            l.Knee.Rotation = new Vector3(0, 0, -2.1f * l.Side);
+        }
         if (_bodyPivot != null) _bodyPivot.RotationDegrees = new Vector3(0, 0, 180);
         foreach (var w in _wings) w.RotationDegrees = new Vector3(0, 0, 60);
+        if (_mandL != null) { _mandL.RotationDegrees = new Vector3(0, 30, 0); _mandR.RotationDegrees = new Vector3(0, -30, 0); }
     }
 }
