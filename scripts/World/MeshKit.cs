@@ -4,13 +4,23 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Assembleur de géométrie statique : accumule boîtes, cylindres et quads dans un SurfaceTool
+/// Assembleur de géométrie statique : accumule boîtes, cylindres et quads dans des tableaux C#
 /// par matériau, puis produit un seul ArrayMesh (une surface par matériau).
+/// Les sommets restent côté C# jusqu'au Commit (pas d'appel moteur par sommet, contrairement à SurfaceTool).
 /// L'ordre des sommets est corrigé automatiquement (Godot : faces avant dans le sens horaire).
 /// </summary>
 public class MeshKit
 {
-    private readonly Dictionary<Material, SurfaceTool> _st = new();
+    /// <summary>Sommets d'une surface (triangles non indexés).</summary>
+    private sealed class Surf
+    {
+        public readonly List<Vector3> Pos = new();
+        public readonly List<Vector3> Nrm = new();
+        public readonly List<Color> Col = new();
+        public readonly List<Vector2> Uv = new();
+    }
+
+    private readonly Dictionary<Material, Surf> _st = new();
     private readonly List<Material> _order = new();
 
     /// <summary>Transformation appliquée à tout ce qui est ajouté (repère local du sous-objet).</summary>
@@ -21,27 +31,25 @@ public class MeshKit
 
     public bool Empty => _order.Count == 0;
 
-    private SurfaceTool S(Material m)
+    private Surf S(Material m)
     {
         if (_st.TryGetValue(m, out var st)) return st;
-        st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        st.SetMaterial(m);
+        st = new Surf();
         _st[m] = st;
         _order.Add(m);
         return st;
     }
 
-    private void V(SurfaceTool st, Vector3 p, Vector3 n, Vector2 uv)
+    private void V(Surf st, Vector3 p, Vector3 n, Vector2 uv)
     {
-        st.SetColor(Col);
-        st.SetNormal(n);
-        st.SetUV(uv);
-        st.AddVertex(p);
+        st.Pos.Add(p);
+        st.Nrm.Add(n);
+        st.Col.Add(Col);
+        st.Uv.Add(uv);
     }
 
     /// <summary>Triangle déjà transformé, normales par sommet ; l'ordre est corrigé selon la normale moyenne.</summary>
-    private void TriRaw(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Vector3 na, Vector3 nb, Vector3 nc, Vector2 ua, Vector2 ub, Vector2 uc)
+    private void TriRaw(Surf st,Vector3 a, Vector3 b, Vector3 c, Vector3 na, Vector3 nb, Vector3 nc, Vector2 ua, Vector2 ub, Vector2 uc)
     {
         var face = (b - a).Cross(c - a);
         if (face.Dot(na + nb + nc) > 0)
@@ -223,8 +231,49 @@ public class MeshKit
         foreach (var m in _order)
         {
             var st = _st[m];
-            st.GenerateTangents();
-            st.Commit(mesh);
+            var n = st.Pos.Count;
+            if (n == 0) continue;
+            // Tangentes par triangle (méthode des dérivées d'UV), repli perpendiculaire à la normale
+            // pour les surfaces sans UV (matériaux triplanaires, qui recalculent leur repère).
+            var tan = new float[n * 4];
+            for (var i = 0; i + 2 < n; i += 3)
+            {
+                var e1 = st.Pos[i + 1] - st.Pos[i];
+                var e2 = st.Pos[i + 2] - st.Pos[i];
+                var d1 = st.Uv[i + 1] - st.Uv[i];
+                var d2 = st.Uv[i + 2] - st.Uv[i];
+                var r = d1.X * d2.Y - d2.X * d1.Y;
+                Vector3 t, b;
+                if (Mathf.Abs(r) > 1e-8f)
+                {
+                    t = (e1 * d2.Y - e2 * d1.Y) / r;
+                    b = (e2 * d1.X - e1 * d2.X) / r;
+                }
+                else
+                {
+                    var nn = st.Nrm[i];
+                    t = Mathf.Abs(nn.Y) > 0.9f ? Vector3.Right : Vector3.Up.Cross(nn);
+                    b = nn.Cross(t);
+                }
+                for (var k = 0; k < 3; k++)
+                {
+                    var nv = st.Nrm[i + k];
+                    var tv = (t - nv * nv.Dot(t)).Normalized();
+                    if (!tv.IsFinite() || tv == Vector3.Zero) tv = Mathf.Abs(nv.Y) > 0.9f ? Vector3.Right : Vector3.Up.Cross(nv).Normalized();
+                    var j = (i + k) * 4;
+                    tan[j] = tv.X; tan[j + 1] = tv.Y; tan[j + 2] = tv.Z;
+                    tan[j + 3] = nv.Cross(tv).Dot(b) < 0 ? -1f : 1f;
+                }
+            }
+            var arrays = new Godot.Collections.Array();
+            arrays.Resize((int)Mesh.ArrayType.Max);
+            arrays[(int)Mesh.ArrayType.Vertex] = st.Pos.ToArray();
+            arrays[(int)Mesh.ArrayType.Normal] = st.Nrm.ToArray();
+            arrays[(int)Mesh.ArrayType.Tangent] = tan;
+            arrays[(int)Mesh.ArrayType.Color] = st.Col.ToArray();
+            arrays[(int)Mesh.ArrayType.TexUV] = st.Uv.ToArray();
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, m);
         }
         return mesh;
     }

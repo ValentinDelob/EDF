@@ -239,7 +239,7 @@ public static class Props
 
     private static readonly Vector3[] Ico = BuildIco();
 
-    /// <summary>Icosaèdre subdivisé une fois (80 faces), sommets sur la sphère unité, par triangles.</summary>
+    /// <summary>Icosaèdre subdivisé deux fois (320 faces), sommets sur la sphère unité, par triangles.</summary>
     private static Vector3[] BuildIco()
     {
         var t = (1f + Mathf.Sqrt(5f)) / 2f;
@@ -253,14 +253,21 @@ public static class Props
             0, 11, 5, 0, 5, 1, 0, 1, 7, 0, 7, 10, 0, 10, 11, 1, 5, 9, 5, 11, 4, 11, 10, 2, 10, 7, 6, 7, 1, 8,
             3, 9, 4, 3, 4, 2, 3, 2, 6, 3, 6, 8, 3, 8, 9, 4, 9, 5, 2, 4, 11, 6, 2, 10, 8, 6, 7, 9, 8, 1,
         };
-        var res = new List<Vector3>();
-        for (var i = 0; i < f.Length; i += 3)
+        var tris = new List<Vector3>();
+        for (var i = 0; i < f.Length; i++) tris.Add(v[f[i]].Normalized());
+        // Deux subdivisions (320 faces) : silhouette assez ronde pour de gros houppiers.
+        for (var level = 0; level < 2; level++)
         {
-            var a = v[f[i]].Normalized(); var b = v[f[i + 1]].Normalized(); var c = v[f[i + 2]].Normalized();
-            var ab = (a + b).Normalized(); var bc = (b + c).Normalized(); var ca = (c + a).Normalized();
-            res.AddRange(new[] { a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca });
+            var res = new List<Vector3>();
+            for (var i = 0; i < tris.Count; i += 3)
+            {
+                var a = tris[i]; var b = tris[i + 1]; var c = tris[i + 2];
+                var ab = (a + b).Normalized(); var bc = (b + c).Normalized(); var ca = (c + a).Normalized();
+                res.AddRange(new[] { a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca });
+            }
+            tris = res;
         }
-        return res.ToArray();
+        return tris.ToArray();
     }
 
     /// <summary>Houppier irrégulier : sphère bosselée (déformation continue, donc sans trous), teinte plus claire au sommet.</summary>
@@ -269,7 +276,9 @@ public static class Props
         var m = Mats.Foliage();
         Vector3 D(Vector3 d)
         {
-            var bump = 1f + 0.22f * Mathf.Sin(d.X * 4.1f + seed) * Mathf.Cos(d.Z * 3.7f + seed * 1.3f) + 0.12f * Mathf.Sin(d.Y * 6f + seed * 0.7f);
+            // Grosses masses + touffes de feuillage plus fines.
+            var bump = 1f + 0.2f * Mathf.Sin(d.X * 4.1f + seed) * Mathf.Cos(d.Z * 3.7f + seed * 1.3f) + 0.1f * Mathf.Sin(d.Y * 6f + seed * 0.7f)
+                + 0.07f * Mathf.Sin(d.X * 13f + seed * 2.1f) * Mathf.Sin(d.Y * 11f + seed) * Mathf.Sin(d.Z * 12f + seed * 0.5f);
             return c + new Vector3(d.X, d.Y * 0.78f, d.Z) * (r * bump);
         }
         Color C(Vector3 d)

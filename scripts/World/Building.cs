@@ -111,8 +111,18 @@ public partial class Building : StaticBody3D
             var v0 = (h - baseY) / 3.2f;
             kit.Quad(facade, a, bb, c, d, new Vector2(0, v0), new Vector2(u, v0), new Vector2(u, 0), new Vector2(0, 0));
         }
-        // Toit.
-        kit.Quad(roof, new Vector3(-hx, h, hz), new Vector3(hx, h, hz), new Vector3(hx, h, -hz), new Vector3(-hx, h, -hz));
+        // Toit : gravillons, étanchéité sombre ou claire, parfois végétalisé.
+        var rr = rng.Randf();
+        var roofMat = roof;
+        if (rr < 0.7f)
+        {
+            roofMat = Mats.Detail();
+            kit.Col = rr < 0.25f ? new Color(0.56f, 0.55f, 0.51f)
+                : rr < 0.45f ? new Color(0.3f, 0.3f, 0.32f)
+                : rr < 0.62f ? new Color(0.74f, 0.74f, 0.72f)
+                : new Color(0.33f, 0.42f, 0.22f);
+        }
+        kit.Quad(roofMat,new Vector3(-hx, h, hz), new Vector3(hx, h, hz), new Vector3(hx, h, -hz), new Vector3(-hx, h, -hz));
 
         var tower = style.Kind == BuildingKind.Tower;
         var trim = style.Variant is 4 or 8 ? new Color(0.78f, 0.76f, 0.7f)

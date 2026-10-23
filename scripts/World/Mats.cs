@@ -247,7 +247,8 @@ public static class Mats
         var emit = night ? new Px(w, h, 3) : null;
         var curtain = s.Kind == FKind.Curtain;
 
-        for (var y = 0; y < h; y++)
+        System.Threading.Tasks.Parallel.For(0, h, y =>
+        {
         for (var x = 0; x < w; x++)
         {
             var u = x / (float)perU;
@@ -366,6 +367,7 @@ public static class Mats
             bump.Set(x, y, new Color(height, height, height));
             emit?.Set(x, y, e);
         }
+        }); // lignes calculées en parallèle (code C# pur, sans appel au moteur)
 
         var nimg = bump.ToImage(false);
         nimg.BumpMapToNormalMap(curtain ? 1.5f : 3f);
