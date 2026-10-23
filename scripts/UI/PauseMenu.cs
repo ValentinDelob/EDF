@@ -1,12 +1,15 @@
+using System.Linq;
 using Godot;
 
 namespace Rempart;
 
-/// <summary>Menu pause en mission (le jeu continue en multijoueur).</summary>
+/// <summary>Pause : liste à gauche, mission et escouade à droite. En multijoueur, le jeu continue.</summary>
 public partial class PauseMenu : CanvasLayer
 {
     public World World;
     private Control _root;
+    private Button _resume;
+    private VBoxContainer _info;
 
     public override void _Ready()
     {
@@ -17,24 +20,73 @@ public partial class PauseMenu : CanvasLayer
         UiKit.FillRect(_root);
         AddChild(_root);
         _root.AddChild(UiKit.Scrim(0.6f));
-        var m = UiKit.Margin(96, 0, 0, 0);
-        UiKit.FillRect(m);
-        _root.AddChild(m);
-        var v = UiKit.VBox(6);
-        v.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        m.AddChild(v);
-        v.AddChild(UiKit.Eyebrow(Net.I.IsSolo ? "Jeu en pause" : "Mission en cours — le jeu continue", UiKit.Accent));
-        v.AddChild(UiKit.Heading(World.Mission.Name, 52));
-        v.AddChild(UiKit.Label($"{Difficulties.Names[(int)World.Difficulty]} · {Classes.Get(Profile.I.Data.SelectedClass).Name}", 17, UiKit.Muted));
-        v.AddChild(new Control { CustomMinimumSize = new Vector2(0, 24) });
-        v.AddChild(UiKit.Button("Reprendre", () => World.TogglePause(), "MenuItem", 52));
-        v.AddChild(UiKit.Button("Options", OpenOptions, "MenuItem", 52));
-        v.AddChild(UiKit.Button(Net.I.IsHost ? "Abandonner la mission" : "Quitter la partie", Abandon, "MenuItem", 52));
+        _root.AddChild(UiKit.SideShade(760, 0.85f));
+
+        var left = UiKit.VBox(2);
+        left.Position = new Vector2(UiKit.ScreenX, 0);
+        left.AnchorTop = 0.5f;
+        left.AnchorBottom = 0.5f;
+        left.GrowVertical = Control.GrowDirection.Both;
+        _root.AddChild(left);
+        left.AddChild(UiKit.Eyebrow(Net.I.IsSolo ? "Pause" : "Le jeu continue pour l'escouade", UiKit.Accent));
+        left.AddChild(UiKit.Heading(World.Mission.Name, 56));
+        left.AddChild(UiKit.Gap(32));
+        _resume = UiKit.Button("Reprendre", () => World.TogglePause(), "MenuItem", 54);
+        left.AddChild(_resume);
+        left.AddChild(UiKit.Button("Options", OpenOptions, "MenuItem", 54));
+        left.AddChild(UiKit.Button(Net.I.IsHost ? "Abandonner la mission" : "Quitter la partie", Abandon, "MenuItem", 54));
+
+        _info = UiKit.VBox(6);
+        _info.CustomMinimumSize = new Vector2(420, 0);
+        _root.AddChild(_info);
+        _info.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterRight);
+        _info.GrowHorizontal = Control.GrowDirection.Begin;
+        _info.GrowVertical = Control.GrowDirection.Both;
+        _info.Position += new Vector2(-UiKit.ScreenX, 0);
+
+        var hint = UiKit.KeyHint("Échap", "Reprendre", () => World.TogglePause());
+        _root.AddChild(hint);
+        hint.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
+        hint.Position = new Vector2(UiKit.ScreenX, hint.Position.Y - UiKit.ScreenBottom);
+        VisibilityChanged += OnShown;
+    }
+
+    private void OnShown()
+    {
+        if (!Visible) return;
+        _resume.GrabFocus();
+        foreach (var c in _info.GetChildren()) c.QueueFree();
+        _info.AddChild(UiKit.Eyebrow("Mission"));
+        _info.AddChild(UiKit.Label(World.ObjectiveText, 18));
+        _info.AddChild(UiKit.Label($"{Difficulties.Names[(int)World.Difficulty]} · {UiKit.Time(World.Elapsed)} · {World.TeamKills} éliminations", 15, UiKit.Muted));
+        _info.AddChild(UiKit.Gap(20));
+        _info.AddChild(UiKit.Eyebrow("Escouade"));
+        var me = World.LocalPlayer;
+        if (me != null) _info.AddChild(SquadRow(Settings.I.PlayerName, me.Def.Name, me.Health / me.MaxHealth, me.Downed));
+        foreach (var r in World.Remotes.Values)
+            _info.AddChild(SquadRow(r.PlayerName, Classes.Get(r.Class).Name, r.Health / Mathf.Max(r.MaxHealth, 1), r.Downed));
+        _info.AddChild(UiKit.Gap(20));
+        _info.AddChild(UiKit.Eyebrow("Butin de l'équipe"));
+        _info.AddChild(UiKit.Label(string.Join("   ", Enumerable.Range(0, 4).Select(i => $"{Crates.Names[i]} {World.CratesCollected[i]}")), 15, UiKit.Muted));
+    }
+
+    private static Control SquadRow(string name, string cls, float hp, bool downed)
+    {
+        var v = UiKit.VBox(4);
+        var h = UiKit.HBox();
+        var n = UiKit.Label(name, 17);
+        n.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        h.AddChild(n);
+        h.AddChild(UiKit.Label(downed ? "À TERRE" : cls, 14, downed ? UiKit.Danger : UiKit.Muted));
+        v.AddChild(h);
+        var bar = new ProgressBar { ShowPercentage = false, MaxValue = 1, Value = hp, CustomMinimumSize = new Vector2(0, 4) };
+        v.AddChild(bar);
+        return v;
     }
 
     private void OpenOptions()
     {
-        var o = new OptionsMenu { OnClose = () => { } };
+        var o = new OptionsMenu { OnClose = () => _resume.GrabFocus() };
         _root.AddChild(o);
     }
 
@@ -56,13 +108,9 @@ public partial class PauseMenu : CanvasLayer
             if (!World.Ended) { World.TogglePause(); GetViewport().SetInputAsHandled(); }
             return;
         }
-        if (true)
-        {
-            // L'écran d'options se ferme lui-même ; sinon on reprend.
-            foreach (var c in _root.GetChildren())
-                if (c is OptionsMenu) return;
-            World.TogglePause();
-            GetViewport().SetInputAsHandled();
-        }
+        foreach (var c in _root.GetChildren())
+            if (c is OptionsMenu) return;
+        World.TogglePause();
+        GetViewport().SetInputAsHandled();
     }
 }

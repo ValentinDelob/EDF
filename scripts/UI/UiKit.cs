@@ -3,156 +3,207 @@ using Godot;
 
 namespace Rempart;
 
-/// <summary>Jetons de design et fabriques de contrôles : toute l'interface passe par ici.</summary>
+/// <summary>
+/// Jetons de design et fabriques de contrôles (cf. docs/ui-knowledge-base.md) :
+/// aplats translucides sans bordure, un seul accent orange, focus = barre d'accent à gauche.
+/// </summary>
 public static class UiKit
 {
-    // Couleurs
-    public static readonly Color Bg = new("0b0e11");
-    public static readonly Color Surface = new(0.075f, 0.09f, 0.11f, 0.92f);
-    public static readonly Color SurfaceHi = new(0.11f, 0.13f, 0.16f, 0.95f);
-    public static readonly Color Line = new("2b333b");
-    public static readonly Color Text = new("e8eaed");
-    public static readonly Color Muted = new("9aa3ad");
-    public static readonly Color Accent = new("f0a43a");
-    public static readonly Color AccentText = new("1a1206");
-    public static readonly Color Good = new("7fd49b");
-    public static readonly Color Danger = new("e0533f");
-    public static readonly Color Info = new("6fa8ff");
+    // Palette
+    public static readonly Color Bg = new("0e1114");
+    public static readonly Color Panel = new(0.082f, 0.102f, 0.122f, 0.72f);   // #151A1F à 72 %
+    public static readonly Color PanelSolid = new("151a1f");
+    public static readonly Color Line = new("2a323a");
+    public static readonly Color Text = new("f2f4f5");
+    public static readonly Color Muted = new("9aa4ad");
+    public static readonly Color Dim = new("5c6670");
+    public static readonly Color Accent = new("ff8a1f");
+    public static readonly Color AccentPress = new("e06f00");
+    public static readonly Color OnAccent = new("0e1114");
+    public static readonly Color Info = new("3fb6e8");
+    public static readonly Color Danger = new("e8413c");
+    public static readonly Color Good = new("5bd16e");
+    public static readonly Color Gold = new("ffc233");
+    public static readonly Color Surface = Panel;
+
+    // Marges d'écran (1600×900)
+    public const int ScreenX = 80;
+    public const int ScreenTop = 48;
+    public const int ScreenBottom = 40;
 
     private static Theme _theme;
-    private static SystemFont _body, _head;
+    private static Font _body, _bodyMedium, _head, _headSemi;
 
-    public static SystemFont BodyFont => _body ??= new SystemFont
+    private static Font LoadFont(string path, Font fallback)
     {
-        FontNames = new[] { "Segoe UI", "Bahnschrift", "Arial" },
-        FontWeight = 400,
-        Antialiasing = TextServer.FontAntialiasing.Lcd,
-        Hinting = TextServer.Hinting.Light,
+        var f = ResourceLoader.Exists(path) ? ResourceLoader.Load<FontFile>(path) : null;
+        return f ?? fallback;
+    }
+
+    public static Font BodyFont => _body ??= LoadFont("res://assets/fonts/Inter.ttf", new SystemFont { FontNames = new[] { "Segoe UI", "Arial" } });
+
+    public static Font BodyMedium => _bodyMedium ??= new FontVariation
+    {
+        BaseFont = BodyFont,
+        VariationOpentype = new Godot.Collections.Dictionary { { TextServerManager.GetPrimaryInterface().NameToTag("wght"), 520 } },
     };
 
-    public static SystemFont HeadFont => _head ??= new SystemFont
-    {
-        FontNames = new[] { "Bahnschrift", "Segoe UI", "Arial" },
-        FontWeight = 600,
-        FontStretch = 87,
-        Antialiasing = TextServer.FontAntialiasing.Gray,
-    };
+    public static Font HeadFont => _head ??= LoadFont("res://assets/fonts/BarlowCondensed-Bold.ttf", new SystemFont { FontNames = new[] { "Bahnschrift", "Arial" }, FontWeight = 700 });
+    public static Font HeadSemi => _headSemi ??= LoadFont("res://assets/fonts/BarlowCondensed-SemiBold.ttf", HeadFont);
 
-    public static StyleBoxFlat Box(Color bg, Color border = default, int borderW = 0, int radius = 4, int padH = 16, int padV = 10)
+    public static StyleBoxFlat Box(Color bg, Color border = default, int borderW = 0, int radius = 0, int padH = 16, int padV = 10)
     {
         var s = new StyleBoxFlat
         {
             BgColor = bg,
             BorderColor = border,
-            CornerRadiusTopLeft = radius, CornerRadiusTopRight = radius, CornerRadiusBottomLeft = radius, CornerRadiusBottomRight = radius,
             ContentMarginLeft = padH, ContentMarginRight = padH, ContentMarginTop = padV, ContentMarginBottom = padV,
-            AntiAliasing = true,
         };
+        s.SetCornerRadiusAll(radius);
         s.SetBorderWidthAll(borderW);
         return s;
     }
+
+    /// <summary>Fond + barre verticale d'accent à gauche (état focus / sélection).</summary>
+    public static StyleBoxFlat Bar(Color bg, Color bar, int barW = 4, int padH = 16, int padV = 10)
+    {
+        var s = Box(bg, bar, 0, 0, padH, padV);
+        s.BorderWidthLeft = barW;
+        return s;
+    }
+
+    public static StyleBoxFlat Underline(Color bg, Color line, int w = 3, int padH = 0, int padV = 8)
+    {
+        var s = Box(bg, line, 0, 0, padH, padV);
+        s.BorderWidthBottom = w;
+        return s;
+    }
+
+    private static readonly StyleBoxEmpty Empty = new();
 
     public static Theme Theme
     {
         get
         {
             if (_theme != null) return _theme;
-            var t = new Theme { DefaultFont = BodyFont, DefaultFontSize = 18 };
-            // Boutons
-            t.SetStylebox("normal", "Button", Box(new Color(1, 1, 1, 0.04f), Line, 1));
-            t.SetStylebox("hover", "Button", Box(new Color(1, 1, 1, 0.09f), Muted, 1));
-            t.SetStylebox("pressed", "Button", Box(new Color(1, 1, 1, 0.14f), Accent, 1));
-            t.SetStylebox("focus", "Button", Box(new Color(0, 0, 0, 0), Accent, 2));
-            t.SetStylebox("disabled", "Button", Box(new Color(1, 1, 1, 0.02f), new Color(Line, 0.5f), 1));
+            var t = new Theme { DefaultFont = BodyFont, DefaultFontSize = 17 };
+            var hover = new Color(1, 1, 1, 0.06f);
+
+            // Bouton secondaire : aplat translucide, focus = barre d'accent
+            t.SetStylebox("normal", "Button", Box(Panel, default, 0, 0, 20, 10));
+            t.SetStylebox("hover", "Button", Bar(new Color(0.12f, 0.145f, 0.17f, 0.85f), Accent, 4, 20, 10));
+            t.SetStylebox("pressed", "Button", Bar(new Color(0.14f, 0.165f, 0.19f, 0.9f), AccentPress, 4, 20, 10));
+            t.SetStylebox("focus", "Button", Bar(new Color(0, 0, 0, 0), Accent, 4, 20, 10));
+            t.SetStylebox("disabled", "Button", Box(new Color(Panel, 0.4f), default, 0, 0, 20, 10));
             t.SetColor("font_color", "Button", Text);
-            t.SetColor("font_hover_color", "Button", Colors.White);
-            t.SetColor("font_pressed_color", "Button", Accent);
-            t.SetColor("font_focus_color", "Button", Colors.White);
-            t.SetColor("font_disabled_color", "Button", new Color(Muted, 0.5f));
-            // Bouton principal
+            t.SetColor("font_hover_color", "Button", Text);
+            t.SetColor("font_pressed_color", "Button", Text);
+            t.SetColor("font_focus_color", "Button", Text);
+            t.SetColor("font_hover_pressed_color", "Button", Text);
+            t.SetColor("font_disabled_color", "Button", Dim);
+            t.SetFont("font", "Button", BodyMedium);
+
+            // Action principale (bas-droite)
             t.SetTypeVariation("Primary", "Button");
-            t.SetStylebox("normal", "Primary", Box(Accent, Accent, 0));
-            t.SetStylebox("hover", "Primary", Box(Accent.Lightened(0.15f), Accent, 0));
-            t.SetStylebox("pressed", "Primary", Box(Accent.Darkened(0.1f), Accent, 0));
-            t.SetStylebox("focus", "Primary", Box(new Color(0, 0, 0, 0), Colors.White, 2));
-            t.SetStylebox("disabled", "Primary", Box(new Color(Accent, 0.3f), Accent, 0));
-            t.SetColor("font_color", "Primary", AccentText);
-            t.SetColor("font_hover_color", "Primary", AccentText);
-            t.SetColor("font_pressed_color", "Primary", AccentText);
-            t.SetColor("font_focus_color", "Primary", AccentText);
+            t.SetStylebox("normal", "Primary", Box(Accent, default, 0, 0, 44, 12));
+            t.SetStylebox("hover", "Primary", Box(Accent.Lightened(0.12f), default, 0, 0, 44, 12));
+            t.SetStylebox("pressed", "Primary", Box(AccentPress, default, 0, 0, 44, 12));
+            t.SetStylebox("focus", "Primary", Box(new Color(0, 0, 0, 0), Text, 2, 0, 44, 12));
+            t.SetStylebox("disabled", "Primary", Box(new Color(Accent, 0.28f), default, 0, 0, 44, 12));
+            foreach (var k in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
+                t.SetColor(k, "Primary", OnAccent);
+            t.SetColor("font_disabled_color", "Primary", new Color(OnAccent, 0.6f));
             t.SetFont("font", "Primary", HeadFont);
-            // Bouton de menu (texte seul, soulignement accent au survol)
+            t.SetFontSize("font_size", "Primary", 26);
+
+            // Entrée de menu texte (menu principal, pause)
             t.SetTypeVariation("MenuItem", "Button");
-            var mi = Box(new Color(0, 0, 0, 0), default, 0, 2, 4, 6);
-            t.SetStylebox("normal", "MenuItem", mi);
-            var mih = Box(new Color(0, 0, 0, 0), Accent, 0, 0, 4, 6);
-            mih.BorderWidthLeft = 3;
-            mih.ContentMarginLeft = 14;
-            t.SetStylebox("hover", "MenuItem", mih);
-            t.SetStylebox("focus", "MenuItem", mih);
-            t.SetStylebox("pressed", "MenuItem", mih);
-            t.SetColor("font_color", "MenuItem", new Color(Text, 0.82f));
-            t.SetColor("font_hover_color", "MenuItem", Colors.White);
-            t.SetColor("font_focus_color", "MenuItem", Colors.White);
-            t.SetColor("font_pressed_color", "MenuItem", Accent);
-            t.SetFont("font", "MenuItem", HeadFont);
-            t.SetFontSize("font_size", "MenuItem", 30);
-            // Onglets / boutons bascule
-            t.SetTypeVariation("Chip", "Button");
-            t.SetStylebox("normal", "Chip", Box(new Color(0, 0, 0, 0), default, 0, 3, 14, 8));
-            t.SetStylebox("hover", "Chip", Box(new Color(1, 1, 1, 0.06f), default, 0, 3, 14, 8));
-            t.SetStylebox("pressed", "Chip", Box(new Color(Accent, 0.16f), Accent, 0, 3, 14, 8));
-            t.SetStylebox("focus", "Chip", Box(new Color(0, 0, 0, 0), Accent, 1, 3, 14, 8));
-            t.SetColor("font_pressed_color", "Chip", Accent);
-            t.SetColor("font_color", "Chip", Muted);
-            t.SetColor("font_hover_color", "Chip", Text);
-            t.SetFont("font", "Chip", HeadFont);
-            t.SetFontSize("font_size", "Chip", 19);
-            // Cartes sélectionnables
-            t.SetTypeVariation("Card", "Button");
-            t.SetStylebox("normal", "Card", Box(Surface, Line, 1, 6, 18, 14));
-            t.SetStylebox("hover", "Card", Box(SurfaceHi, Muted, 1, 6, 18, 14));
-            t.SetStylebox("pressed", "Card", Box(SurfaceHi, Accent, 2, 6, 18, 14));
-            t.SetStylebox("focus", "Card", Box(new Color(0, 0, 0, 0), Accent, 1, 6, 18, 14));
+            t.SetStylebox("normal", "MenuItem", Box(new Color(0, 0, 0, 0), default, 0, 0, 20, 4));
+            t.SetStylebox("hover", "MenuItem", Bar(new Color(0, 0, 0, 0), Accent, 4, 16, 4));
+            t.SetStylebox("focus", "MenuItem", Bar(new Color(0, 0, 0, 0), Accent, 4, 16, 4));
+            t.SetStylebox("pressed", "MenuItem", Bar(new Color(0, 0, 0, 0), AccentPress, 4, 16, 4));
+            t.SetColor("font_color", "MenuItem", Muted);
+            t.SetColor("font_hover_color", "MenuItem", Text);
+            t.SetColor("font_focus_color", "MenuItem", Text);
+            t.SetColor("font_pressed_color", "MenuItem", Text);
+            t.SetColor("font_hover_pressed_color", "MenuItem", Text);
+            t.SetFont("font", "MenuItem", HeadSemi);
+            t.SetFontSize("font_size", "MenuItem", 36);
+
+            // Onglet (souligné accent quand actif)
+            t.SetTypeVariation("Tab", "Button");
+            t.SetStylebox("normal", "Tab", Underline(new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), 3, 2, 6));
+            t.SetStylebox("hover", "Tab", Underline(new Color(0, 0, 0, 0), Line, 3, 2, 6));
+            t.SetStylebox("pressed", "Tab", Underline(new Color(0, 0, 0, 0), Accent, 3, 2, 6));
+            t.SetStylebox("focus", "Tab", Underline(new Color(0, 0, 0, 0), Muted, 3, 2, 6));
+            t.SetColor("font_color", "Tab", Muted);
+            t.SetColor("font_hover_color", "Tab", Text);
+            t.SetColor("font_pressed_color", "Tab", Text);
+            t.SetColor("font_hover_pressed_color", "Tab", Text);
+            t.SetColor("font_focus_color", "Tab", Text);
+            t.SetFont("font", "Tab", HeadSemi);
+            t.SetFontSize("font_size", "Tab", 21);
+
+            // Ligne de liste sélectionnable (missions, armes, parties LAN)
+            t.SetTypeVariation("Row", "Button");
+            t.SetStylebox("normal", "Row", Box(new Color(0, 0, 0, 0), default, 0, 0, 22, 12));
+            t.SetStylebox("hover", "Row", Box(hover, default, 0, 0, 22, 12));
+            t.SetStylebox("pressed", "Row", Bar(Panel, Accent, 4, 18, 12));
+            t.SetStylebox("hover_pressed", "Row", Bar(new Color(0.12f, 0.145f, 0.17f, 0.85f), Accent, 4, 18, 12));
+            t.SetStylebox("focus", "Row", Bar(new Color(0, 0, 0, 0), Muted, 2, 20, 12));
+            t.SetStylebox("disabled", "Row", Box(new Color(0, 0, 0, 0), default, 0, 0, 22, 12));
+            t.SetTypeVariation("Card", "Row");
+
             // Panneaux
-            t.SetStylebox("panel", "PanelContainer", Box(Surface, Line, 1, 6, 24, 20));
+            t.SetStylebox("panel", "PanelContainer", Box(Panel, default, 0, 0, 22, 18));
             t.SetTypeVariation("Glass", "PanelContainer");
-            t.SetStylebox("panel", "Glass", Box(new Color(0.03f, 0.04f, 0.05f, 0.6f), default, 0, 6, 18, 14));
+            t.SetStylebox("panel", "Glass", Box(new Color(0.055f, 0.067f, 0.078f, 0.55f), default, 0, 0, 16, 12));
+            t.SetTypeVariation("Clear", "PanelContainer");
+            t.SetStylebox("panel", "Clear", Empty);
+
             // Libellés
             t.SetColor("font_color", "Label", Text);
-            t.SetTypeVariation("Muted", "Label");
-            t.SetColor("font_color", "Muted", Muted);
-            t.SetFontSize("font_size", "Muted", 15);
-            t.SetTypeVariation("Heading", "Label");
-            t.SetFont("font", "Heading", HeadFont);
-            t.SetFontSize("font_size", "Heading", 34);
-            t.SetTypeVariation("Eyebrow", "Label");
-            t.SetFont("font", "Eyebrow", HeadFont);
-            t.SetFontSize("font_size", "Eyebrow", 15);
-            t.SetColor("font_color", "Eyebrow", Muted);
+            t.SetColor("font_shadow_color", "Label", new Color(0, 0, 0, 0));
+
             // Champs
-            t.SetStylebox("normal", "LineEdit", Box(new Color(0, 0, 0, 0.35f), Line, 1, 4, 14, 10));
-            t.SetStylebox("focus", "LineEdit", Box(new Color(0, 0, 0, 0.35f), Accent, 1, 4, 14, 10));
+            t.SetStylebox("normal", "LineEdit", Underline(Panel, Line, 2, 14, 10));
+            t.SetStylebox("focus", "LineEdit", Underline(Panel, Accent, 2, 14, 10));
             t.SetColor("caret_color", "LineEdit", Accent);
+            t.SetColor("font_color", "LineEdit", Text);
+            t.SetColor("selection_color", "LineEdit", new Color(Accent, 0.35f));
+
             // Curseurs
-            t.SetStylebox("slider", "HSlider", Box(new Color(1, 1, 1, 0.12f), default, 0, 2, 0, 3));
-            t.SetStylebox("grabber_area", "HSlider", Box(Accent, default, 0, 2, 0, 3));
-            t.SetStylebox("grabber_area_highlight", "HSlider", Box(Accent.Lightened(0.2f), default, 0, 2, 0, 3));
-            t.SetIcon("grabber", "HSlider", Dot(18, Colors.White));
-            t.SetIcon("grabber_highlight", "HSlider", Dot(20, Accent));
+            t.SetStylebox("slider", "HSlider", Box(Line, default, 0, 0, 0, 2));
+            t.SetStylebox("grabber_area", "HSlider", Box(Accent, default, 0, 0, 0, 2));
+            t.SetStylebox("grabber_area_highlight", "HSlider", Box(Accent.Lightened(0.15f), default, 0, 0, 0, 2));
+            t.SetIcon("grabber", "HSlider", Dot(16, Text));
+            t.SetIcon("grabber_highlight", "HSlider", Dot(18, Accent));
+            t.SetConstant("center_grabber", "HSlider", 1);
+
             // Barres de progression
-            t.SetStylebox("background", "ProgressBar", Box(new Color(1, 1, 1, 0.1f), default, 0, 2, 0, 0));
-            t.SetStylebox("fill", "ProgressBar", Box(Good, default, 0, 2, 0, 0));
+            t.SetStylebox("background", "ProgressBar", Box(new Color(0, 0, 0, 0.4f), default, 0, 0, 0, 0));
+            t.SetStylebox("fill", "ProgressBar", Box(Text, default, 0, 0, 0, 0));
+
             // Défilement
-            t.SetStylebox("scroll", "VScrollBar", Box(new Color(1, 1, 1, 0.03f), default, 0, 3, 3, 3));
-            t.SetStylebox("grabber", "VScrollBar", Box(new Color(1, 1, 1, 0.18f), default, 0, 3, 3, 3));
-            t.SetStylebox("grabber_highlight", "VScrollBar", Box(new Color(1, 1, 1, 0.3f), default, 0, 3, 3, 3));
-            // Info-bulles
-            t.SetStylebox("panel", "TooltipPanel", Box(new Color(0.05f, 0.06f, 0.07f, 0.97f), Line, 1, 4, 12, 8));
+            t.SetStylebox("scroll", "VScrollBar", Box(new Color(1, 1, 1, 0.02f), default, 0, 0, 2, 2));
+            t.SetStylebox("grabber", "VScrollBar", Box(new Color(1, 1, 1, 0.16f), default, 0, 0, 2, 2));
+            t.SetStylebox("grabber_highlight", "VScrollBar", Box(new Color(1, 1, 1, 0.3f), default, 0, 0, 2, 2));
+            t.SetStylebox("grabber_pressed", "VScrollBar", Box(Accent, default, 0, 0, 2, 2));
+
+            // Cases à cocher / bascules
+            t.SetColor("font_color", "CheckButton", Text);
+
             // Listes déroulantes
-            t.SetStylebox("normal", "OptionButton", Box(new Color(1, 1, 1, 0.04f), Line, 1));
-            t.SetStylebox("hover", "OptionButton", Box(new Color(1, 1, 1, 0.08f), Muted, 1));
-            t.SetStylebox("panel", "PopupMenu", Box(new Color(0.06f, 0.07f, 0.09f, 0.98f), Line, 1, 4, 6, 6));
+            t.SetStylebox("normal", "OptionButton", Box(Panel, default, 0, 0, 16, 10));
+            t.SetStylebox("hover", "OptionButton", Bar(new Color(0.12f, 0.145f, 0.17f, 0.85f), Accent, 4, 16, 10));
+            t.SetStylebox("focus", "OptionButton", Bar(new Color(0, 0, 0, 0), Accent, 4, 16, 10));
+            t.SetStylebox("pressed", "OptionButton", Bar(Panel, Accent, 4, 16, 10));
+            t.SetStylebox("panel", "PopupMenu", Box(PanelSolid, default, 0, 0, 6, 6));
+            t.SetStylebox("hover", "PopupMenu", Bar(new Color(1, 1, 1, 0.06f), Accent, 3, 8, 6));
+            t.SetColor("font_hover_color", "PopupMenu", Text);
+
+            // Info-bulles
+            t.SetStylebox("panel", "TooltipPanel", Box(PanelSolid, default, 0, 0, 12, 8));
             _theme = t;
             return t;
         }
@@ -173,7 +224,7 @@ public static class UiKit
 
     // ------------------------------------------------------------ Fabriques
 
-    public static Label Label(string text, int size = 18, Color? color = null, bool head = false)
+    public static Label Label(string text, int size = 17, Color? color = null, bool head = false)
     {
         var l = new Label { Text = text };
         l.AddThemeFontSizeOverride("font_size", size);
@@ -182,12 +233,23 @@ public static class UiKit
         return l;
     }
 
-    public static Label Heading(string text, int size = 34) => Label(text, size, Text, true);
+    /// <summary>Texte de HUD : blanc avec ombre portée pour rester lisible sur une nuée ou une explosion.</summary>
+    public static Label HudLabel(string text, int size, Color? color = null, bool head = false)
+    {
+        var l = Label(text, size, color, head);
+        l.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, 0.75f));
+        l.AddThemeConstantOverride("shadow_offset_x", 1);
+        l.AddThemeConstantOverride("shadow_offset_y", 1);
+        l.AddThemeConstantOverride("shadow_outline_size", 3);
+        return l;
+    }
+
+    public static Label Heading(string text, int size = 48) => Label(text.ToUpperInvariant(), size, Text, true);
 
     public static Label Eyebrow(string text, Color? color = null)
     {
-        var l = Label(text.ToUpperInvariant(), 14, color ?? Muted, true);
-        l.AddThemeConstantOverride("outline_size", 0);
+        var l = Label(text.ToUpperInvariant(), 13, color ?? Muted);
+        l.AddThemeFontOverride("font", BodyMedium);
         return l;
     }
 
@@ -195,13 +257,16 @@ public static class UiKit
     {
         var b = new Button { Text = text, CustomMinimumSize = new Vector2(0, minHeight), FocusMode = Control.FocusModeEnum.All };
         if (variation != null) b.ThemeTypeVariation = variation;
-        if (variation == "Primary") b.AddThemeFontSizeOverride("font_size", 22);
+        if (variation == "Primary") b.Text = text.ToUpperInvariant();
+        if (variation == "Tab") b.Text = text.ToUpperInvariant();
+        if (variation == "MenuItem") { b.Text = text.ToUpperInvariant(); b.Alignment = HorizontalAlignment.Left; }
         b.Pressed += () =>
         {
             Sfx.Ui("ui_click", -6f);
             onClick?.Invoke();
         };
-        b.MouseEntered += () => Sfx.Ui("ui_hover", -10f, 1f, 40);
+        b.MouseEntered += () => Sfx.Ui("ui_hover", -12f, 1f, 40);
+        b.FocusEntered += () => Sfx.Ui("ui_hover", -12f, 1f, 40);
         return b;
     }
 
@@ -222,11 +287,14 @@ public static class UiKit
     {
         SizeFlagsVertical = expandV ? Control.SizeFlags.ExpandFill : Control.SizeFlags.Fill,
         SizeFlagsHorizontal = expandH ? Control.SizeFlags.ExpandFill : Control.SizeFlags.Fill,
+        MouseFilter = Control.MouseFilterEnum.Ignore,
     };
 
-    public static ColorRect Rule(Color? c = null) => new() { Color = c ?? Line, CustomMinimumSize = new Vector2(0, 1) };
+    public static Control Gap(int px) => new() { CustomMinimumSize = new Vector2(px, px), MouseFilter = Control.MouseFilterEnum.Ignore };
 
-    public static PanelContainer Panel(string variation = null)
+    public static ColorRect Rule(Color? c = null) => new() { Color = c ?? Line, CustomMinimumSize = new Vector2(0, 1), MouseFilter = Control.MouseFilterEnum.Ignore };
+
+    public static PanelContainer Panel_(string variation = null)
     {
         var p = new PanelContainer();
         if (variation != null) p.ThemeTypeVariation = variation;
@@ -237,17 +305,165 @@ public static class UiKit
 
     public static string Time(float seconds) => $"{(int)seconds / 60:00}:{(int)seconds % 60:00}";
 
-    /// <summary>Fond plein écran semi-opaque pour les écrans par-dessus la scène 3D.</summary>
+    /// <summary>Voile plein écran (assombrit la scène 3D sans la masquer).</summary>
     public static ColorRect Scrim(float alpha = 0.55f) => new()
     {
-        Color = new Color(0.02f, 0.025f, 0.03f, alpha),
+        Color = new Color(Bg, alpha),
         AnchorRight = 1, AnchorBottom = 1,
         MouseFilter = Control.MouseFilterEnum.Stop,
     };
+
+    /// <summary>Dégradé horizontal sombre depuis le bord gauche (lisibilité des menus sur le décor).</summary>
+    public static TextureRect SideShade(float width, float strength = 0.92f, bool fromRight = false)
+    {
+        var tex = new GradientTexture2D
+        {
+            Gradient = new Gradient { Colors = new[] { new Color(Bg, strength), new Color(Bg, strength * 0.6f), new Color(Bg, 0f) }, Offsets = new[] { 0f, 0.55f, 1f } },
+            FillFrom = fromRight ? new Vector2(1, 0) : new Vector2(0, 0),
+            FillTo = fromRight ? new Vector2(0, 0) : new Vector2(1, 0),
+            Width = 256, Height = 4,
+        };
+        var r = new TextureRect
+        {
+            Texture = tex,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.Scale,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            AnchorBottom = 1,
+        };
+        if (fromRight) { r.AnchorLeft = 1; r.AnchorRight = 1; r.OffsetLeft = -width; }
+        else r.OffsetRight = width;
+        return r;
+    }
 
     public static void FillRect(Control c)
     {
         c.AnchorLeft = 0; c.AnchorTop = 0; c.AnchorRight = 1; c.AnchorBottom = 1;
         c.OffsetLeft = c.OffsetTop = c.OffsetRight = c.OffsetBottom = 0;
+    }
+
+    /// <summary>Indication de touche (« Échap  Retour ») pour la barre d'aide.</summary>
+    public static Control KeyHint(string key, string action, Action onClick = null)
+    {
+        var b = new Button { Flat = true, FocusMode = Control.FocusModeEnum.None, MouseDefaultCursorShape = Control.CursorShape.PointingHand };
+        b.AddThemeStyleboxOverride("normal", Empty);
+        b.AddThemeStyleboxOverride("hover", Empty);
+        b.AddThemeStyleboxOverride("pressed", Empty);
+        var h = HBox(8);
+        h.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var k = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        k.AddThemeStyleboxOverride("panel", Box(new Color(1, 1, 1, 0.1f), default, 0, 2, 6, 1));
+        var kl = Label(key, 13, Text);
+        kl.AddThemeFontOverride("font", BodyMedium);
+        k.AddChild(kl);
+        h.AddChild(k);
+        var a = Label(action, 14, Muted);
+        a.MouseFilter = Control.MouseFilterEnum.Ignore;
+        h.AddChild(a);
+        b.AddChild(h);
+        b.CustomMinimumSize = new Vector2(0, 28);
+        h.Resized += () => b.CustomMinimumSize = new Vector2(h.Size.X, 28);
+        if (onClick != null) b.Pressed += onClick;
+        return b;
+    }
+
+    public static string KeyName(string action) => Settings.Describe(Settings.I.GetBinding(action));
+}
+
+/// <summary>
+/// Gabarit commun des écrans de menu : titre + onglets en haut à gauche, contenu, barre de pied
+/// avec aides de touches à gauche et action principale à droite.
+/// </summary>
+public partial class MenuScreen : Control
+{
+    protected HBoxContainer Header;
+    protected HBoxContainer Tabs;
+    protected Control Body;
+    protected HBoxContainer FooterLeft;
+    protected HBoxContainer FooterRight;
+    protected Label TitleLabel;
+    protected Label HeaderRight;
+
+    protected void BuildFrame(string title, float scrim = 0f, float shade = 0f)
+    {
+        Theme = UiKit.Theme;
+        UiKit.FillRect(this);
+        if (scrim > 0) AddChild(UiKit.Scrim(scrim));
+        if (shade > 0) AddChild(UiKit.SideShade(shade));
+        var m = UiKit.Margin(UiKit.ScreenX, UiKit.ScreenTop, UiKit.ScreenX, UiKit.ScreenBottom);
+        UiKit.FillRect(m);
+        m.MouseFilter = MouseFilterEnum.Ignore;
+        AddChild(m);
+        var v = UiKit.VBox(28);
+        v.MouseFilter = MouseFilterEnum.Ignore;
+        m.AddChild(v);
+
+        Header = UiKit.HBox(40);
+        TitleLabel = UiKit.Heading(title, 48);
+        Header.AddChild(TitleLabel);
+        Tabs = UiKit.HBox(24);
+        Tabs.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        Header.AddChild(Tabs);
+        Header.AddChild(UiKit.Spacer(false, true));
+        HeaderRight = UiKit.Label("", 14, UiKit.Muted);
+        HeaderRight.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        Header.AddChild(HeaderRight);
+        v.AddChild(Header);
+
+        Body = new Control { SizeFlagsVertical = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
+        v.AddChild(Body);
+
+        var foot = UiKit.HBox(24);
+        FooterLeft = UiKit.HBox(28);
+        FooterLeft.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        foot.AddChild(FooterLeft);
+        foot.AddChild(UiKit.Spacer(false, true));
+        FooterRight = UiKit.HBox(12);
+        foot.AddChild(FooterRight);
+        v.AddChild(foot);
+    }
+
+    /// <summary>Ajoute un onglet ; renvoie le bouton.</summary>
+    protected Button AddTab(string name, Action onSelect)
+    {
+        var b = UiKit.Button(name, null, "Tab", 40);
+        b.ToggleMode = true;
+        b.Pressed += () =>
+        {
+            foreach (var c in Tabs.GetChildren())
+                if (c is Button o) o.SetPressedNoSignal(o == b);
+            onSelect();
+        };
+        Tabs.AddChild(b);
+        return b;
+    }
+
+    protected void SelectTab(int i)
+    {
+        if (i < 0 || i >= Tabs.GetChildCount()) return;
+        ((Button)Tabs.GetChild(i)).EmitSignal(BaseButton.SignalName.Pressed);
+    }
+
+    protected int CurrentTab()
+    {
+        for (var i = 0; i < Tabs.GetChildCount(); i++)
+            if (((Button)Tabs.GetChild(i)).ButtonPressed) return i;
+        return 0;
+    }
+
+    /// <summary>Onglets précédent / suivant avec Q / E (ou LB / RB).</summary>
+    protected bool HandleTabKeys(InputEvent e)
+    {
+        if (Tabs.GetChildCount() < 2 || e is not InputEventKey k || !k.Pressed || k.Echo) return false;
+        if (GetViewport().GuiGetFocusOwner() is LineEdit) return false;
+        var n = Tabs.GetChildCount();
+        if (k.PhysicalKeycode == Key.Q) { SelectTab((CurrentTab() + n - 1) % n); return true; }
+        if (k.PhysicalKeycode == Key.E) { SelectTab((CurrentTab() + 1) % n); return true; }
+        return false;
+    }
+
+    protected void ClearBody()
+    {
+        foreach (var c in Body.GetChildren()) c.QueueFree();
     }
 }

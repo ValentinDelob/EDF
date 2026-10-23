@@ -59,6 +59,7 @@ public partial class App : Node
     {
         EnsureBackground();
         Input.MouseMode = Input.MouseModeEnum.Visible;
+        _bg.SetMode(MenuBackground.Mode.Title);
         var m = new MainMenu();
         SetScreen(m);
         if (_pendingNotice != null) { m.Notice(_pendingNotice); _pendingNotice = null; }
@@ -153,6 +154,7 @@ public partial class App : Node
     public void Quit() => GetTree().Quit();
 
     public World CurrentWorld => _world;
+    public MenuBackground Background => _bg;
     public Control CurrentScreen => _screen;
 }
 

@@ -130,15 +130,16 @@ public partial class BugModel : Node3D
             var yaw = (35f - i * 35f) * side;
             var hip = new Node3D { Position = new Vector3(0.35f * side, -0.1f, z), RotationDegrees = new Vector3(0, yaw, 0) };
             _bodyPivot.AddChild(hip);
-            var upperLen = 1.0f * legScale;
-            var lowerLen = 1.35f * legScale;
-            var upperPivot = new Node3D { RotationDegrees = new Vector3(0, 0, -60 * side) };
+            var upperLen = 0.95f * legScale;
+            var lowerLen = 1.6f * legScale;
+            var upperPivot = new Node3D { RotationDegrees = new Vector3(0, 0, -70 * side) };
             hip.AddChild(upperPivot);
             var upper = Segment(mat, upperLen, 0.09f, 0.07f);
             upper.Position = new Vector3(0, upperLen / 2, 0);
             upper.RotationDegrees = Vector3.Zero;
             upperPivot.AddChild(upper);
-            var knee = new Node3D { Position = new Vector3(0, upperLen, 0), RotationDegrees = new Vector3(0, 0, 105 * side) };
+            // Genou : le tibia repart vers l'extérieur et le bas jusqu'au sol.
+            var knee = new Node3D { Position = new Vector3(0, upperLen, 0), RotationDegrees = new Vector3(0, 0, -85 * side) };
             upperPivot.AddChild(knee);
             var lower = Segment(dark, lowerLen, 0.07f, 0.03f);
             lower.Position = new Vector3(0, lowerLen / 2, 0);
@@ -264,7 +265,7 @@ public partial class BugModel : Node3D
             var s = Mathf.Sin(_gait + l.Phase);
             var lift = Mathf.Max(0, Mathf.Cos(_gait + l.Phase)) * Mathf.Min(speed, 6f) / 6f;
             l.Hip.RotationDegrees = new Vector3(0, l.BaseYaw + s * 22f * Mathf.Min(speed, 6f) / 6f, 0);
-            l.Knee.RotationDegrees = new Vector3(0, 0, (-60 + lift * 18f) * l.Side);
+            l.Knee.RotationDegrees = new Vector3(0, 0, (-70 + lift * 16f) * l.Side);
         }
         if (_bodyPivot != null)
             _bodyPivot.Position = new Vector3(0, 1.05f + Mathf.Abs(Mathf.Sin(_gait * 2)) * 0.05f * Mathf.Min(speed, 6) / 6f, 0);
@@ -282,7 +283,7 @@ public partial class BugModel : Node3D
     /// <summary>Pose de mort : retourné, pattes repliées.</summary>
     public void DeathPose()
     {
-        foreach (var l in _legs) l.Knee.RotationDegrees = new Vector3(0, 0, -20 * l.Side);
+        foreach (var l in _legs) l.Knee.RotationDegrees = new Vector3(0, 0, -30 * l.Side);
         if (_bodyPivot != null) _bodyPivot.RotationDegrees = new Vector3(0, 0, 180);
         foreach (var w in _wings) w.RotationDegrees = new Vector3(0, 0, 60);
     }

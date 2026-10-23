@@ -170,24 +170,27 @@ public partial class World : Node3D
                 sky.GroundBottomColor = new Color(0.12f, 0.1f, 0.1f);
                 sky.SunAngleMax = 30;
                 sky.SunCurve = 0.08f;
-                _sun.RotationDegrees = new Vector3(-12, 70, 0);
-                _sun.LightEnergy = 1.2f;
+                _sun.RotationDegrees = new Vector3(-24, 70, 0);
+                _sun.LightEnergy = 1.5f;
+                env.AmbientLightEnergy = 1.2f;
                 _sun.LightColor = new Color(1f, 0.62f, 0.38f);
                 env.FogLightColor = new Color(0.75f, 0.5f, 0.38f);
-                env.TonemapExposure = 1.1f;
+                env.TonemapExposure = 1.25f;
+                env.FogDensity = Mission.Fog * 0.6f;
                 break;
             case TimeOfDay.Night:
-                sky.SkyTopColor = new Color(0.01f, 0.015f, 0.035f);
-                sky.SkyHorizonColor = new Color(0.06f, 0.07f, 0.1f);
-                sky.GroundHorizonColor = new Color(0.04f, 0.04f, 0.05f);
+                sky.SkyTopColor = new Color(0.025f, 0.04f, 0.09f);
+                sky.SkyHorizonColor = new Color(0.12f, 0.15f, 0.22f);
+                sky.GroundHorizonColor = new Color(0.08f, 0.09f, 0.11f);
                 sky.GroundBottomColor = new Color(0.01f, 0.01f, 0.01f);
                 sky.SunAngleMax = 2;
                 _sun.RotationDegrees = new Vector3(-40, 150, 0);
-                _sun.LightEnergy = 0.25f;
-                _sun.LightColor = new Color(0.6f, 0.7f, 1f);
-                env.FogLightColor = new Color(0.08f, 0.09f, 0.12f);
-                env.AmbientLightEnergy = 0.5f;
-                env.TonemapExposure = 1.35f;
+                _sun.LightEnergy = 0.55f;
+                _sun.LightColor = new Color(0.62f, 0.72f, 1f);
+                env.FogLightColor = new Color(0.12f, 0.14f, 0.2f);
+                env.AmbientLightEnergy = 1.4f;
+                env.TonemapExposure = 1.7f;
+                env.FogDensity = Mission.Fog * 0.5f;
                 break;
         }
         _env = new WorldEnvironment { Environment = env };

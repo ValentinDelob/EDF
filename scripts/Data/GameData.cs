@@ -52,7 +52,7 @@ public static class Rarities
     public static readonly float[] DropWeight = { 55f, 28f, 12f, 4.5f, 0.5f };
     public static readonly Color[] Colors =
     {
-        new(0.75f, 0.75f, 0.75f), new(0.4f, 0.85f, 0.4f), new(0.35f, 0.6f, 1f), new(0.7f, 0.4f, 1f), new(1f, 0.78f, 0.25f),
+        new("c9ced3"), new("5bd16e"), new("3fa2ff"), new("b067ff"), new("ffc233"),
     };
 }
 
