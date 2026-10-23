@@ -10,7 +10,7 @@ namespace Rempart;
 /// voitures, arbres, palmiers) dans un ordre de tirage inchangé ; tout le décor ajouté utilise
 /// des générateurs séparés à graine fixe pour ne jamais décaler les identifiants réseau.
 /// </summary>
-public static class CityBuilder
+public static partial class CityBuilder
 {
     public const float Half = 220f;
     public const float BeachStart = 112f;
@@ -48,6 +48,7 @@ public static class CityBuilder
 
         var statics = new StaticBody3D { Name = "Ground", CollisionLayer = 1, CollisionMask = 0 };
         root.AddChild(statics);
+        BeginRuins(root, statics, night);
 
         // Sol de la ville (asphalte), de la plage et l'extérieur.
         AddSlab(root, statics, new Vector3(0, -0.5f, (-Half + BeachStart) / 2), new Vector3(Half * 2 + 40, 1f, BeachStart + Half), Mats.Asphalt());
@@ -133,7 +134,8 @@ public static class CityBuilder
                 var pos = center + new Vector3(lot.Position.X + lot.Size.X / 2, 0.15f, lot.Position.Y + lot.Size.Y / 2);
                 var variant = rng.RandiRange(0, mats.Length - 1); // même tirage qu'auparavant : ordre des ID inchangé
                 var style = PickStyle(id, variant, floors, distCenter, coastal, setback, night);
-                var b = Building.Create(id++, pos, size, Mats.Facade(style.Variant, night), roof, style);
+                style.Night = night && Powered(id); // réseau électrique coupé : seuls quelques immeubles ont encore de la lumière
+                var b = Building.Create(id++, pos, size, Mats.Facade(style.Variant, style.Night), roof, style);
                 root.AddChild(b);
                 res.Buildings.Add(b);
             }
@@ -191,11 +193,13 @@ public static class CityBuilder
         foreach (var lot in vacant)
         {
             var roll = deco.Randf();
+            if (RuinShell(lot)) continue; // immeuble éventré (carcasse) à la place
             if (roll < 0.4f) BuildWorksite(root, statics, props, lot, deco);
             else if (roll < 0.72f) BuildParkingLot(root, statics, lot, deco);
             else BuildPlaza(root, statics, props, lot, deco);
         }
 
+        DressCity(res, props);
         root.AddChild(new MeshInstance3D { Name = "StreetDetail", Mesh = ground.Commit(), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         props.Flush(root);
 
@@ -347,7 +351,7 @@ public static class CityBuilder
             props.Add(Props.Bin(), center + new Vector3(t + 1.6f, 0.15f, e + 0.2f), Mathf.Pi);
         }
         // Abribus côté nord, face à la rue.
-        props.Add(Props.BusStop(false), center + new Vector3(-2f, 0.15f, -inner / 2 + 1.0f), Mathf.Pi, shadows: true, range: 220);
+        props.Add(Props.BusStopRuined(), center + new Vector3(-2f, 0.15f, -inner / 2 + 1.0f), Mathf.Pi, shadows: true, range: 220);
     }
 
     /// <summary>Mobilier de trottoir d'un pâté : potelets aux angles, corbeilles, borne d'incendie.</summary>
@@ -402,7 +406,7 @@ public static class CityBuilder
 
     private static void AddTree(Node3D root, StaticBody3D body, Vector3 p, float hgt, (float r, Vector3 off)[] blobs)
     {
-        root.AddChild(new MeshInstance3D { Mesh = Props.Tree(hgt, blobs, p.X * 0.37f + p.Z * 0.11f), Position = p });
+        root.AddChild(new MeshInstance3D { Mesh = RuinTree(p) ?? Props.Tree(hgt, blobs, p.X * 0.37f + p.Z * 0.11f), Position = p });
         body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.4f, Height = hgt }, Position = p + new Vector3(0, hgt / 2, 0) });
     }
 
@@ -411,7 +415,7 @@ public static class CityBuilder
         var hgt = rng.RandfRange(7, 10);
         var trunk = new Node3D { Position = p, RotationDegrees = new Vector3(rng.RandfRange(-6, 6), rng.RandfRange(0, 360), rng.RandfRange(-6, 6)) };
         root.AddChild(trunk);
-        trunk.AddChild(new MeshInstance3D { Mesh = Props.Palm(hgt, p.X * 0.71f) });
+        trunk.AddChild(new MeshInstance3D { Mesh = RuinPalm(p, hgt) ?? Props.Palm(hgt, p.X * 0.71f) });
         body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.35f, Height = hgt }, Position = p + new Vector3(0, hgt / 2, 0) });
     }
 
@@ -425,6 +429,7 @@ public static class CityBuilder
     {
         // Les fourgons sont surtout blancs ; les camions portent une bande de couleur sur leur caisse.
         if (type == Props.VehicleType.Van && vrng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
+        if (RuinVehicle(root, p, yaw, type, ref paint, len)) return; // épave calcinée à la place (sinon carrosserie couverte de cendre)
         var size = Props.VehicleSize(type, len);
         root.AddChild(new MeshInstance3D
         {
@@ -439,6 +444,7 @@ public static class CityBuilder
 
     private static void BuildLamp(Node3D root, StaticBody3D body, PropScatter props, Vector3 p, float yaw, bool night)
     {
+        if (RuinLamp(p, yaw, ref night)) return; // lampadaire abattu ; sinon, éteint la nuit s'il est hors service
         props.Add(Props.StreetLamp(night), p, yaw, range: 260, shadows: true);
         if (night)
         {
@@ -575,13 +581,13 @@ public static class CityBuilder
             var nsGreen = deco.Randf() < 0.5f;
             const float y = 0.15f;
             // Approche depuis le nord (vers +Z) : coin nord-ouest, feu tourné vers -Z.
-            props.Add(Props.TrafficLight(nsGreen), new Vector3(xr - 6.6f, y, zr - 10f), Mathf.Pi, range: 200);
+            AddTrafficLight(props, nsGreen,new Vector3(xr - 6.6f, y, zr - 10f), Mathf.Pi, range: 200);
             // Approche depuis le sud (vers -Z) : coin sud-est.
-            props.Add(Props.TrafficLight(nsGreen), new Vector3(xr + 6.6f, y, zr + 10f), 0, range: 200);
+            AddTrafficLight(props, nsGreen,new Vector3(xr + 6.6f, y, zr + 10f), 0, range: 200);
             // Approche depuis l'est (vers -X) : coin nord-est.
-            props.Add(Props.TrafficLight(!nsGreen), new Vector3(xr + 10f, y, zr - 6.6f), Mathf.Pi / 2, range: 200);
+            AddTrafficLight(props, !nsGreen,new Vector3(xr + 10f, y, zr - 6.6f), Mathf.Pi / 2, range: 200);
             // Approche depuis l'ouest (vers +X) : coin sud-ouest.
-            props.Add(Props.TrafficLight(!nsGreen), new Vector3(xr - 10f, y, zr + 6.6f), -Mathf.Pi / 2, range: 200);
+            AddTrafficLight(props, !nsGreen,new Vector3(xr - 10f, y, zr + 6.6f), -Mathf.Pi / 2, range: 200);
         }
     }
 
@@ -592,7 +598,7 @@ public static class CityBuilder
         const float y = 0.15f;
         // Abribus sur la promenade, face au boulevard.
         var stops = new[] { -145f, -45f, 55f, 155f };
-        foreach (var x in stops) props.Add(Props.BusStop(night), new Vector3(x, y, BlvdSouth + 1.3f), Mathf.Pi, range: 220, shadows: true);
+        foreach (var x in stops) props.Add(Props.BusStopRuined(), new Vector3(x, y, BlvdSouth + 1.3f), Mathf.Pi, range: 220, shadows: true);
 
         // Lampadaires du boulevard (éclairent aussi la promenade).
         for (var x = -Half + 12.5f; x < Half; x += 25f)
@@ -666,13 +672,12 @@ public static class CityBuilder
                 var p = new Vector3(cx + deco.RandfRange(-7, 7), sandY, cz + deco.RandfRange(-4, 4));
                 var col = BeachColors[deco.RandiRange(0, BeachColors.Length - 1)];
                 var yaw = deco.RandfRange(0, Mathf.Tau);
-                props.Add(Props.UmbrellaPole(), p, yaw, range: 220);
-                props.Add(Props.UmbrellaTop(), p, yaw, col, range: 260, shadows: true);
                 var tp = p + new Basis(Vector3.Up, yaw) * new Vector3(0.6f, 0, 0.9f);
-                if (deco.Randf() < 0.6f)
-                    props.Add(Props.Towel(), tp, yaw + deco.RandfRange(-0.3f, 0.3f), BeachColors[deco.RandiRange(0, BeachColors.Length - 1)], range: 140);
-                else
-                    props.Add(Props.Lounger(), tp, yaw + deco.RandfRange(-0.2f, 0.2f), range: 140, shadows: true);
+                // Plage désertée : parasols renversés, serviettes souillées (tirages conservés).
+                var towel = deco.Randf() < 0.6f;
+                var tyaw = yaw + (towel ? deco.RandfRange(-0.3f, 0.3f) : deco.RandfRange(-0.2f, 0.2f));
+                var tcol = towel ? BeachColors[deco.RandiRange(0, BeachColors.Length - 1)] : Colors.White;
+                BeachLeftovers(props, p, yaw, col, tp, tyaw, towel, tcol);
             }
         }
         BuildLifeguardTower(root, body, new Vector3(65, sandY, BeachStart + 26));

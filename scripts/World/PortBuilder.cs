@@ -6,7 +6,7 @@ namespace Rempart;
 /// Carte « Zone portuaire » : entrepôts en tôle, parc à conteneurs (piles destructibles), grues portiques,
 /// cuves et quai. Génération déterministe, mêmes zones d'apparition que la ville.
 /// </summary>
-public static class PortBuilder
+public static partial class PortBuilder
 {
     private static readonly Color[] ContainerColors =
     {
@@ -99,6 +99,7 @@ public static class PortBuilder
         res.PlayerSpawns.Add(new Vector3(4, 1, 6));
         res.PlayerSpawns.Add(new Vector3(-4, 1, 12));
         res.PlayerSpawns.Add(new Vector3(4, 1, 12));
+        DressPort(root, statics, res, night);
         return res;
     }
 

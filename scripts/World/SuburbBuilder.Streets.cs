@@ -202,7 +202,7 @@ public static partial class SuburbBuilder
         // Abribus sur la grande rue, côté bourg.
         var (bp, bt) = g.At(ArcAtX(g, -48f));
         var bl = Vector3.Up.Cross(bt);
-        c.Props.Add(Props.BusStop(c.Night), bp - bl * (g.Hw + 1.3f) + Vector3.Up * 0.13f, Mathf.Atan2(bl.X, bl.Z), range: 220, shadows: true);
+        c.Props.Add(Props.BusStopRuined(), bp - bl * (g.Hw + 1.3f) + Vector3.Up * 0.13f, Mathf.Atan2(bl.X, bl.Z), range: 220, shadows: true);
     }
 
     /// <summary>Abscisse curviligne du point de la rue (est-ouest) le plus proche de x.</summary>
@@ -238,6 +238,7 @@ public static partial class SuburbBuilder
                 var face = -lft * side;
                 var yaw = Mathf.Atan2(face.X, face.Z);
                 pos.Y = 0.13f;
+                if (RuinLamp(pos, yaw)) continue; // lampadaire abattu
                 c.Props.Add(Props.StreetLamp(c.Night), pos, yaw, range: 240, shadows: true);
                 c.Body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.15f, Height = 7f }, Position = pos + new Vector3(0, 3.5f, 0) });
                 if (c.Night)
