@@ -174,60 +174,11 @@ public partial class World : Node3D
             DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel4Splits,
             ShadowBlur = 1.2f,
         };
-        switch (Mission.Time)
-        {
-            case TimeOfDay.Day:
-                sky.SkyTopColor = new Color(0.22f, 0.4f, 0.68f);
-                sky.SkyHorizonColor = new Color(0.66f, 0.73f, 0.8f);
-                sky.GroundHorizonColor = new Color(0.55f, 0.58f, 0.6f);
-                sky.GroundBottomColor = new Color(0.2f, 0.2f, 0.2f);
-                sky.SunAngleMax = 20;
-                _sun.RotationDegrees = new Vector3(-52, -35, 0);
-                _sun.LightEnergy = 1.6f;
-                _sun.LightColor = new Color(1f, 0.96f, 0.88f);
-                env.FogLightColor = new Color(0.65f, 0.72f, 0.8f);
-                break;
-            case TimeOfDay.Dusk:
-                sky.SkyTopColor = new Color(0.16f, 0.2f, 0.38f);
-                sky.SkyHorizonColor = new Color(0.95f, 0.55f, 0.3f);
-                sky.GroundHorizonColor = new Color(0.5f, 0.35f, 0.28f);
-                sky.GroundBottomColor = new Color(0.12f, 0.1f, 0.1f);
-                sky.SunAngleMax = 30;
-                sky.SunCurve = 0.08f;
-                _sun.RotationDegrees = new Vector3(-24, 70, 0);
-                _sun.LightEnergy = 1.5f;
-                env.AmbientLightEnergy = 1.2f;
-                _sun.LightColor = new Color(1f, 0.62f, 0.38f);
-                env.FogLightColor = new Color(0.75f, 0.5f, 0.38f);
-                env.TonemapExposure = 1.25f;
-                env.FogDensity = Mission.Fog * 0.6f;
-                break;
-            case TimeOfDay.Night:
-                sky.SkyTopColor = new Color(0.025f, 0.04f, 0.09f);
-                sky.SkyHorizonColor = new Color(0.12f, 0.15f, 0.22f);
-                sky.GroundHorizonColor = new Color(0.08f, 0.09f, 0.11f);
-                sky.GroundBottomColor = new Color(0.01f, 0.01f, 0.01f);
-                sky.SunAngleMax = 2;
-                _sun.RotationDegrees = new Vector3(-40, 150, 0);
-                _sun.LightEnergy = 0.55f;
-                _sun.LightColor = new Color(0.62f, 0.72f, 1f);
-                env.FogLightColor = new Color(0.12f, 0.14f, 0.2f);
-                env.AmbientLightEnergy = 1.4f;
-                env.TonemapExposure = 1.7f;
-                env.FogDensity = Mission.Fog * 0.5f;
-                break;
-        }
-        if (Mission.Weather != Weather.Clear)
-        {
-            // Ciel couvert : moins de soleil, plus de brouillard.
-            _sun.LightEnergy *= 0.55f;
-            env.FogDensity *= 1.6f;
-            sky.SkyTopColor = sky.SkyTopColor.Lerp(new Color(0.25f, 0.27f, 0.3f), 0.5f);
-            sky.SkyHorizonColor = sky.SkyHorizonColor.Lerp(new Color(0.35f, 0.37f, 0.4f), 0.5f);
-        }
+        Grade.Apply(env, sky, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);
         AddChild(_sun);
+        AddChild(Grade.Overlay());
         ApplyGraphics();
     }
 
@@ -244,8 +195,8 @@ public partial class World : Node3D
         env.SdfgiEnabled = q >= 2;
         env.SdfgiUseOcclusion = true;
         env.SdfgiCascades = q >= 3 ? 6 : 4;
-        env.VolumetricFogEnabled = q >= 2 && Mission.Time != TimeOfDay.Day;
-        env.VolumetricFogDensity = Mission.Time == TimeOfDay.Night ? 0.012f : 0.006f;
+        env.VolumetricFogEnabled = q >= 2;
+        env.VolumetricFogDensity = Mission.Time switch { TimeOfDay.Night => 0.012f, TimeOfDay.Dusk => 0.008f, _ => 0.005f };
         env.VolumetricFogAlbedo = env.FogLightColor;
         _sun.DirectionalShadowMaxDistance = q switch { 0 => 80f, 1 => 140f, 2 => 220f, _ => 320f };
         _sun.ShadowEnabled = true;

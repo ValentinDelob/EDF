@@ -22,41 +22,25 @@ public partial class MenuBackground : Node3D
 
     public override void _Ready()
     {
-        var sky = new ProceduralSkyMaterial
-        {
-            SkyTopColor = new Color(0.14f, 0.18f, 0.32f),
-            SkyHorizonColor = new Color(0.92f, 0.52f, 0.3f),
-            GroundHorizonColor = new Color(0.45f, 0.32f, 0.26f),
-            GroundBottomColor = new Color(0.1f, 0.09f, 0.09f),
-            SunAngleMax = 30,
-        };
+        var sky = new ProceduralSkyMaterial();
         var env = new Godot.Environment
         {
             BackgroundMode = Godot.Environment.BGMode.Sky,
             Sky = new Sky { SkyMaterial = sky },
-            AmbientLightSource = Godot.Environment.AmbientSource.Sky,
             TonemapMode = Godot.Environment.ToneMapper.Agx,
-            TonemapExposure = 1.05f,
-            GlowEnabled = true,
-            GlowIntensity = 0.7f,
-            FogEnabled = true,
-            FogDensity = 0.006f,
-            FogLightColor = new Color(0.75f, 0.5f, 0.38f),
-            FogAerialPerspective = 0.7f,
             SsaoEnabled = true,
             VolumetricFogEnabled = Settings.I.Quality >= 2,
             VolumetricFogDensity = 0.008f,
-            VolumetricFogAlbedo = new Color(0.8f, 0.55f, 0.4f),
         };
+        var sun = new DirectionalLight3D { ShadowEnabled = true, DirectionalShadowMaxDistance = 150f };
+        // Même direction artistique que les missions : crépuscule enfumé sur une ville envahie.
+        Grade.Apply(env, sky, sun, TimeOfDay.Dusk, Weather.Clear, 0.006f);
+        sun.RotationDegrees = new Vector3(-14, 68, 0);
+        env.AmbientLightEnergy = 1.4f; // les soldats du salon doivent rester lisibles
+        env.VolumetricFogAlbedo = env.FogLightColor;
         AddChild(new WorldEnvironment { Environment = env });
-        AddChild(new DirectionalLight3D
-        {
-            RotationDegrees = new Vector3(-14, 68, 0),
-            LightEnergy = 1.3f,
-            LightColor = new Color(1f, 0.63f, 0.4f),
-            ShadowEnabled = true,
-            DirectionalShadowMaxDistance = 150f,
-        });
+        AddChild(sun);
+        AddChild(Grade.Overlay());
         // Lumière d'appoint pour les soldats du salon (éclairage « studio »).
         AddChild(new OmniLight3D { Position = new Vector3(4, 4, 10), LightEnergy = 1.4f, OmniRange = 16, LightColor = new Color(0.85f, 0.9f, 1f) });
         CityBuilder.Build(this, TimeOfDay.Dusk);

@@ -111,7 +111,7 @@ public static partial class Mats
         if (Cache.TryGetValue("grass", out var m)) return (StandardMaterial3D)m;
         var mat = new StandardMaterial3D
         {
-            AlbedoTexture = ColorNoise(61, 0.05f, new Color(0.16f, 0.24f, 0.09f), new Color(0.3f, 0.38f, 0.15f)),
+            AlbedoTexture = ColorNoise(61, 0.05f, new Color(0.15f, 0.15f, 0.09f), new Color(0.29f, 0.27f, 0.16f)),
             NormalEnabled = true,
             NormalTexture = Noise(62, 0.3f, true, 512, 4f),
             Roughness = 0.95f,
