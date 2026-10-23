@@ -13,22 +13,32 @@ public partial class OptionsMenu : MenuScreen
     private string _waitingAction;
     private readonly Dictionary<string, Button> _bindButtons = new();
     private Control _resetHint;
+    private Control _returnFocus;
+    private const int ControlWidth = 360;
 
     public override void _Ready()
     {
+        // Focus d'origine (menu principal, pause) rendu à la fermeture.
+        _returnFocus = GetViewport().GuiGetFocusOwner();
         BuildFrame("Options", 0.96f);
         var row = UiKit.HBox(64);
         UiKit.FillRect(row);
         row.MouseFilter = MouseFilterEnum.Ignore;
         Body.AddChild(row);
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(880, 0) };
+        // Colonne de réglages (2/3) + description (1/3) : s'adapte de 1280 à 1920 px de large.
+        var scroll = Scroll(720);
+        scroll.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        scroll.SizeFlagsStretchRatio = 2f;
         _col = UiKit.VBox(2);
         _col.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _col.CustomMinimumSize = new Vector2(860, 0);
-        scroll.AddChild(_col);
+        var colPad = UiKit.Margin(0, 0, 16, 0);
+        colPad.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        colPad.AddChild(_col);
+        scroll.AddChild(colPad);
         row.AddChild(scroll);
         var desc = UiKit.VBox(12);
         desc.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        desc.CustomMinimumSize = new Vector2(280, 0);
         _descTitle = UiKit.Label("", 28, UiKit.Text, true);
         _descText = UiKit.Label("", 16, new Color(UiKit.Text, 0.78f));
         _descText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -51,6 +61,10 @@ public partial class OptionsMenu : MenuScreen
     {
         Settings.I.Save();
         OnClose?.Invoke();
+        // Si l'appelant n'a pas repris le focus, on le rend à l'élément qui l'avait avant l'ouverture.
+        var f = GetViewport().GuiGetFocusOwner();
+        if ((f == null || IsAncestorOf(f)) && _returnFocus != null && IsInstanceValid(_returnFocus) && !IsAncestorOf(_returnFocus))
+            UiKit.FocusLater(_returnFocus);
         QueueFree();
     }
 
@@ -102,7 +116,7 @@ public partial class OptionsMenu : MenuScreen
 
     private void Section(string title)
     {
-        if (_col.GetChildCount() > 0) _col.AddChild(UiKit.Gap(20));
+        if (UiKit.HasLiveChildren(_col)) _col.AddChild(UiKit.Gap(20));
         _col.AddChild(UiKit.Eyebrow(title));
         _col.AddChild(UiKit.Gap(4));
     }
@@ -111,7 +125,8 @@ public partial class OptionsMenu : MenuScreen
     {
         var panel = new PanelContainer { CustomMinimumSize = new Vector2(0, height), MouseFilter = MouseFilterEnum.Pass };
         var normal = UiKit.Box(new Color(0, 0, 0, 0), default, 0, 0, 22, 6);
-        var hot = UiKit.Bar(UiKit.Panel, UiKit.Accent, 4, 18, 6);
+        // Même marge intérieure qu'au repos : la barre d'accent ne décale pas le contenu.
+        var hot = UiKit.Bar(UiKit.Panel, UiKit.Accent, 4, 22, 6);
         panel.AddThemeStyleboxOverride("panel", normal);
         var h = UiKit.HBox(24);
         h.MouseFilter = MouseFilterEnum.Pass;
@@ -119,7 +134,9 @@ public partial class OptionsMenu : MenuScreen
         l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         l.VerticalAlignment = VerticalAlignment.Center;
         h.AddChild(l);
+        // Colonne de contrôles de largeur fixe : tous les réglages commencent et finissent au même x.
         control.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        control.CustomMinimumSize = new Vector2(ControlWidth, control.CustomMinimumSize.Y);
         h.AddChild(control);
         panel.AddChild(h);
         void On()
@@ -128,18 +145,37 @@ public partial class OptionsMenu : MenuScreen
             _descTitle.Text = label.ToUpperInvariant();
             _descText.Text = description ?? "";
         }
-        void Off() => panel.AddThemeStyleboxOverride("panel", normal);
+        void Off()
+        {
+            if (!IsInstanceValid(panel) || !panel.IsInsideTree()) return;
+            var f = GetViewport()?.GuiGetFocusOwner();
+            if (f != null && panel.IsAncestorOf(f)) return;
+            if (panel.GetGlobalRect().HasPoint(panel.GetGlobalMousePosition())) return;
+            panel.AddThemeStyleboxOverride("panel", normal);
+        }
         panel.MouseEntered += On;
-        panel.MouseExited += () => { if (!panel.GetGlobalRect().HasPoint(panel.GetGlobalMousePosition())) Off(); };
-        control.FocusEntered += On;
-        control.FocusExited += Off;
+        panel.MouseExited += Off;
+        // Surbrillance au focus clavier / manette, quel que soit le contrôle focalisable de la ligne.
+        foreach (var f in Focusables(control))
+        {
+            f.FocusEntered += On;
+            f.FocusExited += () => Callable.From(Off).CallDeferred();
+        }
         _col.AddChild(panel);
+    }
+
+    private static IEnumerable<Control> Focusables(Control root)
+    {
+        if (root.FocusMode != FocusModeEnum.None) yield return root;
+        foreach (var n in root.GetChildren())
+            if (n is Control c)
+                foreach (var f in Focusables(c)) yield return f;
     }
 
     private static Control Slider(float min, float max, float step, float value, Action<float> onChange, Func<float, string> fmt)
     {
         var h = UiKit.HBox(16);
-        var s = new HSlider { MinValue = min, MaxValue = max, Step = step, Value = value, CustomMinimumSize = new Vector2(280, 24), FocusMode = FocusModeEnum.All };
+        var s = new HSlider { MinValue = min, MaxValue = max, Step = step, Value = value, CustomMinimumSize = new Vector2(200, 24), FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         var l = UiKit.Label(fmt(value), 17, UiKit.Text);
         l.AddThemeFontOverride("font", UiKit.BodyMedium);
         l.CustomMinimumSize = new Vector2(64, 0);
@@ -151,34 +187,13 @@ public partial class OptionsMenu : MenuScreen
         };
         h.AddChild(s);
         h.AddChild(l);
-        h.FocusEntered += () => s.GrabFocus();
         return h;
     }
 
-    /// <summary>Sélecteur « ‹ valeur › » compact (pattern manette).</summary>
+    /// <summary>Sélecteur « ‹ valeur › » en un seul contrôle (← / → au clavier et à la manette).</summary>
     private static Control Selector(string[] values, int index, Action<int> onChange)
     {
-        var h = UiKit.HBox(0);
-        var label = UiKit.Label(values[index], 17, UiKit.Text);
-        label.AddThemeFontOverride("font", UiKit.BodyMedium);
-        label.HorizontalAlignment = HorizontalAlignment.Center;
-        label.CustomMinimumSize = new Vector2(200, 0);
-        label.VerticalAlignment = VerticalAlignment.Center;
-        var i = index;
-        Button prev = null, next = null;
-        void Set(int ni)
-        {
-            i = Mathf.Clamp(ni, 0, values.Length - 1);
-            label.Text = values[i];
-            onChange(i);
-        }
-        prev = UiKit.Button("‹", () => Set(i - 1), null, 40);
-        next = UiKit.Button("›", () => Set(i + 1), null, 40);
-        prev.CustomMinimumSize = next.CustomMinimumSize = new Vector2(44, 40);
-        h.AddChild(prev);
-        h.AddChild(label);
-        h.AddChild(next);
-        return h;
+        return new Stepper(values, index, onChange, 40);
     }
 
     private static readonly string[] OnOff = { "Non", "Oui" };

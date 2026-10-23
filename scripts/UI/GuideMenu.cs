@@ -6,41 +6,52 @@ namespace Rempart;
 public partial class GuideMenu : MenuScreen
 {
     private VBoxContainer _col;
+    private ScrollContainer _scroll;
 
     public override void _Ready()
     {
         BuildFrame("Guide", 0.88f);
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(980, 0) };
-        UiKit.FillRect(scroll);
-        scroll.AnchorRight = 0;
-        scroll.OffsetRight = 980;
+        _scroll = Scroll(980);
+        UiKit.FillRect(_scroll);
+        _scroll.AnchorRight = 0;
+        _scroll.OffsetRight = 980;
         _col = UiKit.VBox(8);
         _col.CustomMinimumSize = new Vector2(940, 0);
-        scroll.AddChild(_col);
-        Body.AddChild(scroll);
+        _scroll.AddChild(_col);
+        Body.AddChild(_scroll);
         AddTab("Les bases", BuildBasics);
         AddTab("Classes", BuildClasses);
         AddTab("Butin et progression", BuildLoot);
         FooterLeft.AddChild(UiKit.KeyHint("Échap", "Retour", () => App.I.ShowMain()));
         FooterLeft.AddChild(UiKit.KeyHint("Q / E", "Onglets"));
+        FooterLeft.AddChild(UiKit.KeyHint("↑ / ↓", "Défiler"));
         App.I.Background?.SetMode(MenuBackground.Mode.Title);
         SelectTab(0);
     }
 
+    // Page de lecture : rien de focalisable, la croix directionnelle fait défiler le texte.
+    protected override void FocusContent() => GetViewport()?.GuiReleaseFocus();
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (e.IsActionPressed("ui_cancel")) { App.I.ShowMain(); GetViewport().SetInputAsHandled(); return; }
-        if (HandleTabKeys(e)) GetViewport().SetInputAsHandled();
+        if (HandleTabKeys(e)) { GetViewport().SetInputAsHandled(); return; }
+        var dy = e.IsActionPressed("ui_down", true) ? 1 : e.IsActionPressed("ui_up", true) ? -1 : 0;
+        if (dy == 0) return;
+        var tw = _scroll.CreateTween();
+        tw.TweenProperty(_scroll, "scroll_vertical", _scroll.ScrollVertical + dy * 96, 0.12f).SetEase(Tween.EaseType.Out);
+        GetViewport().SetInputAsHandled();
     }
 
     private void Clear()
     {
         foreach (var c in _col.GetChildren()) c.QueueFree();
+        _scroll.ScrollVertical = 0;
     }
 
     private void Section(string title)
     {
-        if (_col.GetChildCount() > 0) _col.AddChild(UiKit.Gap(18));
+        if (UiKit.HasLiveChildren(_col)) _col.AddChild(UiKit.Gap(18));
         _col.AddChild(UiKit.Eyebrow(title, UiKit.Accent));
     }
 
@@ -63,6 +74,7 @@ public partial class GuideMenu : MenuScreen
             grid.AddChild(UiKit.KeyHint(k, label));
         }
         _col.AddChild(grid);
+        _col.AddChild(UiKit.Gap(4));
     }
 
     private void BuildBasics()
@@ -76,6 +88,8 @@ public partial class GuideMenu : MenuScreen
             ("aim", "Viser"), ("reload", "Recharger"), ("weapon_swap", "Arme suivante"), ("ability", "Capacité de classe"),
             ("grenade", "Grenade"), ("interact", "Relever, monter dans le char"), ("scoreboard", "Tableau des scores"), ("=Échap", "Pause"));
         Para("Toutes les touches et la sensibilité de la souris se règlent dans Options › Contrôles. Une manette est aussi reconnue.");
+        Section("Radar");
+        Para("Le radar (en haut à droite) tourne avec la caméra : le haut est toujours devant vous et le repère « N » indique le nord. Points rouges : insectes ; orange : ennemis volants ; grands points : boss et nids ; bleus : alliés et équipiers ; petits carrés : caisses, de la couleur de leur contenu ; losanges : marqueurs de l'escouade.");
         Section("Multijoueur en réseau local");
         Para("Un joueur choisit « Héberger (LAN) », les autres « Rejoindre (LAN) » : la partie apparaît automatiquement, sinon saisissez l'adresse IP de l'hôte. Un soldat à terre peut être relevé par un équipier qui maintient la touche d'interaction près de lui. Si toute l'escouade est à terre, la mission échoue.");
         Section("Véhicules et alliés");

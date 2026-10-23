@@ -15,6 +15,10 @@ public partial class ResultsScreen : CanvasLayer
     private int _viewing = -1;
     private float _timer = 1.6f;
     private Button _revealAll, _continue;
+    private ColorRect _flash;
+    private Control _navHints;
+    private Tween _cardTween, _flashTween;
+    private int _flashed = -1;
 
     public override void _Ready()
     {
@@ -72,15 +76,24 @@ public partial class ResultsScreen : CanvasLayer
             root.AddChild(sq);
         }
 
+        // Flash plein écran de la couleur de rareté à chaque révélation (derrière la fiche).
+        _flash = new ColorRect { Color = new Color(1, 1, 1, 0), MouseFilter = Control.MouseFilterEnum.Ignore };
+        UiKit.FillRect(_flash);
+        root.AddChild(_flash);
+        root.MoveChild(_flash, 1);
+
+        // Bande de progression : un segment par arme, celui affiché est plus haut.
         _strip = UiKit.HBox(8);
+        _strip.CustomMinimumSize = new Vector2(0, 12);
         root.AddChild(_strip);
-        _strip.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom);
+        _strip.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom, Control.LayoutPresetMode.KeepSize);
         _strip.GrowHorizontal = Control.GrowDirection.Both;
-        _strip.Position += new Vector2(0, -140);
+        _strip.GrowVertical = Control.GrowDirection.Begin;
+        _strip.Position += new Vector2(0, -168);
         for (var i = 0; i < Report.Weapons.Count; i++)
         {
             var idx = i;
-            var b = new Button { CustomMinimumSize = new Vector2(34, 8), FocusMode = Control.FocusModeEnum.None, TooltipText = "" };
+            var b = new Button { CustomMinimumSize = new Vector2(34, 6), FocusMode = Control.FocusModeEnum.None, TooltipText = "", SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseDefaultCursorShape = Control.CursorShape.PointingHand };
             var sb = UiKit.Box(UiKit.Line, default, 0, 0, 0, 0);
             b.AddThemeStyleboxOverride("normal", sb);
             b.AddThemeStyleboxOverride("hover", sb);
@@ -88,12 +101,25 @@ public partial class ResultsScreen : CanvasLayer
             b.Pressed += () => { if (idx < _revealed) Show(idx); };
             _strip.AddChild(b);
         }
+        if (Report.Weapons.Count > 1)
+        {
+            var nav = UiKit.HBox(24);
+            nav.AddChild(UiKit.KeyHint("← / →", "Parcourir"));
+            nav.AddChild(UiKit.KeyHint("Entrée", "Tout révéler", RevealAll));
+            _navHints = nav;
+            root.AddChild(nav);
+            nav.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.CenterBottom, Control.LayoutPresetMode.KeepSize);
+            nav.GrowHorizontal = Control.GrowDirection.Both;
+            nav.GrowVertical = Control.GrowDirection.Begin;
+            nav.Position += new Vector2(0, -124);
+        }
 
-        // Pied : totaux à gauche, actions à droite
+        // Pied : totaux à gauche (alignés sur le bas de l'action principale), actions à droite
         var foot = UiKit.HBox(40);
         root.AddChild(foot);
-        foot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
-        foot.Position = new Vector2(UiKit.ScreenX, foot.Position.Y - UiKit.ScreenBottom - 40);
+        foot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft, Control.LayoutPresetMode.KeepSize);
+        foot.GrowVertical = Control.GrowDirection.Begin;
+        foot.Position += new Vector2(UiKit.ScreenX, -UiKit.ScreenBottom);
         foot.AddChild(Total($"{Report.Kills}", "éliminations", UiKit.Text));
         foot.AddChild(Total($"+{Report.ArmorGained:0}", "PV d'armure", UiKit.Info));
         foot.AddChild(Total($"+{Report.CreditsGained}", "crédits", UiKit.Gold));
@@ -127,7 +153,9 @@ public partial class ResultsScreen : CanvasLayer
             none.HorizontalAlignment = HorizontalAlignment.Center;
             _card.AddChild(none);
         }
-        _continue.CallDeferred(Control.MethodName.GrabFocus);
+        // Entrée révèle d'abord tout le butin, puis valide « Continuer » (jamais l'inverse).
+        UiKit.FocusLater(Report.Weapons.Count > 0 ? _revealAll : _continue);
+        UiKit.FadeIn(root, 0.2f);
     }
 
     private static Control Total(string value, string label, Color c)
@@ -140,7 +168,17 @@ public partial class ResultsScreen : CanvasLayer
 
     public override void _Process(double delta)
     {
-        if (_revealed >= Report.Weapons.Count) { _revealAll.Visible = false; return; }
+        if (_revealed >= Report.Weapons.Count)
+        {
+            if (_revealAll.Visible)
+            {
+                var hadFocus = _revealAll.HasFocus();
+                _revealAll.Visible = false;
+                if (_navHints?.GetChild(1) is Control h) h.Visible = false;
+                if (hadFocus || _continue.GetViewport()?.GuiGetFocusOwner() == null) UiKit.FocusSilently(_continue);
+            }
+            return;
+        }
         _timer -= (float)delta;
         if (_timer > 0) return;
         _timer = 1.1f;
@@ -150,6 +188,18 @@ public partial class ResultsScreen : CanvasLayer
     public override void _UnhandledInput(InputEvent e)
     {
         if (e.IsActionPressed("ui_accept") && _revealed < Report.Weapons.Count) { RevealAll(); GetViewport().SetInputAsHandled(); }
+    }
+
+    public override void _Input(InputEvent e)
+    {
+        // ← / → : parcourir les armes déjà révélées (avant la navigation de focus : Entrée suffit pour les boutons).
+        var d = e.IsActionPressed("ui_left") ? -1 : e.IsActionPressed("ui_right") ? 1 : 0;
+        if (d != 0 && _revealed > 0)
+        {
+            var i = Mathf.Clamp((_viewing < 0 ? 0 : _viewing) + d, 0, _revealed - 1);
+            if (i != _viewing) { Show(i); Sfx.Ui("ui_hover", -10f); }
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     private void RevealAll()
@@ -228,12 +278,35 @@ public partial class ResultsScreen : CanvasLayer
         Line("Portée", w.Range, eq?.Range, "{0:0} m");
         if (eq != null)
         {
-            var cmp = UiKit.Label($"comparé à {eq.T.Name} Nv.{eq.Level} (équipée)", 13, UiKit.Dim);
+            var cmp = UiKit.Label($"comparé à {eq.T.Name} Nv.{eq.Level} (équipée)", 13, UiKit.Muted);
             cmp.HorizontalAlignment = HorizontalAlignment.Center;
             _card.AddChild(cmp);
         }
+        // Segment affiché : plus haut et plein ; les autres révélés restent à la couleur de leur rareté.
+        for (var k = 0; k < _strip.GetChildCount(); k++)
+        {
+            var pip = (Control)_strip.GetChild(k);
+            pip.CustomMinimumSize = new Vector2(k == i ? 48 : 34, k == i ? 10 : 6);
+            pip.Modulate = new Color(1, 1, 1, k == i || k >= _revealed ? 1f : 0.55f);
+        }
+
+        // Apparition : fondu + légère mise à l'échelle (≤ 250 ms), flash de rareté pour une arme fraîchement révélée.
+        _cardTween?.Kill();
         _card.Modulate = new Color(1, 1, 1, 0);
-        var tw = _card.CreateTween();
-        tw.TweenProperty(_card, "modulate:a", 1f, 0.18f);
+        _card.PivotOffset = new Vector2(_card.Size.X / 2f, 120);
+        _card.Scale = Vector2.One * 0.94f;
+        _cardTween = _card.CreateTween().SetParallel();
+        _cardTween.SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
+        _cardTween.TweenProperty(_card, "scale", Vector2.One, 0.22f);
+        _cardTween.TweenProperty(_card, "modulate:a", 1f, 0.16f).SetTrans(Tween.TransitionType.Cubic);
+        if (i == _revealed - 1 && i != _flashed)
+        {
+            _flashed = i;
+            var strength = 0.10f + 0.04f * (int)w.Rarity;
+            _flash.Color = new Color(rc, strength);
+            _flashTween?.Kill();
+            _flashTween = _flash.CreateTween();
+            _flashTween.TweenProperty(_flash, "color:a", 0f, 0.25f).SetEase(Tween.EaseType.Out);
+        }
     }
 }

@@ -109,10 +109,11 @@ public static class UiKit
             t.SetStylebox("hover", "Primary", Box(Accent.Lightened(0.12f), default, 0, 0, 44, 12));
             t.SetStylebox("pressed", "Primary", Box(AccentPress, default, 0, 0, 44, 12));
             t.SetStylebox("focus", "Primary", Box(new Color(0, 0, 0, 0), Text, 2, 0, 44, 12));
-            t.SetStylebox("disabled", "Primary", Box(new Color(Accent, 0.28f), default, 0, 0, 44, 12));
+            // Désactivé : aplat neutre et texte atténué (l'accent reste réservé à ce qui est actionnable).
+            t.SetStylebox("disabled", "Primary", Box(Panel, default, 0, 0, 44, 12));
             foreach (var k in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
                 t.SetColor(k, "Primary", OnAccent);
-            t.SetColor("font_disabled_color", "Primary", new Color(OnAccent, 0.6f));
+            t.SetColor("font_disabled_color", "Primary", Muted);
             t.SetFont("font", "Primary", HeadFont);
             t.SetFontSize("font_size", "Primary", 26);
 
@@ -152,7 +153,11 @@ public static class UiKit
             t.SetStylebox("hover_pressed", "Row", Bar(new Color(0.12f, 0.145f, 0.17f, 0.85f), Accent, 4, 18, 12));
             t.SetStylebox("focus", "Row", Bar(new Color(0, 0, 0, 0), Muted, 2, 20, 12));
             t.SetStylebox("disabled", "Row", Box(new Color(0, 0, 0, 0), default, 0, 0, 22, 12));
+            // Tuile (classes, emplacements) : comme une ligne, avec un léger aplat pour se lire comme un bouton.
             t.SetTypeVariation("Card", "Row");
+            t.SetStylebox("normal", "Card", Box(new Color(1, 1, 1, 0.04f), default, 0, 0, 22, 12));
+            t.SetStylebox("hover", "Card", Box(new Color(1, 1, 1, 0.08f), default, 0, 0, 22, 12));
+            t.SetStylebox("disabled", "Card", Box(new Color(1, 1, 1, 0.02f), default, 0, 0, 22, 12));
 
             // Panneaux
             t.SetStylebox("panel", "PanelContainer", Box(Panel, default, 0, 0, 22, 18));
@@ -265,10 +270,81 @@ public static class UiKit
             Sfx.Ui("ui_click", -6f);
             onClick?.Invoke();
         };
-        b.MouseEntered += () => Sfx.Ui("ui_hover", -12f, 1f, 40);
-        b.FocusEntered += () => Sfx.Ui("ui_hover", -12f, 1f, 40);
+        b.MouseEntered += () =>
+        {
+            if (b.Disabled) return;
+            Sfx.Ui("ui_hover", -12f, 1f, 60);
+            // Liste de menu : le survol déplace le focus, pour qu'une seule entrée soit en surbrillance.
+            if (variation == "MenuItem" && !b.HasFocus()) FocusSilently(b);
+        };
+        b.FocusEntered += () => { if (!_silentFocus) Sfx.Ui("ui_hover", -12f, 1f, 60); };
         return b;
     }
+
+    private static bool _silentFocus;
+
+    /// <summary>Donne le focus sans jouer le son de survol (ouverture d'écran, reconstruction de liste).</summary>
+    public static void FocusSilently(Control c)
+    {
+        if (c == null || !GodotObject.IsInstanceValid(c) || !c.IsInsideTree() || !c.IsVisibleInTree()) return;
+        if (c is BaseButton { Disabled: true }) return;
+        _silentFocus = true;
+        c.GrabFocus();
+        _silentFocus = false;
+    }
+
+    /// <summary>Focus différé (après la mise en page) et silencieux.</summary>
+    public static void FocusLater(Control c)
+    {
+        if (c == null) return;
+        Callable.From(() => FocusSilently(c)).CallDeferred();
+    }
+
+    /// <summary>Premier descendant focalisable (ordre de l'arbre), ou null.</summary>
+    public static Control FirstFocusable(Node root)
+    {
+        foreach (var n in root.GetChildren())
+        {
+            if (n is Control { Visible: false }) continue;
+            if (n is Control c && c.FocusMode == Control.FocusModeEnum.All && !(c is BaseButton { Disabled: true }) && !c.IsQueuedForDeletion())
+                return c;
+            if (n is Node child && !child.IsQueuedForDeletion() && FirstFocusable(child) is { } f) return f;
+        }
+        return null;
+    }
+
+    /// <summary>Chaîne verticale de focus qui boucle (haut du premier → dernier, bas du dernier → premier).</summary>
+    public static void ChainVertical(params Control[] items)
+    {
+        var list = Array.FindAll(items, c => c != null);
+        for (var i = 0; i < list.Length; i++)
+        {
+            var prev = list[(i + list.Length - 1) % list.Length];
+            var next = list[(i + 1) % list.Length];
+            list[i].FocusNeighborTop = list[i].GetPathTo(prev);
+            list[i].FocusNeighborBottom = list[i].GetPathTo(next);
+        }
+    }
+
+    /// <summary>Apparition en fondu (≤ 200 ms) d'un écran ou d'un panneau.</summary>
+    public static void FadeIn(CanvasItem c, float seconds = 0.15f)
+    {
+        c.Modulate = new Color(1, 1, 1, 0);
+        var tw = c.CreateTween();
+        tw.SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        tw.TweenProperty(c, "modulate:a", 1f, seconds);
+    }
+
+    /// <summary>Vrai si le nœud a des enfants non marqués pour suppression (les QueueFree restent jusqu'à la fin de l'image).</summary>
+    public static bool HasLiveChildren(Node n)
+    {
+        foreach (var c in n.GetChildren())
+            if (!c.IsQueuedForDeletion()) return true;
+        return false;
+    }
+
+    /// <summary>Espace horizontal fixe (Gap fixe les deux dimensions).</summary>
+    public static Control HGap(int px) => new() { CustomMinimumSize = new Vector2(px, 0), MouseFilter = Control.MouseFilterEnum.Ignore };
 
     public static VBoxContainer VBox(int sep = 12) { var v = new VBoxContainer(); v.AddThemeConstantOverride("separation", sep); return v; }
     public static HBoxContainer HBox(int sep = 12) { var h = new HBoxContainer(); h.AddThemeConstantOverride("separation", sep); return h; }
@@ -368,6 +444,111 @@ public static class UiKit
     }
 
     public static string KeyName(string action) => Settings.Describe(Settings.I.GetBinding(action));
+
+    /// <summary>Indication de touche pour le HUD (touche encadrée + libellé ombré).</summary>
+    public static Control HudKey(string key, string action)
+    {
+        var h = HBox(8);
+        h.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var k = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        k.AddThemeStyleboxOverride("panel", Box(new Color(Bg, 0.6f), default, 0, 2, 6, 1));
+        var kl = Label(key, 13, Text);
+        kl.AddThemeFontOverride("font", BodyMedium);
+        k.AddChild(kl);
+        h.AddChild(k);
+        var a = HudLabel(action, 15, new Color(Text, 0.9f));
+        a.VerticalAlignment = VerticalAlignment.Center;
+        h.AddChild(a);
+        return h;
+    }
+}
+
+/// <summary>
+/// Sélecteur « ‹ valeur › » en un seul contrôle focalisable : ← / → (ou croix directionnelle) changent la valeur,
+/// Entrée passe à la suivante, clic sur un chevron = précédente / suivante.
+/// </summary>
+public partial class Stepper : Button
+{
+    private readonly string[] _values;
+    private readonly Action<int> _onChange;
+    private readonly Label _prev, _next;
+    private bool _wrap = true;
+    public bool Wrap { get => _wrap; set { _wrap = value; if (_values != null) Refresh(); } }
+    public int Index { get; private set; }
+
+    public Stepper() { }
+
+    public Stepper(string[] values, int index, Action<int> onChange, int height = 44)
+    {
+        _values = values;
+        _onChange = onChange;
+        Index = Mathf.Clamp(index, 0, values.Length - 1);
+        CustomMinimumSize = new Vector2(0, height);
+        FocusMode = FocusModeEnum.All;
+        ClipText = true;
+        _prev = Chevron("‹", HorizontalAlignment.Left);
+        _next = Chevron("›", HorizontalAlignment.Right);
+        Refresh();
+        MouseEntered += () => { if (!Disabled) Sfx.Ui("ui_hover", -12f, 1f, 60); };
+        Pressed += () => Step(+1, true);
+    }
+
+    private Label Chevron(string t, HorizontalAlignment a)
+    {
+        var l = UiKit.Label(t, 22, UiKit.Muted);
+        l.MouseFilter = MouseFilterEnum.Ignore;
+        UiKit.FillRect(l);
+        l.OffsetLeft = 16; l.OffsetRight = -16;
+        l.HorizontalAlignment = a;
+        l.VerticalAlignment = VerticalAlignment.Center;
+        AddChild(l);
+        return l;
+    }
+
+    private void Refresh()
+    {
+        Text = _values[Index];
+        var first = Index == 0 && !_wrap;
+        var last = Index == _values.Length - 1 && !_wrap;
+        _prev.Modulate = new Color(1, 1, 1, first || Disabled ? 0.25f : 1f);
+        _next.Modulate = new Color(1, 1, 1, last || Disabled ? 0.25f : 1f);
+    }
+
+    public void SetIndex(int i, bool notify = false)
+    {
+        Index = Mathf.Clamp(i, 0, _values.Length - 1);
+        Refresh();
+        if (notify) _onChange?.Invoke(Index);
+    }
+
+    private void Step(int d, bool wrap)
+    {
+        if (Disabled) return;
+        var n = Index + d;
+        if (wrap && Wrap) n = (n + _values.Length) % _values.Length;
+        n = Mathf.Clamp(n, 0, _values.Length - 1);
+        if (n == Index) return;
+        Index = n;
+        Refresh();
+        Sfx.Ui("ui_click", -8f, 1.1f);
+        _onChange?.Invoke(Index);
+    }
+
+    public override void _GuiInput(InputEvent e)
+    {
+        if (Disabled) return;
+        if (e.IsActionPressed("ui_left", true)) { Step(-1, false); AcceptEvent(); return; }
+        if (e.IsActionPressed("ui_right", true)) { Step(+1, false); AcceptEvent(); return; }
+        if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb)
+        {
+            UiKit.FocusSilently(this);
+            var x = mb.Position.X / Mathf.Max(1, Size.X);
+            if (x < 0.3f) Step(-1, false);
+            else if (x > 0.7f) Step(+1, false);
+            else Step(+1, true);
+            AcceptEvent();
+        }
+    }
 }
 
 /// <summary>
@@ -414,6 +595,7 @@ public partial class MenuScreen : Control
         v.AddChild(Body);
 
         var foot = UiKit.HBox(24);
+        foot.CustomMinimumSize = new Vector2(0, 60);
         FooterLeft = UiKit.HBox(28);
         FooterLeft.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         foot.AddChild(FooterLeft);
@@ -421,18 +603,34 @@ public partial class MenuScreen : Control
         FooterRight = UiKit.HBox(12);
         foot.AddChild(FooterRight);
         v.AddChild(foot);
+        UiKit.FadeIn(this);
     }
 
-    /// <summary>Ajoute un onglet ; renvoie le bouton.</summary>
+    /// <summary>Colonne défilante verticale qui suit le focus clavier / manette.</summary>
+    public static ScrollContainer Scroll(float minWidth = 0)
+    {
+        return new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            FollowFocus = true,
+            CustomMinimumSize = new Vector2(minWidth, 0),
+            MouseFilter = MouseFilterEnum.Pass,
+        };
+    }
+
+    /// <summary>Ajoute un onglet ; renvoie le bouton. Les onglets se changent à la souris ou avec Q / E (LB / RB) :
+    /// ils ne prennent pas le focus, la croix directionnelle reste dans le contenu.</summary>
     protected Button AddTab(string name, Action onSelect)
     {
         var b = UiKit.Button(name, null, "Tab", 40);
+        b.FocusMode = FocusModeEnum.None;
         b.ToggleMode = true;
         b.Pressed += () =>
         {
             foreach (var c in Tabs.GetChildren())
                 if (c is Button o) o.SetPressedNoSignal(o == b);
             onSelect();
+            FocusContent();
         };
         Tabs.AddChild(b);
         return b;
@@ -454,12 +652,59 @@ public partial class MenuScreen : Control
     /// <summary>Onglets précédent / suivant avec Q / E (ou LB / RB).</summary>
     protected bool HandleTabKeys(InputEvent e)
     {
-        if (Tabs.GetChildCount() < 2 || e is not InputEventKey k || !k.Pressed || k.Echo) return false;
-        if (GetViewport().GuiGetFocusOwner() is LineEdit) return false;
+        if (Tabs.GetChildCount() < 2) return false;
+        var dir = 0;
+        if (e is InputEventKey { Pressed: true, Echo: false } k)
+        {
+            if (GetViewport().GuiGetFocusOwner() is LineEdit) return false;
+            if (k.PhysicalKeycode == Key.Q) dir = -1;
+            else if (k.PhysicalKeycode == Key.E) dir = 1;
+        }
+        else if (e is InputEventJoypadButton { Pressed: true } j)
+        {
+            if (j.ButtonIndex == JoyButton.LeftShoulder) dir = -1;
+            else if (j.ButtonIndex == JoyButton.RightShoulder) dir = 1;
+        }
+        if (dir == 0) return false;
         var n = Tabs.GetChildCount();
-        if (k.PhysicalKeycode == Key.Q) { SelectTab((CurrentTab() + n - 1) % n); return true; }
-        if (k.PhysicalKeycode == Key.E) { SelectTab((CurrentTab() + 1) % n); return true; }
-        return false;
+        SelectTab((CurrentTab() + n + dir) % n);
+        return true;
+    }
+
+    /// <summary>Après un changement d'onglet au clavier : focus sur le premier élément actionnable du contenu.</summary>
+    protected virtual void FocusContent()
+    {
+        Callable.From(() => UiKit.FocusSilently(UiKit.FirstFocusable(Body))).CallDeferred();
+    }
+
+    /// <summary>Clé de focus : permet de retrouver l'élément équivalent après une reconstruction de liste.</summary>
+    protected static void SetFocusKey(Control c, string key) => c.SetMeta("focus_key", key);
+
+    protected string FocusedKey()
+    {
+        var f = GetViewport()?.GuiGetFocusOwner();
+        return f != null && f.HasMeta("focus_key") ? f.GetMeta("focus_key").AsString() : null;
+    }
+
+    /// <summary>Redonne le focus (différé) à l'élément portant la clé, sinon au repli.</summary>
+    protected void RestoreFocus(string key, Control fallback = null)
+    {
+        Callable.From(() =>
+        {
+            var c = key != null ? FindKey(Body, key) : null;
+            UiKit.FocusSilently(c ?? fallback);
+        }).CallDeferred();
+    }
+
+    private static Control FindKey(Node root, string key)
+    {
+        foreach (var n in root.GetChildren())
+        {
+            if (n.IsQueuedForDeletion()) continue;
+            if (n is Control c && c.HasMeta("focus_key") && c.GetMeta("focus_key").AsString() == key) return c;
+            if (FindKey(n, key) is { } f) return f;
+        }
+        return null;
     }
 
     protected void ClearBody()

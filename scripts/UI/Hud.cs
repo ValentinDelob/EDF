@@ -164,7 +164,7 @@ void fragment() {
         _hp = new ProgressBar { ShowPercentage = false, CustomMinimumSize = new Vector2(0, 8), MaxValue = 1, Step = 0.001 };
         v.AddChild(_hp);
         var res = UiKit.HBox(10);
-        _resourceLabel = UiKit.HudLabel("", 12, new Color(UiKit.Text, 0.75f));
+        _resourceLabel = UiKit.HudLabel("", 13, new Color(UiKit.Text, 0.75f));
         _resourceLabel.CustomMinimumSize = new Vector2(84, 0);
         res.AddChild(_resourceLabel);
         _resource = new ProgressBar { ShowPercentage = false, CustomMinimumSize = new Vector2(0, 4), MaxValue = 1, Step = 0.001, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
@@ -189,7 +189,7 @@ void fragment() {
         names.SizeFlagsVertical = Control.SizeFlags.ShrinkEnd;
         _wName = UiKit.HudLabel("", 17);
         _wName.HorizontalAlignment = HorizontalAlignment.Right;
-        _wSub = UiKit.HudLabel("", 12);
+        _wSub = UiKit.HudLabel("", 13);
         _wSub.HorizontalAlignment = HorizontalAlignment.Right;
         names.AddChild(_wName);
         names.AddChild(_wSub);
@@ -245,39 +245,50 @@ void fragment() {
 
     public void Briefing(MissionDef m)
     {
+        // Colonne de briefing à gauche (zone libre entre l'objectif et la vie) : titre, texte, puis rappel des commandes.
+        var col = UiKit.VBox(24);
+        col.MouseFilter = Control.MouseFilterEnum.Ignore;
         var v = UiKit.VBox(6);
-        v.AddChild(UiKit.HudLabel($"MISSION {m.Index + 1:00} · {Difficulties.Names[(int)World.Difficulty].ToUpperInvariant()}", 14, UiKit.Accent, true));
+        v.AddChild(UiKit.HudLabel($"MISSION {m.Index + 1:00} · {Difficulties.Names[(int)World.Difficulty].ToUpperInvariant()}", 15, UiKit.Accent, true));
         v.AddChild(UiKit.HudLabel(m.Name.ToUpperInvariant(), 64, UiKit.Text, true));
         var b = UiKit.HudLabel(m.Briefing, 17, new Color(UiKit.Text, 0.9f));
         b.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         b.CustomMinimumSize = new Vector2(560, 0);
         v.AddChild(b);
-        Anchor(v, Control.LayoutPreset.CenterLeft, new Vector2(UiKit.ScreenX, -140));
+        col.AddChild(v);
 
-        // Rappel des commandes en bas au centre pendant les premières secondes.
-        var keys = UiKit.HBox(24);
+        // Rappel des commandes pendant les premières secondes (touches encadrées, comme dans les menus).
+        // Il était en bas au centre et chevauchait la vie et l'arme en 1280×720.
+        var keys = new HFlowContainer { CustomMinimumSize = new Vector2(560, 0), MouseFilter = Control.MouseFilterEnum.Ignore };
+        keys.AddThemeConstantOverride("h_separation", 20);
+        keys.AddThemeConstantOverride("v_separation", 8);
         string K(string a) => UiKit.KeyName(a);
-        var ability = World.LocalPlayer?.Def.Id switch
+        var items = new List<(string key, string text)> { ($"{K("move_forward")}{K("move_left")}{K("move_back")}{K("move_right")}", "Se déplacer") };
+        items.AddRange(World.LocalPlayer?.Def.Id switch
         {
-            SoldierClass.Airborne => $"{K("jump")} Voler · {K("sprint")} Propulsion",
-            SoldierClass.Heavy => $"{K("sprint")} Poussée · {K("jump")} Saut assisté",
-            _ => $"{K("sprint")} Courir · {K("dodge")} Roulade",
-        };
-        foreach (var t in new[] { $"{K("move_forward")}{K("move_left")}{K("move_back")}{K("move_right")} Se déplacer", ability, $"{K("reload")} Recharger", $"1 / 2 / 3 Armes", $"{K("ability")} Capacité", $"{K("grenade")} Grenade", $"{K("interact")} Relever" })
-            keys.AddChild(UiKit.HudLabel(t, 14, new Color(UiKit.Text, 0.85f)));
-        Anchor(keys, Control.LayoutPreset.CenterBottom, new Vector2(0, -24));
-        keys.GrowHorizontal = Control.GrowDirection.Both;
+            SoldierClass.Airborne => new[] { (K("jump"), "Voler"), (K("sprint"), "Propulsion") },
+            SoldierClass.Heavy => new[] { (K("sprint"), "Poussée"), (K("jump"), "Saut assisté") },
+            _ => new[] { (K("sprint"), "Courir"), (K("dodge"), "Roulade") },
+        });
+        items.AddRange(new[] { (K("reload"), "Recharger"), ("1 2 3", "Armes"), (K("ability"), "Capacité"), (K("grenade"), "Grenade"), (K("interact"), "Relever") });
+        foreach (var (key, text) in items) keys.AddChild(UiKit.HudKey(key, text));
+        col.AddChild(keys);
+        // Ancré sous le bloc objectif (et non centré) : ne le chevauche pas en 1280×720, reste au-dessus de la vie.
+        Anchor(col, Control.LayoutPreset.TopLeft, new Vector2(UiKit.ScreenX, 168));
+
         var kt = keys.CreateTween();
-        kt.TweenInterval(12f);
-        kt.TweenProperty(keys, "modulate:a", 0f, 1.5f);
-        kt.TweenCallback(Callable.From(keys.QueueFree));
+        keys.Modulate = new Color(1, 1, 1, 0);
+        kt.TweenInterval(0.6f);
+        kt.TweenProperty(keys, "modulate:a", 1f, 0.4f);
+        kt.TweenInterval(11f);
+        kt.TweenProperty(keys, "modulate:a", 0f, 1.0f);
+        kt.TweenCallback(Callable.From(col.QueueFree));
 
         var tw = v.CreateTween();
         v.Modulate = new Color(1, 1, 1, 0);
         tw.TweenProperty(v, "modulate:a", 1f, 0.5f);
         tw.TweenInterval(6f);
         tw.TweenProperty(v, "modulate:a", 0f, 1.0f);
-        tw.TweenCallback(Callable.From(v.QueueFree));
     }
 
     public void Radio(string text, int kind)
@@ -308,7 +319,9 @@ void fragment() {
         h.AddChild(new ColorRect { Color = Crates.Colors[(int)type], CustomMinimumSize = new Vector2(8, 8), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter });
         _pickupFeed.AddChild(h);
         while (_pickupFeed.GetChildCount() > 5) _pickupFeed.GetChild(0).Free();
+        h.Modulate = new Color(1, 1, 1, 0);
         var tw = h.CreateTween();
+        tw.TweenProperty(h, "modulate:a", 1f, 0.12f);
         tw.TweenInterval(3f);
         tw.TweenProperty(h, "modulate:a", 0f, 0.6f);
         tw.TweenCallback(Callable.From(h.QueueFree));
@@ -334,7 +347,7 @@ void fragment() {
     {
         var dt = (float)delta;
         var p = World.LocalPlayer;
-        Visible = !World.Ended;
+        Visible = !World.Ended && !World.Paused;
         // Échelle du HUD : on agrandit la racine et on réduit sa taille logique d'autant.
         var s = Mathf.Clamp(Settings.I.HudScale, 0.8f, 1.2f);
         if (!Mathf.IsEqualApprox(_root.Scale.X, s) || _root.Size != GetViewport().GetVisibleRect().Size / s)
@@ -441,7 +454,7 @@ void fragment() {
                 var n = UiKit.HudLabel(r.PlayerName, 14, r.Downed ? UiKit.Danger : UiKit.Text);
                 n.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 h.AddChild(n);
-                h.AddChild(UiKit.HudLabel(r.Downed ? "À TERRE" : Classes.Get(r.Class).Name, 12, new Color(UiKit.Text, 0.7f)));
+                h.AddChild(UiKit.HudLabel(r.Downed ? "À TERRE" : Classes.Get(r.Class).Name, 13, new Color(UiKit.Text, 0.7f)));
                 row.AddChild(h);
                 var bar = new ProgressBar { ShowPercentage = false, MaxValue = 1, Value = r.Health / Mathf.Max(1, r.MaxHealth), CustomMinimumSize = new Vector2(0, 3) };
                 bar.AddThemeStyleboxOverride("fill", UiKit.Box(r.Downed ? UiKit.Danger : UiKit.Info, default, 0, 0, 0, 0));
@@ -621,7 +634,15 @@ public partial class Radar : Control
         var c = size / 2;
         var r = Mathf.Min(size.X, size.Y) / 2;
         DrawCircle(c, r, new Color(0, 0, 0, 0.35f));
-        DrawArc(c, r, 0, Mathf.Tau, 64, new Color(1, 1, 1, 0.15f), 1.5f, true);
+        // Cône de vision discret (haut = devant soi).
+        var cone = new List<Vector2> { c };
+        for (var k = 0; k <= 12; k++)
+        {
+            var a = -Mathf.Pi / 2 - 0.5f + k / 12f;
+            cone.Add(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * (r - 2));
+        }
+        DrawColoredPolygon(cone.ToArray(), new Color(1, 1, 1, 0.05f));
+        DrawArc(c, r, 0, Mathf.Tau, 64, new Color(1, 1, 1, 0.18f), 1.5f, true);
         DrawArc(c, r * 0.5f, 0, Mathf.Tau, 48, new Color(1, 1, 1, 0.07f), 1f, true);
         var fwd = p.AimForward;
         var yaw = Mathf.Atan2(fwd.X, fwd.Z);
@@ -660,5 +681,18 @@ public partial class Radar : Control
         }
         // Joueur : triangle pointant vers le haut
         DrawColoredPolygon(new[] { c + new Vector2(0, -7), c + new Vector2(5, 5), c + new Vector2(-5, 5) }, Colors.White);
+
+        // Repère du nord (-Z) sur le bord : le radar tourne avec la caméra.
+        var north = Map(p.GlobalPosition + new Vector3(0, 0, -Range * 4f)) - c;
+        if (north.LengthSquared() > 0.01f)
+        {
+            var np = c + north.Normalized() * (r - 1);
+            DrawCircle(np, 9f, new Color(UiKit.Bg, 0.85f));
+            DrawArc(np, 9f, 0, Mathf.Tau, 24, new Color(1, 1, 1, 0.35f), 1f, true);
+            var font = UiKit.HeadFont;
+            const int fs = 13;
+            var ts = font.GetStringSize("N", HorizontalAlignment.Left, -1, fs);
+            DrawString(font, np + new Vector2(-ts.X / 2f, ts.Y / 2f - 3f), "N", HorizontalAlignment.Left, -1, fs, UiKit.Accent);
+        }
     }
 }

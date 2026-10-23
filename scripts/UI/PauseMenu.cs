@@ -10,6 +10,9 @@ public partial class PauseMenu : CanvasLayer
     private Control _root;
     private Button _resume;
     private VBoxContainer _info;
+    private Button _abandon;
+    private Label _abandonHint;
+    private bool _confirmAbandon;
 
     public override void _Ready()
     {
@@ -33,8 +36,17 @@ public partial class PauseMenu : CanvasLayer
         left.AddChild(UiKit.Gap(32));
         _resume = UiKit.Button("Reprendre", () => World.TogglePause(), "MenuItem", 54);
         left.AddChild(_resume);
-        left.AddChild(UiKit.Button("Options", OpenOptions, "MenuItem", 54));
-        left.AddChild(UiKit.Button(Net.I.IsHost ? "Abandonner la mission" : "Quitter la partie", Abandon, "MenuItem", 54));
+        var options = UiKit.Button("Options", OpenOptions, "MenuItem", 54);
+        left.AddChild(options);
+        _abandon = UiKit.Button(AbandonText, Abandon, "MenuItem", 54);
+        _abandon.FocusExited += ResetAbandon;
+        _abandon.MouseExited += ResetAbandon;
+        left.AddChild(_abandon);
+        _abandonHint = UiKit.Label("", 14, UiKit.Danger);
+        _abandonHint.CustomMinimumSize = new Vector2(0, 20);
+        left.AddChild(UiKit.Gap(4));
+        left.AddChild(_abandonHint);
+        UiKit.ChainVertical(_resume, options, _abandon);
 
         _info = UiKit.VBox(6);
         _info.CustomMinimumSize = new Vector2(420, 0);
@@ -46,15 +58,32 @@ public partial class PauseMenu : CanvasLayer
 
         var hint = UiKit.KeyHint("Échap", "Reprendre", () => World.TogglePause());
         _root.AddChild(hint);
-        hint.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
-        hint.Position = new Vector2(UiKit.ScreenX, hint.Position.Y - UiKit.ScreenBottom);
+        hint.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft, Control.LayoutPresetMode.KeepSize);
+        hint.GrowVertical = Control.GrowDirection.Begin;
+        hint.Position += new Vector2(UiKit.ScreenX, -UiKit.ScreenBottom);
         VisibilityChanged += OnShown;
+    }
+
+    private string AbandonText => Net.I.IsHost ? "Abandonner la mission" : "Quitter la partie";
+
+    private void ResetAbandon()
+    {
+        if (!_confirmAbandon) return;
+        _confirmAbandon = false;
+        _abandon.Text = AbandonText.ToUpperInvariant();
+        _abandon.RemoveThemeColorOverride("font_focus_color");
+        _abandon.RemoveThemeColorOverride("font_hover_color");
+        _abandonHint.Text = "";
     }
 
     private void OnShown()
     {
+        // Le HUD est masqué derrière la pause (sinon le briefing et la vie transparaissent sous le menu).
+        if (World.Hud != null) World.Hud.Visible = !Visible && !World.Ended;
         if (!Visible) return;
-        _resume.GrabFocus();
+        ResetAbandon();
+        UiKit.FadeIn(_root, 0.12f);
+        UiKit.FocusLater(_resume);
         foreach (var c in _info.GetChildren()) c.QueueFree();
         _info.AddChild(UiKit.Eyebrow("Mission"));
         _info.AddChild(UiKit.Label(World.ObjectiveText, 18));
@@ -86,12 +115,23 @@ public partial class PauseMenu : CanvasLayer
 
     private void OpenOptions()
     {
-        var o = new OptionsMenu { OnClose = () => _resume.GrabFocus() };
+        var o = new OptionsMenu { OnClose = () => UiKit.FocusLater(_resume) };
         _root.AddChild(o);
     }
 
     private void Abandon()
     {
+        // Confirmation en deux temps (pas de fenêtre modale empilée).
+        if (!_confirmAbandon)
+        {
+            _confirmAbandon = true;
+            _abandon.Text = "CONFIRMER ?";
+            _abandon.AddThemeColorOverride("font_focus_color", UiKit.Danger);
+            _abandon.AddThemeColorOverride("font_hover_color", UiKit.Danger);
+            _abandonHint.Text = Net.I.IsHost ? "La mission sera comptée comme un échec." : "Vous quitterez la partie en cours.";
+            return;
+        }
+        _confirmAbandon = false;
         if (Net.I.IsHost) World.EndMission(false);
         else
         {
