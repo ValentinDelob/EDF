@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>E · Choix des armes façon EDF 6</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;family=Saira+Condensed:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.e-mono{font-family:'Share Tech Mono',monospace}
+.e-cond{font-family:'Saira Condensed',sans-serif}
+.e-o{text-shadow:1px 1px 0 #06140C,-1px -1px 0 #06140C,1px -1px 0 #06140C,-1px 1px 0 #06140C}
+.e-bdg{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:#D42A22;border:2px solid #FFFFFF;box-sizing:border-box;font-family:'Saira Condensed',sans-serif;font-weight:800;font-size:12px;color:#FFFFFF;box-shadow:0 0 0 1px #5a0c08}
+.e-key{font-family:'Saira Condensed',sans-serif;font-weight:600;font-size:16px;color:#DBF6E6;background:transparent;border:0;padding:0 6px;display:flex;align-items:center;gap:6px;cursor:pointer;height:44px}
+.bg-root{background:radial-gradient(ellipse 900px 640px at 760px 380px,#158050 0%,#0C4A2C 55%,#052012 100%)}
+.bg-grid{position:absolute;inset:-56px;background:linear-gradient(rgba(110,255,160,0.10) 1px,rgba(0,0,0,0) 1px) 0 0/28px 28px,linear-gradient(90deg,rgba(110,255,160,0.10) 1px,rgba(0,0,0,0) 1px) 0 0/28px 28px;animation:bgGrid 6s linear infinite}
+@keyframes bgGrid{to{transform:translate(28px,28px)}}
+.bg-spin{transform-box:fill-box;transform-origin:center;animation:bgSpin 60s linear infinite}
+.bg-spin-r{transform-box:fill-box;transform-origin:center;animation:bgSpin 38s linear infinite reverse}
+@keyframes bgSpin{to{transform:rotate(360deg)}}
+.bg-sweep{position:absolute;left:580px;top:60px;width:600px;height:600px;border-radius:50%;background:conic-gradient(from 0deg,rgba(63,224,200,0) 0deg,rgba(63,224,200,0) 300deg,rgba(63,224,200,0.22) 360deg);animation:bgSpin 7s linear infinite}
+.bg-flow{stroke-dasharray:18 12;animation:bgFlow 2.4s linear infinite}
+.bg-flow-s{stroke-dasharray:6 14;animation:bgFlow 1.6s linear infinite reverse}
+@keyframes bgFlow{to{stroke-dashoffset:-60}}
+.bg-pulse{transform-box:fill-box;transform-origin:center;animation:bgPulse 2.2s ease-in-out infinite}
+@keyframes bgPulse{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+.bg-scan{position:absolute;left:0;right:0;top:-120px;height:120px;background:linear-gradient(180deg,rgba(110,255,160,0) 0%,rgba(110,255,160,0.10) 70%,rgba(170,255,200,0.28) 100%);animation:bgScan 5.5s linear infinite}
+@keyframes bgScan{to{transform:translateY(860px)}}
+.bg-mote{position:absolute;width:3px;height:3px;background:#9CFFB0;box-shadow:0 0 6px #6CFF9A;animation:bgMote 9s linear infinite;opacity:0}
+@keyframes bgMote{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}85%{opacity:.6}100%{opacity:0;transform:translateY(-320px)}}
+.bg-blink{animation:bgBlink 1.2s steps(2) infinite}
+@keyframes bgBlink{50%{opacity:.2}}
+@media (prefers-reduced-motion: reduce){.bg-grid,.bg-spin,.bg-spin-r,.bg-sweep,.bg-flow,.bg-flow-s,.bg-pulse,.bg-scan,.bg-mote,.bg-blink{animation:none}}
+.nm{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap}
+.nm-in{display:inline-block;padding-right:24px;animation:nmScroll 7s linear infinite}
+.nm-in + .nm-in{padding-right:24px}
+.nm-run{display:inline-flex;animation:nmScroll 7s linear infinite}
+@keyframes nmScroll{0%,18%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){.nm-run{animation:none}}
+</style>
+</helmet>
+<div class="bg-root" style="width: 1280px; height: 720px; position: relative; overflow: hidden; color: #DBF6E6">
+
+<!-- fond animé commun (menus) : grille qui défile, anneaux radar, balayage, circuits, particules -->
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden">
+<div class="bg-grid"></div>
+<div class="bg-sweep"></div>
+<svg width="1280" height="720" viewBox="0 0 1280 720" style="position: absolute; left: 0; top: 0">
+<circle cx="880" cy="360" r="300" fill="none" stroke="#3FE0C8" stroke-width="2" opacity="0.35"></circle>
+<circle class="bg-spin" cx="880" cy="360" r="240" fill="none" stroke="#3FE0C8" stroke-width="14" stroke-dasharray="120 40 60 30" opacity="0.2"></circle>
+<circle class="bg-spin-r" cx="880" cy="360" r="196" fill="none" stroke="#3FE0C8" stroke-width="3" stroke-dasharray="4 10" opacity="0.4"></circle>
+<circle cx="880" cy="360" r="150" fill="none" stroke="#3FE0C8" stroke-width="1.5" opacity="0.3"></circle>
+<path d="M0 200 H120 L150 230 H420 M0 470 H90 L120 440 H400 M440 620 H620 L650 650 H900 M900 90 H1020 L1050 60 H1280 M1100 640 H1280 M20 560 H110 L130 580" stroke="#6CFF9A" stroke-width="1.6" fill="none" opacity="0.22"></path>
+<path class="bg-flow" d="M0 200 H120 L150 230 H420 M440 620 H620 L650 650 H900 M900 90 H1020 L1050 60 H1280" stroke="#9CFFB0" stroke-width="2" fill="none" opacity="0.55"></path>
+<path class="bg-flow-s" d="M0 470 H90 L120 440 H400 M1100 640 H1280 M20 560 H110 L130 580" stroke="#9CFFB0" stroke-width="2" fill="none" opacity="0.5"></path>
+<path d="M0 360 H60 M0 380 H100 M0 400 H70 M1180 300 H1280 M1200 320 H1280" stroke="#6CFF9A" stroke-width="5" opacity="0.25"></path>
+<circle class="bg-pulse" cx="420" cy="230" r="5" fill="#9CFFB0"></circle>
+<circle class="bg-pulse" cx="900" cy="650" r="5" fill="#9CFFB0" style="animation-delay: 0.7s"></circle>
+<circle class="bg-pulse" cx="1050" cy="60" r="5" fill="#9CFFB0" style="animation-delay: 1.4s"></circle>
+<circle class="bg-pulse" cx="400" cy="440" r="4" fill="#9CFFB0" style="animation-delay: 1.9s"></circle>
+<rect class="bg-blink" x="1236" y="296" width="10" height="10" fill="#46E86B"></rect>
+</svg>
+<div class="bg-scan"></div>
+<span class="bg-mote" style="left: 160px; top: 640px; animation-delay: 0s"></span><span class="bg-mote" style="left: 420px; top: 700px; animation-delay: 2.1s"></span><span class="bg-mote" style="left: 690px; top: 660px; animation-delay: 4.3s"></span><span class="bg-mote" style="left: 930px; top: 690px; animation-delay: 1.2s"></span><span class="bg-mote" style="left: 1120px; top: 650px; animation-delay: 5.6s"></span><span class="bg-mote" style="left: 300px; top: 560px; animation-delay: 6.8s"></span><span class="bg-mote" style="left: 820px; top: 580px; animation-delay: 3.4s"></span><span class="bg-mote" style="left: 1210px; top: 520px; animation-delay: 7.7s"></span>
+</div>
+<div style="position: absolute; inset: 0; background: radial-gradient(ellipse 760px 480px at 560px 360px, rgba(4,20,10,0) 40%, rgba(2,12,6,0.5) 100%)"></div>
+
+<!-- ===== BARRE DE TITRE ===== -->
+<div style="position: absolute; left: 260px; top: 34px; width: 760px; height: 44px; background: linear-gradient(180deg, #B9EECF 0%, #7ED5A2 48%, #5CB681 52%, #85D8A8 100%); clip-path: polygon(20px 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 20px 100%, 0 50%); box-shadow: inset 0 0 0 2px #2B6543"></div>
+<div style="position: absolute; left: 272px; top: 40px; width: 736px; height: 32px; background: linear-gradient(180deg, #255137, #163021); clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)"></div>
+<span class="e-cond e-o" style="position: absolute; left: 560px; top: 40px; font-size: 24px; font-weight: 700; letter-spacing: 2px; color: #FFFFFF">Arsenal du fusilier</span>
+<span class="e-cond e-o" style="position: absolute; left: 800px; top: 40px; font-size: 24px; font-weight: 700; letter-spacing: 2px; color: #DBF6E6">Choix des armes</span>
+
+<!-- ===== TABLEAU SUPÉRIEUR ===== -->
+<svg aria-hidden="true" width="800" height="210" viewBox="0 0 800 210" style="position: absolute; left: 124px; top: 92px">
+<polygon points="14,2 786,2 798,14 798,196 786,208 14,208 2,196 2,14" fill="rgba(13,31,21,0.72)" stroke="#6DC692" stroke-width="2.4"></polygon>
+<polygon points="20,8 780,8 792,20 792,190 780,202 20,202 8,190 8,20" fill="none" stroke="#3A7854" stroke-width="1"></polygon>
+</svg>
+<!-- une colonne par type d'arme ; chaque arme est rangée dans la colonne de son type -->
+<div style="position: absolute; left: 138px; top: 110px; width: 772px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 30px; align-items: center; background: linear-gradient(180deg, #2A563C, #173222); border-bottom: 2px solid #6DC692">
+<span class="e-cond" style="padding-left: 8px; font-size: 15px; font-weight: 700; color: #FFFFFF; white-space: nowrap; overflow: hidden">Fusils d'assaut</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; font-weight: 600; color: #DBF6E6; border-left: 1px solid #3A7854">Lv</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; color: #DBF6E6; border-left: 1px solid #3A7854">☆</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 25px; align-items: center; background: rgba(2,10,5,0.88); box-shadow: inset 0 0 0 1px #1E3A2A">
+<span class="e-cond" style="padding-left: 8px; font-size: 14px; font-weight: 500; color: #6F8C79; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden">FA-21 Vigie<span style="flex: none; margin-left: auto; margin-right: 4px; font-size: 9px; font-weight: 700; letter-spacing: .5px; color: #03140A; background: #9CFFB0; padding: 0 4px; line-height: 13px">ÉQUIPÉE 1</span></span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #6F8C79">24</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #6F8C79">3</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 25px; align-items: center; background: linear-gradient(180deg, #16CC62, #09893E); box-shadow: inset 0 0 0 1px #9CFFB0">
+<span class="e-cond" style="padding-left: 8px; font-size: 14px; font-weight: 600; color: #FFFFFF; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden"><span class="nm"><span class="nm-run"><span style="padding-right: 24px">FA-31 Sentinelle</span><span aria-hidden="true" style="padding-right: 24px">FA-31 Sentinelle</span></span></span><span style="font-size: 9px; font-weight: 700; color: #F2D27A">NEW</span></span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">31</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">2</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 30px; align-items: center; background: linear-gradient(180deg, #2A563C, #173222); border-bottom: 2px solid #3A7854">
+<span class="e-cond" style="padding-left: 8px; font-size: 15px; font-weight: 700; color: #DBF6E6; white-space: nowrap; overflow: hidden">Lance-roquettes</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; font-weight: 600; color: #DBF6E6; border-left: 1px solid #3A7854">Lv</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; color: #DBF6E6; border-left: 1px solid #3A7854">☆</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 25px; align-items: center; background: rgba(2,10,5,0.88); box-shadow: inset 0 0 0 1px #1E3A2A">
+<span class="e-cond" style="padding-left: 8px; font-size: 14px; font-weight: 500; color: #6F8C79; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden"><span class="nm"><span class="nm-run"><span style="padding-right: 24px">LR-4 Tonnerre</span><span aria-hidden="true" style="padding-right: 24px">LR-4 Tonnerre</span></span></span><span style="flex: none; margin-left: auto; margin-right: 4px; font-size: 9px; font-weight: 700; letter-spacing: .5px; color: #03140A; background: #9CFFB0; padding: 0 4px; line-height: 13px">ÉQUIPÉE 2</span></span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #6F8C79">22</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #6F8C79">4</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 30px; align-items: center; background: linear-gradient(180deg, #2A563C, #173222); border-bottom: 2px solid #3A7854">
+<span class="e-cond" style="padding-left: 8px; font-size: 15px; font-weight: 700; color: #DBF6E6; white-space: nowrap; overflow: hidden">Fusils à pompe</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; font-weight: 600; color: #DBF6E6; border-left: 1px solid #3A7854">Lv</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; color: #DBF6E6; border-left: 1px solid #3A7854">☆</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 25px; align-items: center; background: rgba(32,68,47,0.75)">
+<span class="e-cond" style="padding-left: 8px; font-size: 14px; font-weight: 500; color: #FFFFFF; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden">CS-90 Bélier</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">18</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">1</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 30px; align-items: center; background: linear-gradient(180deg, #2A563C, #173222); border-bottom: 2px solid #3A7854">
+<span class="e-cond" style="padding-left: 8px; font-size: 15px; font-weight: 700; color: #DBF6E6; white-space: nowrap; overflow: hidden">Mitrailleuses</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; font-weight: 600; color: #DBF6E6; border-left: 1px solid #3A7854">Lv</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; color: #DBF6E6; border-left: 1px solid #3A7854">☆</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 25px; align-items: center; background: rgba(32,68,47,0.75)">
+<span class="e-cond" style="padding-left: 8px; font-size: 14px; font-weight: 500; color: #FFFFFF; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden"><span class="nm"><span class="nm-run"><span style="padding-right: 24px">MK-7 Faucheuse</span><span aria-hidden="true" style="padding-right: 24px">MK-7 Faucheuse</span></span></span><span style="font-size: 9px; font-weight: 700; color: #F2D27A">NEW</span></span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">35</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">5</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 30px; align-items: center; background: linear-gradient(180deg, #2A563C, #173222); border-bottom: 2px solid #3A7854">
+<span class="e-cond" style="padding-left: 8px; font-size: 15px; font-weight: 700; color: #DBF6E6; white-space: nowrap; overflow: hidden">Précision</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; font-weight: 600; color: #DBF6E6; border-left: 1px solid #3A7854">Lv</span>
+<span class="e-cond" style="text-align: center; font-size: 14px; color: #DBF6E6; border-left: 1px solid #3A7854">☆</span>
+</div>
+<div style="display: grid; grid-template-columns: 1fr 26px 22px; height: 25px; align-items: center; background: rgba(32,68,47,0.75)">
+<span class="e-cond" style="padding-left: 8px; font-size: 14px; font-weight: 500; color: #FFFFFF; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden">PR-2 Aiguille</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">40</span>
+<span class="e-mono" style="text-align: center; font-size: 14px; color: #FFFFFF">2</span>
+</div>
+</div>
+</div>
+
+<!-- flèche orange entre les deux cadres -->
+<svg aria-hidden="true" width="40" height="18" viewBox="0 0 40 18" style="position: absolute; left: 536px; top: 308px">
+<polygon points="4,2 36,2 20,16" fill="#F08A1E" stroke="#006229" stroke-width="1"></polygon>
+</svg>
+
+<!-- ===== CADRE INFÉRIEUR SCINDÉ ===== -->
+<svg aria-hidden="true" width="760" height="314" viewBox="0 0 760 314" style="position: absolute; left: 160px; top: 330px">
+<polygon points="14,2 746,2 758,14 758,300 746,312 14,312 2,300 2,14" fill="rgba(7,13,9,0.86)" stroke="#6DC692" stroke-width="2.4"></polygon>
+<polygon points="20,8 740,8 752,20 752,294 740,306 20,306 8,294 8,20" fill="none" stroke="#3A7854" stroke-width="1"></polygon>
+<rect x="18" y="14" width="6" height="190" fill="#13F772"></rect>
+<rect x="18" y="204" width="6" height="96" fill="#4E9BD6"></rect>
+<line x1="388" y1="14" x2="388" y2="300" stroke="#3A7854" stroke-width="2"></line>
+<rect x="30" y="14" width="350" height="30" fill="#20442F"></rect>
+<rect x="396" y="14" width="350" height="30" fill="#20442F"></rect>
+</svg>
+<span class="e-cond e-o" style="position: absolute; left: 172px; top: 316px; font-size: 13px; font-weight: 700; color: #DBF6E6">R1</span>
+<span class="e-cond e-o" style="position: absolute; left: 172px; top: 634px; font-size: 13px; font-weight: 700; color: #DBF6E6">R2</span>
+<span class="e-cond" style="position: absolute; left: 204px; top: 347px; font-size: 19px; font-weight: 600; color: #FFFFFF">FA-31 Sentinelle</span>
+<span class="e-cond" style="position: absolute; left: 668px; top: 347px; font-size: 18px; font-weight: 600; color: #FFFFFF">Niveau d'arme : 31</span>
+
+<div class="e-cond" style="position: absolute; left: 204px; top: 384px; width: 336px; font-size: 16px; line-height: 23px; color: #DBF6E6">
+<p style="margin: 0">Fusil d'assaut.</p>
+<p style="margin: 0 0 12px">Chaque étoile d'une caractéristique lui ajoute un bonus, indiqué entre parenthèses.</p>
+<p style="margin: 0">Récompense de caisse d'arme.</p>
+<p style="margin: 0 0 12px">Niveau 31.</p>
+</div>
+
+<!-- stats : niveau d'étoiles par caractéristique et bonus apporté (toujours un avantage) -->
+<div class="e-mono" style="position: absolute; left: 556px; top: 382px; width: 352px; display: flex; flex-direction: column; gap: 4px; font-size: 16px; line-height: 22px; color: #FFFFFF">
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; align-items: center; gap: 6px"><span style="color: #F2D27A">(☆3)</span><span>Dégâts :</span><span style="display: flex; align-items: center; gap: 8px"><span style="color: #3FD8F0">46</span><span style="color: #6BEA7A">(+10)</span></span></div>
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; align-items: center; gap: 6px"><span style="color: #F2D27A">(☆2)</span><span>Cadence :</span><span style="display: flex; align-items: center; gap: 8px"><span style="color: #3FD8F0">540/min</span><span style="color: #6BEA7A">(+40/min)</span></span></div>
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; align-items: center; gap: 6px"><span style="color: #F2D27A">(☆1)</span><span>Chargeur :</span><span style="display: flex; align-items: center; gap: 8px"><span style="color: #3FD8F0">36</span><span style="color: #6BEA7A">(+4)</span></span></div>
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; align-items: center; gap: 6px"><span style="color: #F2D27A">(☆2)</span><span>Rechargement :</span><span style="display: flex; align-items: center; gap: 8px"><span style="color: #3FD8F0">1,8 s</span><span style="color: #6BEA7A">(−0,3 s)</span></span></div>
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; align-items: center; gap: 6px"><span style="color: #F2D27A">(☆4)</span><span>Précision :</span><span style="display: flex; align-items: center; gap: 8px"><span style="color: #3FD8F0">80</span><span style="color: #6BEA7A">(+16)</span></span></div>
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; align-items: center; gap: 6px"><span style="color: #F2D27A">(☆3)</span><span>Portée :</span><span style="display: flex; align-items: center; gap: 8px"><span style="color: #3FD8F0">140 m</span><span style="color: #6BEA7A">(+30 m)</span></span></div>
+<div style="display: grid; grid-template-columns: 50px 128px 1fr; gap: 6px"><span></span><span>Type :</span><span style="color: #3FD8F0">Fusil d'assaut</span></div>
+</div>
+
+<!-- ===== SOLDAT (droite) ===== -->
+<svg aria-hidden="true" width="300" height="540" viewBox="0 0 300 540" style="position: absolute; left: 944px; top: 96px">
+<defs>
+<linearGradient id="eaCamo" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#274031"></stop><stop offset="0.5" stop-color="#46785B"></stop><stop offset="1" stop-color="#25392D"></stop></linearGradient>
+</defs>
+<path d="M96 118 L204 118 L214 236 L86 236 Z" fill="#1A2820"></path>
+<path d="M104 262 L148 262 L144 360 L110 360 Z" fill="url(#eaCamo)"></path>
+<path d="M154 262 L198 262 L194 360 L160 360 Z" fill="url(#eaCamo)"></path>
+<rect x="96" y="282" width="14" height="36" rx="3" fill="#203328"></rect>
+<rect x="192" y="282" width="14" height="36" rx="3" fill="#203328"></rect>
+<rect x="106" y="352" width="40" height="30" rx="8" fill="#315440" stroke="#17251D"></rect>
+<rect x="156" y="352" width="40" height="30" rx="8" fill="#315440" stroke="#17251D"></rect>
+<path d="M110 380 L144 380 L140 472 L114 472 Z" fill="url(#eaCamo)"></path>
+<path d="M160 380 L194 380 L190 472 L164 472 Z" fill="url(#eaCamo)"></path>
+<path d="M108 470 L144 470 L148 502 L98 502 Q98 482 108 470 Z" fill="#141E18"></path>
+<path d="M160 470 L196 470 Q206 482 206 502 L156 502 Z" fill="#141E18"></path>
+<path d="M100 236 L204 236 L202 266 L102 266 Z" fill="#1E3026"></path>
+<rect x="142" y="242" width="20" height="16" fill="#5C9674"></rect>
+<rect x="108" y="240" width="22" height="22" rx="2" fill="#284434"></rect>
+<rect x="174" y="240" width="22" height="22" rx="2" fill="#284434"></rect>
+<path d="M102 118 Q152 104 200 118 L208 238 L96 238 Z" fill="url(#eaCamo)"></path>
+<path d="M114 128 Q152 118 190 128 L194 196 Q152 208 110 196 Z" fill="#3A644B" stroke="#1C2E24" stroke-width="2"></path>
+<path d="M152 122 V204 M118 160 H186" stroke="#1C2E24" stroke-width="1.5"></path>
+<rect x="114" y="204" width="18" height="28" rx="2" fill="#284434"></rect>
+<rect x="134" y="204" width="18" height="28" rx="2" fill="#284434"></rect>
+<rect x="154" y="204" width="18" height="28" rx="2" fill="#284434"></rect>
+<rect x="174" y="204" width="18" height="28" rx="2" fill="#284434"></rect>
+<rect x="140" y="92" width="24" height="18" fill="#1C2E24"></rect>
+<path d="M126 106 Q152 98 178 106 L176 120 Q152 112 128 120 Z" fill="#283F32"></path>
+<ellipse cx="96" cy="128" rx="24" ry="18" fill="#3A644B" stroke="#1C2E24" stroke-width="2"></ellipse>
+<ellipse cx="208" cy="128" rx="24" ry="18" fill="#3A644B" stroke="#1C2E24" stroke-width="2"></ellipse>
+<path d="M74 134 L104 134 L104 196 L80 200 Z" fill="url(#eaCamo)"></path>
+<path d="M80 190 L104 184 L152 212 L140 232 Z" fill="#2F513D"></path>
+<path d="M200 134 L228 134 L224 186 L198 186 Z" fill="url(#eaCamo)"></path>
+<path d="M198 180 L224 182 L222 168 L206 158 Z" fill="#2F513D"></path>
+<g transform="translate(92 256) rotate(-36)">
+<g transform="translate(0 -22) scale(1.65)">
+<polygon points="2,18 24,15 32,15 32,29 24,31 6,33 2,31" fill="#1B251F"></polygon>
+<rect x="32" y="13" width="44" height="16" fill="#222F27"></rect>
+<polygon points="76,15 104,15 104,25 76,26" fill="#1B251F"></polygon>
+<rect x="104" y="18" width="16" height="4" fill="#151C18"></rect>
+<rect x="118" y="16" width="7" height="8" fill="#151C18"></rect>
+<polygon points="58,29 68,29 71,45 61,45" fill="#17211B"></polygon>
+<polygon points="40,29 49,29 47,41 39,41" fill="#17211B"></polygon>
+<rect x="46" y="5" width="24" height="6" rx="2" fill="#151C18"></rect>
+<rect x="53" y="10" width="9" height="4" fill="#151C18"></rect>
+<path d="M36 20 H72 M80 20 H100" stroke="#3D5045" stroke-width="1.2"></path>
+</g>
+</g>
+<circle cx="146" cy="222" r="11" fill="#142019"></circle>
+<circle cx="212" cy="166" r="11" fill="#142019"></circle>
+<path d="M116 74 Q114 26 152 22 Q190 26 188 74 Z" fill="#335642"></path>
+<path d="M128 40 Q150 28 172 38" stroke="#518767" stroke-width="3" fill="none"></path>
+<path d="M124 80 L180 80 L176 100 Q152 110 128 100 Z" fill="#131B16"></path>
+<path d="M110 74 Q152 66 194 74 L192 82 Q152 74 112 82 Z" fill="#243F2F"></path>
+<rect x="128" y="84" width="48" height="8" rx="3" fill="#56786C"></rect>
+</svg>
+
+<!-- carte d'équipement -->
+<div style="position: absolute; left: 940px; top: 410px; width: 290px; display: flex; flex-direction: column; gap: 3px">
+<div style="display: grid; grid-template-columns: 90px 1fr; height: 30px; align-items: center; background: linear-gradient(90deg, rgba(97,163,125,0.85), rgba(74,120,93,0.55)); padding: 0 12px">
+<span class="e-cond e-o" style="font-size: 17px; font-weight: 600; color: #FFFFFF">Classe</span>
+<span class="e-cond e-o" style="font-size: 17px; font-weight: 600; color: #FFFFFF">Fusilier</span>
+</div>
+<div style="display: grid; grid-template-columns: 90px 1fr; height: 28px; align-items: center; background: rgba(24,44,32,0.85); padding: 0 12px">
+<span class="e-cond" style="font-size: 16px; color: #DBF6E6">Armure</span>
+<span class="e-mono" style="font-size: 17px; color: #FFFFFF">1 450</span>
+</div>
+<div style="display: flex; flex-direction: column; background: rgba(24,44,32,0.85); padding: 6px 12px; gap: 2px">
+<div style="display: flex; justify-content: space-between"><span class="e-cond" style="font-size: 16px; color: #FFFFFF">FA-21 Vigie</span><span class="e-mono" style="font-size: 15px; color: #FFFFFF">Lv24</span></div>
+<div style="display: flex; justify-content: space-between"><span class="e-cond" style="font-size: 16px; color: #FFFFFF">LR-4 Tonnerre</span><span class="e-mono" style="font-size: 15px; color: #FFFFFF">Lv22</span></div>
+</div>
+<div style="display: flex; flex-direction: column; background: rgba(24,44,32,0.85); padding: 6px 12px; gap: 2px; margin-top: 6px">
+<div style="display: flex; justify-content: space-between"><span class="e-cond" style="font-size: 16px; color: #FFFFFF">Fusée de ralliement</span><span class="e-mono" style="font-size: 15px; color: #B8E9CC">Équip.</span></div>
+</div>
+</div>
+
+<!-- ===== BARRE D'AIDE BAS ===== -->
+<div style="position: absolute; left: 230px; top: 652px; width: 820px; height: 40px; background: linear-gradient(180deg, #85D8A8 0%, #479969 50%, #34754F 100%); clip-path: polygon(20px 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 20px 100%, 0 50%)"></div>
+<div style="position: absolute; left: 242px; top: 656px; width: 796px; height: 32px; background: linear-gradient(180deg, #1F3F2C, #102519); clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%)"></div>
+<div style="position: absolute; left: 242px; top: 650px; width: 796px; height: 44px; display: flex; align-items: center; justify-content: center; gap: 14px">
+<button type="button" class="e-key"><span style="display: inline-flex; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #DBF6E6; align-items: center; justify-content: center; font-size: 11px; box-sizing: border-box">✕</span>Équiper</button>
+<button type="button" class="e-key"><span style="display: inline-flex; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #DBF6E6; box-sizing: border-box"></span>Retour</button>
+<button type="button" class="e-key"><span style="font-size: 12px; border: 1px solid #DBF6E6; padding: 0 4px; line-height: 16px">L2</span>Comparer (maintenir)</button></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

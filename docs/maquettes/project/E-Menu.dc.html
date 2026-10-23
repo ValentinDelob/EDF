@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>E · Menu principal façon EDF</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;family=Saira+Condensed:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.e-mono{font-family:'Share Tech Mono',monospace}
+.e-cond{font-family:'Saira Condensed',sans-serif}
+.e-o{text-shadow:1px 1px 0 #031208,-1px -1px 0 #031208,1px -1px 0 #031208,-1px 1px 0 #031208}
+.e-nv{text-shadow:2px 2px 0 #071233,-1px -1px 0 #071233,1px -1px 0 #071233,-1px 1px 0 #071233}
+.e-tab{width:300px;height:54px;padding:2px;border:0;background:#9FC0EA;transform:skewY(3deg);clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 16px) 100%,0 100%);cursor:pointer}
+.e-tab-in{display:flex;align-items:center;height:100%;padding:0 18px;background:linear-gradient(180deg,#2C56A6 0%,#17346F 50%,#0D2050 100%);clip-path:polygon(0 0,100% 0,100% 64%,calc(100% - 15px) 100%,0 100%);font-family:'Saira Condensed',sans-serif;font-size:26px;font-weight:700;color:#FFFFFF;text-shadow:2px 2px 0 #071233,-1px -1px 0 #071233,1px -1px 0 #071233,-1px 1px 0 #071233}
+.e-key{font-family:'Share Tech Mono',monospace;font-size:19px;color:#FFFFFF;background:transparent;border:0;padding:0 4px;height:44px;cursor:pointer;text-shadow:1px 1px 0 #031208,-1px -1px 0 #031208}
+.bg-root{background:radial-gradient(ellipse 900px 640px at 760px 380px,#158050 0%,#0C4A2C 55%,#052012 100%)}
+.bg-grid{position:absolute;inset:-56px;background:linear-gradient(rgba(110,255,160,0.10) 1px,rgba(0,0,0,0) 1px) 0 0/28px 28px,linear-gradient(90deg,rgba(110,255,160,0.10) 1px,rgba(0,0,0,0) 1px) 0 0/28px 28px;animation:bgGrid 6s linear infinite}
+@keyframes bgGrid{to{transform:translate(28px,28px)}}
+.bg-spin{transform-box:fill-box;transform-origin:center;animation:bgSpin 60s linear infinite}
+.bg-spin-r{transform-box:fill-box;transform-origin:center;animation:bgSpin 38s linear infinite reverse}
+@keyframes bgSpin{to{transform:rotate(360deg)}}
+.bg-sweep{position:absolute;left:580px;top:60px;width:600px;height:600px;border-radius:50%;background:conic-gradient(from 0deg,rgba(63,224,200,0) 0deg,rgba(63,224,200,0) 300deg,rgba(63,224,200,0.22) 360deg);animation:bgSpin 7s linear infinite}
+.bg-flow{stroke-dasharray:18 12;animation:bgFlow 2.4s linear infinite}
+.bg-flow-s{stroke-dasharray:6 14;animation:bgFlow 1.6s linear infinite reverse}
+@keyframes bgFlow{to{stroke-dashoffset:-60}}
+.bg-pulse{transform-box:fill-box;transform-origin:center;animation:bgPulse 2.2s ease-in-out infinite}
+@keyframes bgPulse{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+.bg-scan{position:absolute;left:0;right:0;top:-120px;height:120px;background:linear-gradient(180deg,rgba(110,255,160,0) 0%,rgba(110,255,160,0.10) 70%,rgba(170,255,200,0.28) 100%);animation:bgScan 5.5s linear infinite}
+@keyframes bgScan{to{transform:translateY(860px)}}
+.bg-mote{position:absolute;width:3px;height:3px;background:#9CFFB0;box-shadow:0 0 6px #6CFF9A;animation:bgMote 9s linear infinite;opacity:0}
+@keyframes bgMote{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}85%{opacity:.6}100%{opacity:0;transform:translateY(-320px)}}
+.bg-blink{animation:bgBlink 1.2s steps(2) infinite}
+@keyframes bgBlink{50%{opacity:.2}}
+@media (prefers-reduced-motion: reduce){.bg-grid,.bg-spin,.bg-spin-r,.bg-sweep,.bg-flow,.bg-flow-s,.bg-pulse,.bg-scan,.bg-mote,.bg-blink{animation:none}}
+.mb{position:relative;display:flex;align-items:center;gap:12px;width:300px;height:50px;padding:0 14px 0 0;border:0;overflow:hidden;background:linear-gradient(90deg,rgba(3,22,10,0.9) 0%,rgba(6,40,18,0.66) 100%);box-shadow:inset 0 0 0 1px rgba(124,255,142,0.32);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));cursor:pointer;color:#E8FFEE;text-align:left;transition:transform .15s ease,background .15s ease}
+.mb:hover{transform:translateX(6px);background:linear-gradient(90deg,rgba(10,60,26,0.95) 0%,rgba(14,80,34,0.7) 100%);box-shadow:inset 0 0 0 1px rgba(156,255,176,0.7)}
+.mb-num{flex:none;width:50px;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(70,232,107,0.13);border-right:1px solid rgba(124,255,142,0.3);font-family:'Share Tech Mono',monospace;font-size:20px;color:#7CFF8E}
+.mb-txt{display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;flex:1}
+.mb-t{font-family:'Saira Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.5px;line-height:1;text-transform:uppercase;color:#FFFFFF;white-space:nowrap}
+.mb-m{font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1;color:#A8D9B4;white-space:nowrap}
+.mb-tag{flex:none;font-family:'Saira Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;padding:2px 6px;background:#F2C14A;color:#1A1405}
+.mb-on{transform:translateX(16px);background:linear-gradient(90deg,#9CFFB0 0%,#46E86B 55%,#2AB84F 100%);box-shadow:0 0 24px rgba(70,232,107,0.55)}
+.mb-on:hover{transform:translateX(16px);background:linear-gradient(90deg,#B4FFC4 0%,#5AF07C 55%,#33C653 100%)}
+.mb-on .mb-num{background:#03140A;color:#9CFFB0;border-right:0}
+.mb-on .mb-t{color:#03140A}
+.mb-on .mb-m{color:#0B3A1A}
+.mb-on::after{content:"";position:absolute;top:0;bottom:0;left:-90px;width:70px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.5),rgba(255,255,255,0));animation:mbGlint 3s ease-in-out infinite}
+@keyframes mbGlint{0%{left:-90px}55%,100%{left:110%}}
+.mb-ptr{position:absolute;width:12px;height:18px;background:#9CFFB0;clip-path:polygon(0 0,100% 50%,0 100%);animation:mbPtr 1s ease-in-out infinite}
+@keyframes mbPtr{50%{transform:translateX(4px);opacity:.6}}
+.mb-dim{opacity:.75}
+@media (prefers-reduced-motion: reduce){.mb-on::after,.mb-ptr{animation:none}}
+</style>
+</helmet>
+<div class="bg-root" style="width: 1280px; height: 720px; position: relative; overflow: hidden; color: #FFFFFF">
+
+<!-- fond animé commun (menus) : grille qui défile, anneaux radar, balayage, circuits, particules -->
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden">
+<div class="bg-grid"></div>
+<div class="bg-sweep"></div>
+<svg width="1280" height="720" viewBox="0 0 1280 720" style="position: absolute; left: 0; top: 0">
+<circle cx="880" cy="360" r="300" fill="none" stroke="#3FE0C8" stroke-width="2" opacity="0.35"></circle>
+<circle class="bg-spin" cx="880" cy="360" r="240" fill="none" stroke="#3FE0C8" stroke-width="14" stroke-dasharray="120 40 60 30" opacity="0.2"></circle>
+<circle class="bg-spin-r" cx="880" cy="360" r="196" fill="none" stroke="#3FE0C8" stroke-width="3" stroke-dasharray="4 10" opacity="0.4"></circle>
+<circle cx="880" cy="360" r="150" fill="none" stroke="#3FE0C8" stroke-width="1.5" opacity="0.3"></circle>
+<path d="M0 200 H120 L150 230 H420 M0 470 H90 L120 440 H400 M440 620 H620 L650 650 H900 M900 90 H1020 L1050 60 H1280 M1100 640 H1280 M20 560 H110 L130 580" stroke="#6CFF9A" stroke-width="1.6" fill="none" opacity="0.22"></path>
+<path class="bg-flow" d="M0 200 H120 L150 230 H420 M440 620 H620 L650 650 H900 M900 90 H1020 L1050 60 H1280" stroke="#9CFFB0" stroke-width="2" fill="none" opacity="0.55"></path>
+<path class="bg-flow-s" d="M0 470 H90 L120 440 H400 M1100 640 H1280 M20 560 H110 L130 580" stroke="#9CFFB0" stroke-width="2" fill="none" opacity="0.5"></path>
+<path d="M0 360 H60 M0 380 H100 M0 400 H70 M1180 300 H1280 M1200 320 H1280" stroke="#6CFF9A" stroke-width="5" opacity="0.25"></path>
+<circle class="bg-pulse" cx="420" cy="230" r="5" fill="#9CFFB0"></circle>
+<circle class="bg-pulse" cx="900" cy="650" r="5" fill="#9CFFB0" style="animation-delay: 0.7s"></circle>
+<circle class="bg-pulse" cx="1050" cy="60" r="5" fill="#9CFFB0" style="animation-delay: 1.4s"></circle>
+<circle class="bg-pulse" cx="400" cy="440" r="4" fill="#9CFFB0" style="animation-delay: 1.9s"></circle>
+<rect class="bg-blink" x="1236" y="296" width="10" height="10" fill="#46E86B"></rect>
+</svg>
+<div class="bg-scan"></div>
+<span class="bg-mote" style="left: 160px; top: 640px; animation-delay: 0s"></span><span class="bg-mote" style="left: 420px; top: 700px; animation-delay: 2.1s"></span><span class="bg-mote" style="left: 690px; top: 660px; animation-delay: 4.3s"></span><span class="bg-mote" style="left: 930px; top: 690px; animation-delay: 1.2s"></span><span class="bg-mote" style="left: 1120px; top: 650px; animation-delay: 5.6s"></span><span class="bg-mote" style="left: 300px; top: 560px; animation-delay: 6.8s"></span><span class="bg-mote" style="left: 820px; top: 580px; animation-delay: 3.4s"></span><span class="bg-mote" style="left: 1210px; top: 520px; animation-delay: 7.7s"></span>
+</div>
+
+
+<!-- bandeau de titre -->
+<svg aria-hidden="true" width="1280" height="100" viewBox="0 0 1280 100" style="position: absolute; left: 0; top: 0">
+<polygon points="0,0 470,0 420,76 0,76" fill="rgba(4,24,12,0.82)"></polygon>
+<polygon points="470,0 1280,0 1280,10 476,10 426,82 0,82 0,76 420,76" fill="#46E86B"></polygon>
+<polygon points="484,16 1280,16 1280,22 488,22 440,92 0,92 0,88 434,88" fill="#2AB84F"></polygon>
+<polygon points="0,96 400,96 404,100 0,100" fill="#8CFF9E"></polygon>
+</svg>
+<h1 class="e-cond" style="position: absolute; left: 60px; top: 6px; margin: 0; font-size: 50px; font-weight: 700; letter-spacing: 1px; line-height: 64px; color: #FFFFFF; text-shadow: 3px 3px 0 #031208, -1px -1px 0 #031208, 1px -1px 0 #031208, -1px 1px 0 #031208">Menu principal</h1>
+<span class="e-cond e-o" style="position: absolute; left: 520px; top: 26px; font-size: 30px; font-weight: 800; letter-spacing: 10px; color: #CFFFD8">REMPART</span>
+
+<!-- onglets du menu (plaques vertes inclinées, assorties au fond) -->
+<div style="position: absolute; left: 130px; top: 118px; width: 340px; display: flex; flex-direction: column; gap: 9px">
+<span class="mb-ptr" style="left: -4px; top: 16px"></span>
+<button type="button" class="mb mb-on" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Jouer en solo</span></span></button>
+<button type="button" class="mb" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Héberger (LAN)</span></span></button>
+<button type="button" class="mb" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Rejoindre (LAN)</span></span></button>
+<button type="button" class="mb" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Arsenal</span></span></button>
+<button type="button" class="mb" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Options</span></span></button>
+<button type="button" class="mb" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Guide</span></span></button>
+<button type="button" class="mb mb-dim" style="width: 310px"><span class="mb-num"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14"><path d="M7 1 L13 7 L7 13 L1 7 Z" fill="none" stroke="#9CFFB0" stroke-width="2"></path></svg></span><span class="mb-txt"><span class="mb-t">Quitter</span></span></button>
+</div>
+
+<svg aria-hidden="true" width="340" height="612" viewBox="0 0 300 540" style="position: absolute; left: 930px; top: 50px">
+<defs>
+<linearGradient id="enArm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E959B"></stop><stop offset="0.5" stop-color="#E4E8EA"></stop><stop offset="1" stop-color="#80878D"></stop></linearGradient>
+<linearGradient id="enSuit" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E3A2E"></stop><stop offset="0.5" stop-color="#55654F"></stop><stop offset="1" stop-color="#2A3329"></stop></linearGradient>
+</defs>
+<path d="M96 118 L204 118 L214 236 L86 236 Z" fill="#1E2420"></path>
+<path d="M104 262 L148 262 L144 360 L110 360 Z" fill="url(#enSuit)"></path>
+<path d="M154 262 L198 262 L194 360 L160 360 Z" fill="url(#enSuit)"></path>
+<rect x="96" y="282" width="14" height="36" rx="3" fill="#232A24"></rect>
+<rect x="192" y="282" width="14" height="36" rx="3" fill="#232A24"></rect>
+<rect x="106" y="352" width="40" height="30" rx="8" fill="url(#enArm)" stroke="#3A4044"></rect>
+<rect x="156" y="352" width="40" height="30" rx="8" fill="url(#enArm)" stroke="#3A4044"></rect>
+<path d="M110 380 L144 380 L140 472 L114 472 Z" fill="url(#enArm)"></path>
+<path d="M160 380 L194 380 L190 472 L164 472 Z" fill="url(#enArm)"></path>
+<path d="M108 470 L144 470 L148 502 L98 502 Q98 482 108 470 Z" fill="#1B1F22"></path>
+<path d="M160 470 L196 470 Q206 482 206 502 L156 502 Z" fill="#1B1F22"></path>
+<path d="M100 236 L204 236 L202 266 L102 266 Z" fill="#2A2E30"></path>
+<rect x="142" y="242" width="20" height="16" fill="#9AA2A8"></rect>
+<path d="M102 118 Q152 104 200 118 L208 238 L96 238 Z" fill="url(#enSuit)"></path>
+<path d="M114 128 Q152 118 190 128 L194 196 Q152 208 110 196 Z" fill="url(#enArm)" stroke="#3A4044" stroke-width="2"></path>
+<path d="M118 140 Q152 132 186 140 L186 154 Q152 146 118 154 Z" fill="#B8282A"></path>
+<path d="M152 156 V204" stroke="#3A4044" stroke-width="1.5"></path>
+<rect x="114" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="134" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="154" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="174" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="140" y="92" width="24" height="18" fill="#22262A"></rect>
+<path d="M126 106 Q152 98 178 106 L176 120 Q152 112 128 120 Z" fill="#B8282A"></path>
+<ellipse cx="96" cy="128" rx="24" ry="18" fill="url(#enArm)" stroke="#3A4044" stroke-width="2"></ellipse>
+<ellipse cx="208" cy="128" rx="24" ry="18" fill="url(#enArm)" stroke="#3A4044" stroke-width="2"></ellipse>
+<path d="M80 126 Q96 116 112 126" stroke="#B8282A" stroke-width="5" fill="none"></path>
+<path d="M192 126 Q208 116 224 126" stroke="#B8282A" stroke-width="5" fill="none"></path>
+<path d="M74 134 L104 134 L104 196 L80 200 Z" fill="url(#enSuit)"></path>
+<path d="M80 190 L104 184 L152 212 L140 232 Z" fill="#7E868C"></path>
+<path d="M200 134 L228 134 L224 186 L198 186 Z" fill="url(#enSuit)"></path>
+<path d="M198 180 L224 182 L222 168 L206 158 Z" fill="#7E868C"></path>
+<g transform="translate(92 256) rotate(-36)">
+<g transform="translate(0 -22) scale(1.65)">
+<polygon points="2,18 24,15 32,15 32,29 24,31 6,33 2,31" fill="#2A3346"></polygon>
+<rect x="32" y="13" width="44" height="16" fill="#3C4A66"></rect>
+<polygon points="76,15 104,15 104,25 76,26" fill="#2A3346"></polygon>
+<rect x="104" y="18" width="16" height="4" fill="#1A1E26"></rect>
+<rect x="118" y="16" width="7" height="8" fill="#1A1E26"></rect>
+<polygon points="58,29 68,29 71,45 61,45" fill="#1E2430"></polygon>
+<polygon points="40,29 49,29 47,41 39,41" fill="#1E2430"></polygon>
+<rect x="46" y="5" width="24" height="6" rx="2" fill="#1A1E26"></rect>
+<rect x="53" y="10" width="9" height="4" fill="#1A1E26"></rect>
+<path d="M36 20 H72 M80 20 H100" stroke="#6E82A8" stroke-width="1.2"></path>
+</g>
+</g>
+<circle cx="146" cy="222" r="11" fill="#1D2024"></circle>
+<circle cx="212" cy="166" r="11" fill="#1D2024"></circle>
+<path d="M116 74 Q114 26 152 22 Q190 26 188 74 Z" fill="url(#enArm)"></path>
+<path d="M146 24 Q152 22 158 24 L158 72 L146 72 Z" fill="#B8282A"></path>
+<path d="M124 80 L180 80 L176 100 Q152 110 128 100 Z" fill="#1A1D20"></path>
+<path d="M110 74 Q152 66 194 74 L192 82 Q152 74 112 82 Z" fill="#9AA2A8"></path>
+<rect x="128" y="84" width="48" height="8" rx="3" fill="#5AD4E0"></rect>
+</svg>
+
+<!-- boîte d'information centrale -->
+<div style="position: absolute; left: 500px; top: 120px; width: 420px; height: 300px; box-sizing: border-box; border: 3px solid #46E86B; background: rgba(6,40,18,0.88); box-shadow: 0 0 0 1px #031208, 0 0 16px rgba(70,232,107,0.35); padding: 16px 18px">
+<p class="e-mono" style="margin: 0; font-size: 19px; line-height: 23px; color: #FFFFFF; text-shadow: 1px 1px 0 #031208">Jouer en solo.</p>
+<p class="e-mono" style="margin: 0 0 14px; font-size: 19px; line-height: 23px; color: #FFFFFF; text-shadow: 1px 1px 0 #031208">Choisir une opération et la mener seul.</p>
+<p class="e-mono" style="margin: 0 0 16px; font-size: 17px; line-height: 22px; color: #9CFFB0">Opérations terminées : 3/8</p>
+<p class="e-mono" style="margin: 0; font-size: 17px; line-height: 22px; color: #D8F5DD">Prochaine : 04. La toile</p>
+<p class="e-mono" style="margin: 0; font-size: 17px; line-height: 22px; color: #D8F5DD">Zone : port</p>
+</div>
+
+<!-- carte de profil -->
+<div class="e-mono" style="position: absolute; left: 900px; top: 440px; width: 340px; box-sizing: border-box; border: 2px solid #46E86B; background: rgba(6,40,18,0.84); transform: skewY(-2deg); font-size: 17px; color: #FFFFFF; text-shadow: 1px 1px 0 #031208">
+<div style="display: grid; grid-template-columns: 96px 1fr; border-bottom: 1px solid #2AB84F"><span style="padding: 4px 8px; border-right: 1px solid #2AB84F">Profil</span><span style="padding: 4px 8px; font-size: 20px">Soldat</span></div>
+<div style="display: grid; grid-template-columns: 96px 1fr 70px"><span style="padding: 2px 8px; border-right: 1px solid #2AB84F">Classe</span><span style="padding: 2px 8px">Fusilier</span><span style="padding: 2px 6px">Niv.12</span></div>
+<div style="display: grid; grid-template-columns: 96px 1fr"><span style="padding: 2px 8px; border-right: 1px solid #2AB84F">Armure:</span><span style="padding: 2px 8px">1450</span></div>
+<div style="display: grid; grid-template-columns: 96px 1fr"><span style="padding: 2px 8px; border-right: 1px solid #2AB84F">Crédits</span><span style="padding: 2px 8px">8320</span></div>
+<div style="display: grid; grid-template-columns: 96px 1fr"><span style="padding: 2px 8px 6px; border-right: 1px solid #2AB84F">Missions</span><span style="padding: 2px 8px">3/8</span></div>
+</div>
+
+<!-- bande basse -->
+<svg aria-hidden="true" width="1280" height="80" viewBox="0 0 1280 80" style="position: absolute; left: 0; top: 640px">
+<polygon points="700,4 1280,4 1280,8 704,8" fill="#8CFF9E"></polygon>
+<polygon points="680,12 1280,12 1280,60 650,60" fill="rgba(4,24,12,0.82)"></polygon>
+<polygon points="0,66 1280,66 1280,72 0,72" fill="#46E86B"></polygon>
+<polygon points="0,74 1280,74 1280,80 0,80" fill="#2AB84F"></polygon>
+</svg>
+<span class="e-mono e-o" style="position: absolute; left: 60px; top: 676px; font-size: 15px; color: #CFEFD6">v0.5.0</span>
+<div style="position: absolute; left: 800px; top: 650px; height: 44px; display: flex; align-items: center; gap: 12px">
+<button type="button" class="e-key">Entrée:OK</button>
+<button type="button" class="e-key">Échap:Retour</button>
+<button type="button" class="e-key">↑↓:Choisir</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

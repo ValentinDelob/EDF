@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>E · Sélection de mission façon EDF 5</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;family=Saira+Condensed:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.e-mono{font-family:'Share Tech Mono',monospace}
+.e-cond{font-family:'Saira Condensed',sans-serif}
+.e-o{text-shadow:1px 1px 0 #031208,-1px -1px 0 #031208,1px -1px 0 #031208,-1px 1px 0 #031208}
+.e-nv{text-shadow:2px 2px 0 #071233,-1px -1px 0 #071233,1px -1px 0 #071233,-1px 1px 0 #071233}
+.e-thumb{background-image:url(/_blob/b993d1e225819ebb12ff12774eb89cdd);background-size:180%;background-position:62% 38%}
+.e-key{font-family:'Share Tech Mono',monospace;font-size:19px;color:#FFFFFF;background:transparent;border:0;padding:0 4px;height:44px;cursor:pointer;text-shadow:1px 1px 0 #031208,-1px -1px 0 #031208}
+.bg-root{background:radial-gradient(ellipse 900px 640px at 760px 380px,#158050 0%,#0C4A2C 55%,#052012 100%)}
+.bg-grid{position:absolute;inset:-56px;background:linear-gradient(rgba(110,255,160,0.10) 1px,rgba(0,0,0,0) 1px) 0 0/28px 28px,linear-gradient(90deg,rgba(110,255,160,0.10) 1px,rgba(0,0,0,0) 1px) 0 0/28px 28px;animation:bgGrid 6s linear infinite}
+@keyframes bgGrid{to{transform:translate(28px,28px)}}
+.bg-spin{transform-box:fill-box;transform-origin:center;animation:bgSpin 60s linear infinite}
+.bg-spin-r{transform-box:fill-box;transform-origin:center;animation:bgSpin 38s linear infinite reverse}
+@keyframes bgSpin{to{transform:rotate(360deg)}}
+.bg-sweep{position:absolute;left:580px;top:60px;width:600px;height:600px;border-radius:50%;background:conic-gradient(from 0deg,rgba(63,224,200,0) 0deg,rgba(63,224,200,0) 300deg,rgba(63,224,200,0.22) 360deg);animation:bgSpin 7s linear infinite}
+.bg-flow{stroke-dasharray:18 12;animation:bgFlow 2.4s linear infinite}
+.bg-flow-s{stroke-dasharray:6 14;animation:bgFlow 1.6s linear infinite reverse}
+@keyframes bgFlow{to{stroke-dashoffset:-60}}
+.bg-pulse{transform-box:fill-box;transform-origin:center;animation:bgPulse 2.2s ease-in-out infinite}
+@keyframes bgPulse{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+.bg-scan{position:absolute;left:0;right:0;top:-120px;height:120px;background:linear-gradient(180deg,rgba(110,255,160,0) 0%,rgba(110,255,160,0.10) 70%,rgba(170,255,200,0.28) 100%);animation:bgScan 5.5s linear infinite}
+@keyframes bgScan{to{transform:translateY(860px)}}
+.bg-mote{position:absolute;width:3px;height:3px;background:#9CFFB0;box-shadow:0 0 6px #6CFF9A;animation:bgMote 9s linear infinite;opacity:0}
+@keyframes bgMote{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}85%{opacity:.6}100%{opacity:0;transform:translateY(-320px)}}
+.bg-blink{animation:bgBlink 1.2s steps(2) infinite}
+@keyframes bgBlink{50%{opacity:.2}}
+@media (prefers-reduced-motion: reduce){.bg-grid,.bg-spin,.bg-spin-r,.bg-sweep,.bg-flow,.bg-flow-s,.bg-pulse,.bg-scan,.bg-mote,.bg-blink{animation:none}}
+.mb{position:relative;display:flex;align-items:center;gap:12px;width:300px;height:50px;padding:0 14px 0 0;border:0;overflow:hidden;background:linear-gradient(90deg,rgba(3,22,10,0.9) 0%,rgba(6,40,18,0.66) 100%);box-shadow:inset 0 0 0 1px rgba(124,255,142,0.32);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));cursor:pointer;color:#E8FFEE;text-align:left;transition:transform .15s ease,background .15s ease}
+.mb:hover{transform:translateX(6px);background:linear-gradient(90deg,rgba(10,60,26,0.95) 0%,rgba(14,80,34,0.7) 100%);box-shadow:inset 0 0 0 1px rgba(156,255,176,0.7)}
+.mb-num{flex:none;width:50px;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(70,232,107,0.13);border-right:1px solid rgba(124,255,142,0.3);font-family:'Share Tech Mono',monospace;font-size:20px;color:#7CFF8E}
+.mb-txt{display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;flex:1}
+.mb-t{font-family:'Saira Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.5px;line-height:1;text-transform:uppercase;color:#FFFFFF;white-space:nowrap}
+.mb-m{font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1;color:#A8D9B4;white-space:nowrap}
+.mb-tag{flex:none;font-family:'Saira Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;padding:2px 6px;background:#F2C14A;color:#1A1405}
+.mb-on{transform:translateX(16px);background:linear-gradient(90deg,#9CFFB0 0%,#46E86B 55%,#2AB84F 100%);box-shadow:0 0 24px rgba(70,232,107,0.55)}
+.mb-on:hover{transform:translateX(16px);background:linear-gradient(90deg,#B4FFC4 0%,#5AF07C 55%,#33C653 100%)}
+.mb-on .mb-num{background:#03140A;color:#9CFFB0;border-right:0}
+.mb-on .mb-t{color:#03140A}
+.mb-on .mb-m{color:#0B3A1A}
+.mb-on::after{content:"";position:absolute;top:0;bottom:0;left:-90px;width:70px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.5),rgba(255,255,255,0));animation:mbGlint 3s ease-in-out infinite}
+@keyframes mbGlint{0%{left:-90px}55%,100%{left:110%}}
+.mb-ptr{position:absolute;width:12px;height:18px;background:#9CFFB0;clip-path:polygon(0 0,100% 50%,0 100%);animation:mbPtr 1s ease-in-out infinite}
+@keyframes mbPtr{50%{transform:translateX(4px);opacity:.6}}
+.mb-dim{opacity:.75}
+@media (prefers-reduced-motion: reduce){.mb-on::after,.mb-ptr{animation:none}}
+.mb-lock{cursor:not-allowed;background:rgba(2,12,6,0.82);box-shadow:inset 0 0 0 1px rgba(124,255,142,0.14)}
+.mb-lock:hover{transform:none;background:rgba(2,12,6,0.82);box-shadow:inset 0 0 0 1px rgba(124,255,142,0.14)}
+.mb-lock .mb-num{color:#6F8C79;background:rgba(70,232,107,0.05)}
+.mb-lock .mb-t{color:#8FA898}
+.mb-lock .mb-m{color:#7E9A88}
+.deploy-bar{height:100%;width:40%;background:linear-gradient(90deg,#2AB84F,#9CFFB0);animation:deployBar 1.6s ease-in-out infinite}
+@keyframes deployBar{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+</style>
+</helmet>
+<div class="bg-root" style="width: 1280px; height: 720px; position: relative; overflow: hidden; color: #FFFFFF">
+
+<!-- grille numérique + circuits -->
+<!-- fond animé commun (menus) : grille qui défile, anneaux radar, balayage, circuits, particules -->
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden">
+<div class="bg-grid"></div>
+<div class="bg-sweep"></div>
+<svg width="1280" height="720" viewBox="0 0 1280 720" style="position: absolute; left: 0; top: 0">
+<circle cx="880" cy="360" r="300" fill="none" stroke="#3FE0C8" stroke-width="2" opacity="0.35"></circle>
+<circle class="bg-spin" cx="880" cy="360" r="240" fill="none" stroke="#3FE0C8" stroke-width="14" stroke-dasharray="120 40 60 30" opacity="0.2"></circle>
+<circle class="bg-spin-r" cx="880" cy="360" r="196" fill="none" stroke="#3FE0C8" stroke-width="3" stroke-dasharray="4 10" opacity="0.4"></circle>
+<circle cx="880" cy="360" r="150" fill="none" stroke="#3FE0C8" stroke-width="1.5" opacity="0.3"></circle>
+<path d="M0 200 H120 L150 230 H420 M0 470 H90 L120 440 H400 M440 620 H620 L650 650 H900 M900 90 H1020 L1050 60 H1280 M1100 640 H1280 M20 560 H110 L130 580" stroke="#6CFF9A" stroke-width="1.6" fill="none" opacity="0.22"></path>
+<path class="bg-flow" d="M0 200 H120 L150 230 H420 M440 620 H620 L650 650 H900 M900 90 H1020 L1050 60 H1280" stroke="#9CFFB0" stroke-width="2" fill="none" opacity="0.55"></path>
+<path class="bg-flow-s" d="M0 470 H90 L120 440 H400 M1100 640 H1280 M20 560 H110 L130 580" stroke="#9CFFB0" stroke-width="2" fill="none" opacity="0.5"></path>
+<path d="M0 360 H60 M0 380 H100 M0 400 H70 M1180 300 H1280 M1200 320 H1280" stroke="#6CFF9A" stroke-width="5" opacity="0.25"></path>
+<circle class="bg-pulse" cx="420" cy="230" r="5" fill="#9CFFB0"></circle>
+<circle class="bg-pulse" cx="900" cy="650" r="5" fill="#9CFFB0" style="animation-delay: 0.7s"></circle>
+<circle class="bg-pulse" cx="1050" cy="60" r="5" fill="#9CFFB0" style="animation-delay: 1.4s"></circle>
+<circle class="bg-pulse" cx="400" cy="440" r="4" fill="#9CFFB0" style="animation-delay: 1.9s"></circle>
+<rect class="bg-blink" x="1236" y="296" width="10" height="10" fill="#46E86B"></rect>
+</svg>
+<div class="bg-scan"></div>
+<span class="bg-mote" style="left: 160px; top: 640px; animation-delay: 0s"></span><span class="bg-mote" style="left: 420px; top: 700px; animation-delay: 2.1s"></span><span class="bg-mote" style="left: 690px; top: 660px; animation-delay: 4.3s"></span><span class="bg-mote" style="left: 930px; top: 690px; animation-delay: 1.2s"></span><span class="bg-mote" style="left: 1120px; top: 650px; animation-delay: 5.6s"></span><span class="bg-mote" style="left: 300px; top: 560px; animation-delay: 6.8s"></span><span class="bg-mote" style="left: 820px; top: 580px; animation-delay: 3.4s"></span><span class="bg-mote" style="left: 1210px; top: 520px; animation-delay: 7.7s"></span>
+</div>
+
+
+<!-- bandeau de titre + bandes biseautées vertes -->
+<svg aria-hidden="true" width="1280" height="100" viewBox="0 0 1280 100" style="position: absolute; left: 0; top: 0">
+<polygon points="0,0 470,0 420,76 0,76" fill="rgba(4,24,12,0.82)"></polygon>
+<polygon points="470,0 1280,0 1280,10 476,10 426,82 0,82 0,76 420,76" fill="#46E86B"></polygon>
+<polygon points="484,16 1280,16 1280,22 488,22 440,92 0,92 0,88 434,88" fill="#2AB84F"></polygon>
+<polygon points="0,96 400,96 404,100 0,100" fill="#8CFF9E"></polygon>
+</svg>
+<h1 class="e-cond" style="position: absolute; left: 60px; top: 6px; margin: 0; font-size: 50px; font-weight: 700; letter-spacing: 1px; line-height: 64px; color: #FFFFFF; text-shadow: 3px 3px 0 #031208, -1px -1px 0 #031208, 1px -1px 0 #031208, -1px 1px 0 #031208">Sélection de mission</h1>
+
+<!-- ===== LISTE DES MISSIONS (plaques vertes inclinées, assorties au fond) ===== -->
+<div style="position: absolute; left: 112px; top: 106px; width: 330px; display: flex; flex-direction: column; gap: 7px">
+<span class="mb-ptr" style="left: -4px; top: 16px"></span>
+<button type="button" class="{{c01}}" onClick="{{open01}}"><span class="mb-num">01</span><span class="mb-txt"><span class="mb-t">Premier contact</span></span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" style="flex: none"><path d="M3 9 L7 13 L15 4" stroke="#7CFF8E" stroke-width="3" fill="none"></path></svg></button>
+<button type="button" class="{{c02}}" onClick="{{open02}}"><span class="mb-num">02</span><span class="mb-txt"><span class="mb-t">Nids sous la ville</span></span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" style="flex: none"><path d="M3 9 L7 13 L15 4" stroke="#7CFF8E" stroke-width="3" fill="none"></path></svg></button>
+<button type="button" class="{{c03}}" onClick="{{open03}}"><span class="mb-num">03</span><span class="mb-txt"><span class="mb-t">La reine</span></span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" style="flex: none"><path d="M3 9 L7 13 L15 4" stroke="#7CFF8E" stroke-width="3" fill="none"></path></svg></button>
+<button type="button" class="{{c04}}" onClick="{{open04}}"><span class="mb-num">04</span><span class="mb-txt"><span class="mb-t">La toile</span></span></button>
+</div>
+
+<!-- ===== SOLDAT (droite, armure blanche et rouge) ===== -->
+<svg aria-hidden="true" width="330" height="594" viewBox="0 0 300 540" style="position: absolute; left: 936px; top: 60px">
+<defs>
+<linearGradient id="emArm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E959B"></stop><stop offset="0.5" stop-color="#E4E8EA"></stop><stop offset="1" stop-color="#80878D"></stop></linearGradient>
+<linearGradient id="emSuit" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E3A2E"></stop><stop offset="0.5" stop-color="#55654F"></stop><stop offset="1" stop-color="#2A3329"></stop></linearGradient>
+</defs>
+<path d="M96 118 L204 118 L214 236 L86 236 Z" fill="#1E2420"></path>
+<path d="M104 262 L148 262 L144 360 L110 360 Z" fill="url(#emSuit)"></path>
+<path d="M154 262 L198 262 L194 360 L160 360 Z" fill="url(#emSuit)"></path>
+<rect x="96" y="282" width="14" height="36" rx="3" fill="#232A24"></rect>
+<rect x="192" y="282" width="14" height="36" rx="3" fill="#232A24"></rect>
+<rect x="106" y="352" width="40" height="30" rx="8" fill="url(#emArm)" stroke="#3A4044"></rect>
+<rect x="156" y="352" width="40" height="30" rx="8" fill="url(#emArm)" stroke="#3A4044"></rect>
+<path d="M110 380 L144 380 L140 472 L114 472 Z" fill="url(#emArm)"></path>
+<path d="M160 380 L194 380 L190 472 L164 472 Z" fill="url(#emArm)"></path>
+<path d="M108 470 L144 470 L148 502 L98 502 Q98 482 108 470 Z" fill="#1B1F22"></path>
+<path d="M160 470 L196 470 Q206 482 206 502 L156 502 Z" fill="#1B1F22"></path>
+<path d="M100 236 L204 236 L202 266 L102 266 Z" fill="#2A2E30"></path>
+<rect x="142" y="242" width="20" height="16" fill="#9AA2A8"></rect>
+<path d="M102 118 Q152 104 200 118 L208 238 L96 238 Z" fill="url(#emSuit)"></path>
+<path d="M114 128 Q152 118 190 128 L194 196 Q152 208 110 196 Z" fill="url(#emArm)" stroke="#3A4044" stroke-width="2"></path>
+<path d="M118 140 Q152 132 186 140 L186 154 Q152 146 118 154 Z" fill="#B8282A"></path>
+<path d="M152 156 V204" stroke="#3A4044" stroke-width="1.5"></path>
+<rect x="114" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="134" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="154" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="174" y="204" width="18" height="28" rx="2" fill="#3A403A"></rect>
+<rect x="140" y="92" width="24" height="18" fill="#22262A"></rect>
+<path d="M126 106 Q152 98 178 106 L176 120 Q152 112 128 120 Z" fill="#B8282A"></path>
+<ellipse cx="96" cy="128" rx="24" ry="18" fill="url(#emArm)" stroke="#3A4044" stroke-width="2"></ellipse>
+<ellipse cx="208" cy="128" rx="24" ry="18" fill="url(#emArm)" stroke="#3A4044" stroke-width="2"></ellipse>
+<path d="M80 126 Q96 116 112 126" stroke="#B8282A" stroke-width="5" fill="none"></path>
+<path d="M192 126 Q208 116 224 126" stroke="#B8282A" stroke-width="5" fill="none"></path>
+<path d="M74 134 L104 134 L104 196 L80 200 Z" fill="url(#emSuit)"></path>
+<path d="M80 190 L104 184 L152 212 L140 232 Z" fill="#7E868C"></path>
+<path d="M200 134 L228 134 L224 186 L198 186 Z" fill="url(#emSuit)"></path>
+<path d="M198 180 L224 182 L222 168 L206 158 Z" fill="#7E868C"></path>
+<g transform="translate(92 256) rotate(-36)">
+<g transform="translate(0 -22) scale(1.65)">
+<polygon points="2,18 24,15 32,15 32,29 24,31 6,33 2,31" fill="#2A3346"></polygon>
+<rect x="32" y="13" width="44" height="16" fill="#3C4A66"></rect>
+<polygon points="76,15 104,15 104,25 76,26" fill="#2A3346"></polygon>
+<rect x="104" y="18" width="16" height="4" fill="#1A1E26"></rect>
+<rect x="118" y="16" width="7" height="8" fill="#1A1E26"></rect>
+<polygon points="58,29 68,29 71,45 61,45" fill="#1E2430"></polygon>
+<polygon points="40,29 49,29 47,41 39,41" fill="#1E2430"></polygon>
+<rect x="46" y="5" width="24" height="6" rx="2" fill="#1A1E26"></rect>
+<rect x="53" y="10" width="9" height="4" fill="#1A1E26"></rect>
+<path d="M36 20 H72 M80 20 H100" stroke="#6E82A8" stroke-width="1.2"></path>
+</g>
+</g>
+<circle cx="146" cy="222" r="11" fill="#1D2024"></circle>
+<circle cx="212" cy="166" r="11" fill="#1D2024"></circle>
+<path d="M116 74 Q114 26 152 22 Q190 26 188 74 Z" fill="url(#emArm)"></path>
+<path d="M146 24 Q152 22 158 24 L158 72 L146 72 Z" fill="#B8282A"></path>
+<path d="M124 80 L180 80 L176 100 Q152 110 128 100 Z" fill="#1A1D20"></path>
+<path d="M110 74 Q152 66 194 74 L192 82 Q152 74 112 82 Z" fill="#9AA2A8"></path>
+<rect x="128" y="84" width="48" height="8" rx="3" fill="#5AD4E0"></rect>
+</svg>
+
+<!-- ===== BOÎTE DE BRIEFING ===== -->
+<div style="position: absolute; left: 448px; top: 108px; width: 452px; height: 494px; box-sizing: border-box; border: 3px solid #46E86B; background: rgba(6,40,18,0.88); box-shadow: 0 0 0 1px #031208, 0 0 16px rgba(70,232,107,0.35)">
+<div class="e-mono" style="position: absolute; left: 18px; top: 14px; width: 412px; font-size: 18px; line-height: 21px; color: #FFFFFF; text-shadow: 1px 1px 0 #031208">
+<p style="margin: 0">Opération 01 : Premier contact.</p>
+<p style="margin: 0">Type : extermination.</p>
+<p style="margin: 0">Conditions : jour. Zone : ville.</p>
+<p style="margin: 10px 0 0">Les insectes géants envahissent la ville. Éliminez-les tous.</p>
+</div>
+<!-- vignette de mission -->
+<div class="e-thumb" style="position: absolute; left: 0; top: 150px; width: 446px; height: 338px; border-top: 3px solid #46E86B"></div>
+</div>
+
+<!-- ===== CARTE DE CLASSE ===== -->
+<div class="e-mono" style="position: absolute; left: 912px; top: 384px; width: 326px; box-sizing: border-box; border: 2px solid #46E86B; background: rgba(6,40,18,0.82); transform: skewY(-2deg); font-size: 17px; color: #FFFFFF; text-shadow: 1px 1px 0 #031208">
+<div style="display: grid; grid-template-columns: 84px 1fr 52px; border-bottom: 1px solid #2AB84F"><span style="padding: 3px 8px; border-right: 1px solid #2AB84F">Classe</span><span style="padding: 3px 8px; font-size: 19px">Fusilier</span><span></span></div>
+<div style="display: grid; grid-template-columns: 84px 1fr 52px"><span style="padding: 2px 8px; border-right: 1px solid #2AB84F">Armure:</span><span style="padding: 2px 8px; font-size: 19px">1450</span><span></span></div>
+<div style="display: grid; grid-template-columns: 84px 1fr 52px"><span style="padding: 2px 8px; border-right: 1px solid #2AB84F">Arme 1</span><span style="padding: 2px 8px">FA-21 Vigie</span><span style="padding: 2px 6px">Lv24</span></div>
+<div style="display: grid; grid-template-columns: 84px 1fr 52px"><span style="padding: 2px 8px 6px; border-right: 1px solid #2AB84F">Arme 2</span><span style="padding: 2px 8px">LR-4 Tonnerre</span><span style="padding: 2px 6px">Lv22</span></div>
+</div>
+
+<!-- ===== ESCOUADE ===== -->
+<div class="e-mono" style="position: absolute; left: 912px; top: 518px; width: 326px; box-sizing: border-box; border: 2px solid #46E86B; background: rgba(6,40,18,0.82); transform: skewY(-2deg); font-size: 15px; color: #FFFFFF; text-shadow: 1px 1px 0 #031208">
+<div style="display: flex; justify-content: space-between; padding: 2px 8px; border-bottom: 1px solid #2AB84F"><span style="color: #9CFFB0">Escouade</span><span>3/4</span></div>
+<div style="display: flex; justify-content: space-between; padding: 1px 8px"><span>Soldat · Fusilier (hôte)</span><span style="color: #8CFF9E">PRÊT</span></div>
+<div style="display: flex; justify-content: space-between; padding: 1px 8px"><span>Kestrel · Commando aéroporté</span><span style="color: #8CFF9E">PRÊT</span></div>
+<div style="display: flex; justify-content: space-between; padding: 1px 8px"><span>Vigie · Opérateur d'appui</span><span style="color: #FFB09E">PAS PRÊT</span></div>
+<div style="display: flex; justify-content: space-between; padding: 1px 8px 3px"><span style="color: #B8D8BE">— emplacement libre —</span><span></span></div>
+</div>
+
+<!-- ===== BANDE BASSE ===== -->
+<svg aria-hidden="true" width="1280" height="80" viewBox="0 0 1280 80" style="position: absolute; left: 0; top: 640px">
+<polygon points="700,4 1280,4 1280,8 704,8" fill="#8CFF9E"></polygon>
+<polygon points="680,12 1280,12 1280,60 650,60" fill="rgba(4,24,12,0.82)"></polygon>
+<polygon points="0,66 1280,66 1280,72 0,72" fill="#46E86B"></polygon>
+<polygon points="0,74 1280,74 1280,80 0,80" fill="#2AB84F"></polygon>
+</svg>
+<div style="position: absolute; left: 720px; top: 650px; height: 44px; display: flex; align-items: center; gap: 10px">
+<button type="button" class="e-key">Entrée:Choisir</button>
+<button type="button" class="e-key">Échap:Retour</button>
+</div>
+
+<!-- ===== CHOIX DE LA DIFFICULTÉ : s'ouvre au clic sur une mission ; un clic sur une difficulté lance la mission ===== -->
+<sc-if value="{{showDiff}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; inset: 0; background: rgba(2,12,6,0.55)"></div>
+<div style="position: absolute; left: 470px; top: 150px; width: 380px; box-sizing: border-box; padding: 18px 20px 20px; border: 3px solid #46E86B; background: rgba(6,40,18,0.95); box-shadow: 0 0 0 1px #031208, 0 0 28px rgba(70,232,107,0.45); display: flex; flex-direction: column; gap: 10px">
+<span class="e-mono" style="font-size: 15px; color: #9CFFB0">{{missionLabel}}</span>
+<span class="e-cond e-o" style="font-size: 30px; font-weight: 700; line-height: 1; color: #FFFFFF">Difficulté</span>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px">
+<button type="button" class="mb" style="width: 330px" onClick="{{go_facile}}"><span class="mb-num">1</span><span class="mb-txt"><span class="mb-t">Facile</span></span></button>
+<button type="button" class="mb" style="width: 330px" onClick="{{go_normal}}"><span class="mb-num">2</span><span class="mb-txt"><span class="mb-t">Normal</span></span></button>
+<button type="button" class="mb" style="width: 330px" onClick="{{go_difficile}}"><span class="mb-num">3</span><span class="mb-txt"><span class="mb-t">Difficile</span></span></button>
+<button type="button" class="mb" style="width: 330px" onClick="{{go_chaos}}"><span class="mb-num">4</span><span class="mb-txt"><span class="mb-t">Chaos</span></span></button>
+<button type="button" class="mb" style="width: 330px" onClick="{{go_inferno}}"><span class="mb-num">5</span><span class="mb-txt"><span class="mb-t">Inferno</span></span></button>
+</div>
+<button type="button" class="e-key" style="align-self: flex-start; height: 36px; font-size: 16px" onClick="{{close}}">Échap:Retour</button>
+</div>
+</sc-if>
+
+<!-- ===== DÉPLOIEMENT (lancement de la mission) ===== -->
+<sc-if value="{{launching}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(2,12,6,0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px">
+<span class="e-mono" style="font-size: 18px; color: #9CFFB0">{{missionLabel}} · {{diffLabel}}</span>
+<span class="e-cond e-o" style="font-size: 64px; font-weight: 800; letter-spacing: 6px; line-height: 1; color: #FFFFFF">DÉPLOIEMENT</span>
+<div style="width: 420px; height: 6px; background: rgba(0,0,0,0.6); border: 1px solid #2AB84F; overflow: hidden"><div class="deploy-bar"></div></div>
+<button type="button" class="e-key" style="height: 36px; font-size: 16px" onClick="{{close}}">Revenir à la sélection (maquette)</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { mission: '01', step: 'diff', diff: null };
+}
+renderVals() {
+const names = { '01': 'Premier contact', '02': 'Nids sous la ville', '03': 'La reine', '04': 'La toile' };
+const diffs = { facile: 'Facile', normal: 'Normal', difficile: 'Difficile', chaos: 'Chaos', inferno: 'Inferno' };
+const m = this.state.mission;
+const v = {
+showDiff: this.state.step === 'diff',
+launching: this.state.step === 'go',
+missionLabel: m + '. ' + names[m],
+diffLabel: diffs[this.state.diff] || '',
+close: () => this.setState({ step: 'list' }),
+};
+for (const n of Object.keys(names)) {
+v['c' + n] = n === m ? 'mb mb-on' : 'mb';
+v['open' + n] = () => this.setState({ mission: n, step: 'diff' });
+}
+for (const d of Object.keys(diffs)) v['go_' + d] = () => this.setState({ diff: d, step: 'go' });
+return v;
+}
+}
+</script>
+</body>
+</html>

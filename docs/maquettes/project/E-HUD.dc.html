@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>E · HUD façon EDF 5</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;family=Saira+Condensed:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.e-bg{background-image:url(/_blob/b993d1e225819ebb12ff12774eb89cdd);background-size:cover;background-position:center}
+.e-mono{font-family:'Share Tech Mono',monospace}
+.e-cond{font-family:'Saira Condensed',sans-serif}
+.e-o{text-shadow:1px 1px 0 #021008,-1px -1px 0 #021008,1px -1px 0 #021008,-1px 1px 0 #021008,0 0 4px rgba(0,0,0,0.8)}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; position: relative; overflow: hidden; background: #1A1C1A; color: #FFFFFF">
+<div class="e-bg" style="position: absolute; inset: 0"></div>
+<div style="position: absolute; inset: 0; background: radial-gradient(ellipse 980px 600px at 640px 380px, rgba(0,0,0,0) 62%, rgba(0,0,0,0.38) 100%)"></div>
+
+<!-- ===== ARMURE (haut gauche) ===== -->
+<div style="position: absolute; left: 64px; top: 52px; width: 400px; height: 110px">
+<svg aria-hidden="true" width="400" height="110" viewBox="0 0 400 110" style="position: absolute; left: 0; top: 0">
+<polygon points="1,30 11,20 92,20 100,12 200,12 208,20 391,20 399,28 399,58 391,66 160,66 150,76 150,100 141,109 11,109 1,99" fill="rgba(6,30,14,0.62)" stroke="#46E86B" stroke-width="1.8"></polygon>
+<polygon points="-1,44 6,44 6,82 -1,82" fill="#46E86B"></polygon>
+<rect x="20" y="30" width="364" height="26" fill="rgba(0,0,0,0.6)" stroke="#2C9C48" stroke-width="1"></rect>
+<rect x="21" y="31" width="281" height="24" fill="#33C653"></rect>
+<rect x="21" y="31" width="281" height="7" fill="#A6FFB4" opacity="0.55"></rect>
+<line x1="20" y1="49" x2="384" y2="49" stroke="#021008" stroke-width="14" stroke-dasharray="1.2 8.9" opacity="0.45"></line>
+<line x1="20" y1="45" x2="384" y2="45" stroke="#7CFF8E" stroke-width="22" stroke-dasharray="1.5 35" opacity="0.9"></line>
+<line x1="302" y1="34" x2="384" y2="34" stroke="#2C9C48" stroke-width="4" stroke-dasharray="1 8.9"></line>
+<rect x="56" y="80" width="88" height="1.4" fill="#2C9C48"></rect>
+</svg>
+<span class="e-cond e-o" style="position: absolute; left: 100px; top: 8px; width: 108px; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: 1px; color: #9CFFB0; line-height: 1">Armure</span>
+<span class="e-cond e-o" style="position: absolute; left: 14px; top: 78px; font-size: 18px; font-weight: 700; color: #7CFF8E">PV</span>
+<span class="e-mono e-o" style="position: absolute; left: 44px; top: 59px; width: 98px; text-align: right; font-size: 22px; line-height: 1; color: #FFFFFF">1 120</span>
+<span class="e-mono e-o" style="position: absolute; left: 44px; top: 86px; width: 98px; text-align: right; font-size: 20px; line-height: 1; color: #D8F5DD">1 450</span>
+
+</div>
+
+<!-- ===== VIE DES ALLIÉS : barre au-dessus de chaque coéquipier (dans le monde) ===== -->
+<div style="position: absolute; left: 502px; top: 330px; width: 100px; height: 28px">
+<span class="e-cond e-o" style="position: absolute; left: 0; top: 0; width: 100px; text-align: center; font-size: 14px; font-weight: 600; color: #FFFFFF">Kestrel</span>
+<svg aria-hidden="true" width="100" height="5" viewBox="0 0 100 5" style="position: absolute; left: 0; top: 20px">
+<rect x="0" y="0" width="100" height="5" rx="1" fill="rgba(0,0,0,0.55)"></rect>
+<rect x="0" y="0" width="80" height="5" rx="1" fill="#46E86B"></rect>
+</svg>
+</div>
+
+<!-- ===== MARQUEUR MONDE : VIGIE À TERRE ===== -->
+<div style="position: absolute; left: 330px; top: 470px; width: 120px; height: 70px">
+<svg aria-hidden="true" width="120" height="70" viewBox="0 0 120 70" style="position: absolute; left: 0; top: 0">
+<polygon points="48,40 72,40 60,56" fill="#FF6E5A" stroke="#021008" stroke-width="1"></polygon>
+<circle cx="60" cy="62" r="5" fill="none" stroke="#FF6E5A" stroke-width="1.5"></circle>
+</svg>
+<span class="e-mono e-o" style="position: absolute; left: 0; top: 0; width: 120px; text-align: center; font-size: 13px; color: #FFFFFF">Vigie · 18 m</span>
+<span class="e-mono e-o" style="position: absolute; left: 0; top: 18px; width: 120px; text-align: center; font-size: 13px; color: #FF8C7A">Relever [E]</span>
+<svg aria-hidden="true" width="100" height="8" viewBox="0 0 100 8" style="position: absolute; left: 10px; top: 36px">
+<polygon points="3,0 100,0 97,8 0,8" fill="rgba(0,0,0,0.6)" stroke="#E8432E" stroke-width="1"></polygon>
+</svg>
+</div>
+
+<!-- ===== RÉTICULE ROUGE + TOUCHE ===== -->
+<svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40" style="position: absolute; left: 620px; top: 340px">
+<path d="M12 20 H16 M24 20 H28 M20 12 V16 M20 24 V28" stroke="#FF2A1E" stroke-width="1.4" opacity="0.9"></path>
+<circle cx="20" cy="20" r="1.1" fill="#FF2A1E"></circle>
+<path d="M15 15 L17 17 M25 15 L23 17 M15 25 L17 23 M25 25 L23 23" stroke="#FFFFFF" stroke-width="1.4" opacity="0.85"></path>
+</svg>
+<span class="e-mono e-o" style="position: absolute; left: 676px; top: 302px; font-size: 18px; color: #FFF1A8">38</span>
+<span class="e-mono e-o" style="position: absolute; left: 700px; top: 280px; font-size: 15px; color: #FFF1A8">38</span>
+<span class="e-mono e-o" style="position: absolute; left: 718px; top: 262px; font-size: 13px; color: #FFE070">38</span>
+
+<!-- ===== RADAR (haut droite) ===== -->
+<div style="position: absolute; left: 1006px; top: 28px; width: 240px; height: 230px">
+<svg aria-hidden="true" width="240" height="230" viewBox="0 0 240 230" style="position: absolute; left: 0; top: 0">
+<polygon points="200,10 214,10 230,26 230,190 214,206 200,206 200,196 210,196 220,186 220,30 210,20 200,20" fill="rgba(6,30,14,0.62)" stroke="#46E86B" stroke-width="1.4"></polygon>
+<rect x="222" y="70" width="6" height="12" fill="#46E86B"></rect>
+<rect x="222" y="134" width="6" height="12" fill="#46E86B"></rect>
+<circle cx="108" cy="108" r="104" fill="rgba(6,30,14,0.66)"></circle>
+<circle cx="108" cy="108" r="99" fill="none" stroke="#2FB24E" stroke-width="9" stroke-dasharray="66 11.75" transform="rotate(-80 108 108)"></circle>
+<circle cx="108" cy="108" r="99" fill="none" stroke="#7CFF8E" stroke-width="2" stroke-dasharray="66 11.75" transform="rotate(-80 108 108)"></circle>
+<circle cx="108" cy="108" r="91" fill="none" stroke="#46E86B" stroke-width="1"></circle>
+<circle cx="108" cy="108" r="85" fill="none" stroke="#46E86B" stroke-width="6" stroke-dasharray="1 7.9" opacity="0.8"></circle>
+<circle cx="108" cy="108" r="56" fill="none" stroke="#46E86B" stroke-width="1" opacity="0.55"></circle>
+<circle cx="108" cy="108" r="28" fill="none" stroke="#46E86B" stroke-width="1" opacity="0.45"></circle>
+<path d="M108 20 V196 M20 108 H196" stroke="#46E86B" stroke-width="1" opacity="0.4"></path>
+<path d="M108 108 L77 28 A86 86 0 0 1 139 28 Z" fill="rgba(170,255,180,0.2)" stroke="#9CFFB0" stroke-width="1" stroke-opacity="0.6"></path>
+<circle cx="70" cy="62" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="80" cy="54" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="88" cy="70" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="96" cy="58" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="104" cy="74" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="112" cy="66" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="118" cy="80" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="126" cy="70" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="132" cy="86" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="140" cy="76" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="62" cy="80" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="100" cy="86" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="150" cy="96" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="56" cy="46" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="160" cy="62" r="3.4" fill="#FF3A2A"></circle>
+<circle cx="122" cy="120" r="4" fill="#5FD0FF" stroke="#021008" stroke-width="1"></circle>
+<circle cx="80" cy="140" r="5" fill="none" stroke="#FF6E5A" stroke-width="2"></circle>
+<circle cx="80" cy="140" r="2" fill="#FF6E5A"></circle>
+<polygon points="108,100 114,114 108,111 102,114" fill="#FFFFFF" stroke="#021008" stroke-width="1"></polygon>
+<polygon points="196,82 204,78 203,87" fill="#FF3A2A"></polygon>
+<polygon points="199,104 207,102 205,111" fill="#FF3A2A"></polygon>
+<polygon points="196,130 204,134 197,138" fill="#FF3A2A"></polygon>
+<polygon points="186,156 193,162 185,165" fill="#FF3A2A"></polygon>
+<polygon points="20,70 13,66 14,75" fill="#FF3A2A"></polygon>
+<polygon points="122,198 128,206 118,206" fill="#5FD0FF"></polygon>
+<polygon points="96,198 100,206 90,205" fill="#5FD0FF"></polygon>
+</svg>
+<span class="e-mono e-o" style="position: absolute; left: 101px; top: 0; font-size: 12px; color: #9CFFB0">N</span>
+</div>
+
+<!-- ===== ARME 2 : LR-4 TONNERRE (petit) ===== -->
+<span class="e-cond e-o" style="position: absolute; left: 960px; top: 492px; width: 250px; text-align: right; font-size: 13px; font-weight: 500; color: #E8F5EA">LR-4 Tonnerre (Lance-roquettes)</span>
+<div style="position: absolute; left: 1014px; top: 512px; width: 210px; height: 36px">
+<svg aria-hidden="true" width="210" height="36" viewBox="0 0 210 36" style="position: absolute; left: 0; top: 0">
+<polygon points="7,1 182,1 188,7 202,7 209,13 209,25 202,31 188,31 182,35 7,35 1,29 1,7" fill="rgba(6,30,14,0.62)" stroke="#46E86B" stroke-width="1.4"></polygon>
+<rect x="8" y="7" width="22" height="22" rx="4" fill="rgba(0,0,0,0.4)" stroke="#2C9C48"></rect>
+<path d="M14 18 H25 L27 16 L27 20 L25 18" fill="#46E86B" stroke="#46E86B" stroke-width="1.6"></path>
+</svg>
+<span class="e-mono e-o" style="position: absolute; left: 40px; top: 8px; width: 140px; text-align: center; font-size: 16px; line-height: 1; color: #FFFFFF">Prête</span>
+<span class="e-cond" style="position: absolute; left: 82px; top: 25px; width: 56px; text-align: center; font-size: 9px; font-weight: 700; color: #021008; background: #46E86B; line-height: 11px">Roquettes</span>
+<span class="e-mono e-o" style="position: absolute; left: 186px; top: 10px; font-size: 12px; color: #9CFFB0">2</span>
+</div>
+
+<!-- ===== ARME 1 : FA-21 VIGIE (principale) ===== -->
+<span class="e-cond e-o" style="position: absolute; left: 960px; top: 566px; width: 250px; text-align: right; font-size: 21px; font-weight: 600; letter-spacing: 1px; color: #FFFFFF">FA-21 Vigie</span>
+<svg aria-hidden="true" width="128" height="48" viewBox="0 0 128 48" style="position: absolute; left: 832px; top: 598px">
+<g fill="#3BE160" stroke="#0E5A22" stroke-width="1">
+<polygon points="2,18 24,15 32,15 32,29 24,31 6,33 2,31"></polygon>
+<rect x="32" y="13" width="44" height="16"></rect>
+<polygon points="76,15 104,15 104,25 76,26"></polygon>
+<rect x="104" y="18" width="16" height="4"></rect>
+<rect x="118" y="16" width="7" height="8"></rect>
+<polygon points="58,29 68,29 71,45 61,45"></polygon>
+<polygon points="40,29 49,29 47,41 39,41"></polygon>
+<rect x="46" y="5" width="24" height="6" rx="2"></rect>
+<rect x="53" y="10" width="9" height="4"></rect>
+</g>
+<path d="M36 20 H72 M80 20 H100" stroke="#0E5A22" stroke-width="1.4"></path>
+</svg>
+<div style="position: absolute; left: 962px; top: 592px; width: 262px; height: 68px">
+<svg aria-hidden="true" width="262" height="68" viewBox="0 0 262 68" style="position: absolute; left: 0; top: 0">
+<polygon points="10,1 226,1 234,9 252,9 261,18 261,46 252,55 234,55 226,63 10,63 1,54 1,10" fill="rgba(6,30,14,0.66)" stroke="#46E86B" stroke-width="1.8"></polygon>
+<rect x="9" y="9" width="30" height="46" rx="6" fill="rgba(0,0,0,0.4)" stroke="#2C9C48" stroke-width="1"></rect>
+<path d="M20 22 Q24 15 28 22 L28 44 L20 44 Z" fill="#46E86B"></path>
+<line x1="132" y1="12" x2="146" y2="40" stroke="#46E86B" stroke-width="1.6"></line>
+<rect x="44" y="47" width="176" height="3" fill="#2C9C48"></rect>
+<rect x="44" y="47" width="119" height="3" fill="#7CFF8E"></rect>
+<rect x="236" y="20" width="8" height="24" fill="#46E86B"></rect>
+</svg>
+<span class="e-mono e-o" style="position: absolute; left: 60px; top: 6px; width: 66px; text-align: right; font-size: 38px; line-height: 1; color: #FFFFFF">27</span>
+<span class="e-mono e-o" style="position: absolute; left: 152px; top: 12px; font-size: 30px; line-height: 1; color: #D8F5DD">40</span>
+<span class="e-cond" style="position: absolute; left: 104px; top: 55px; width: 60px; text-align: center; font-size: 11px; font-weight: 700; color: #021008; background: #46E86B; line-height: 13px">Balles</span>
+<span class="e-mono e-o" style="position: absolute; left: 238px; top: 46px; font-size: 11px; color: #9CFFB0">1</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
