@@ -355,8 +355,13 @@ public partial class BugModel : Node3D
             l.Femur.Rotation = new Vector3(0, 0, -0.5f * l.Side);
             l.Knee.Rotation = new Vector3(0, 0, -2.1f * l.Side);
         }
-        if (_bodyPivot != null) _bodyPivot.RotationDegrees = new Vector3(0, 0, 180);
-        foreach (var w in _wings) w.RotationDegrees = new Vector3(0, 0, 60);
+        if (_bodyPivot != null)
+        {
+            _bodyPivot.RotationDegrees = new Vector3(0, 0, 180);
+            // Le corps retourné repose sur le dos, pattes en l'air.
+            if (!_flying) _bodyPivot.Position = new Vector3(0, _pivotY * 0.5f, 0);
+        }
+        foreach (var w in _wings) w.RotationDegrees = _drone ? Vector3.Zero : new Vector3(0, 0, 25f * Mathf.Sign(w.Position.X));
         if (_mandL != null) { _mandL.RotationDegrees = new Vector3(0, 30, 0); _mandR.RotationDegrees = new Vector3(0, -30, 0); }
     }
 }

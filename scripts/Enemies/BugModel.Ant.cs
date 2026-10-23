@@ -258,7 +258,7 @@ public partial class BugModel
     {
         m.Use(Chitin());
         // Mandibule en lame courbe, inclinée vers le bas.
-        m.Xf = new Transform3D(new Basis(Vector3.Right, 0.4f), Vector3.Zero);
+        m.Xf = new Transform3D(new Basis(Vector3.Right, 0.4f) * Basis.FromScale(Vector3.One * 0.85f), Vector3.Zero);
         var pts = new[] { Vector3.Zero, new Vector3(0.07f, -0.01f, 0.24f), new Vector3(0.04f, -0.03f, 0.48f), new Vector3(-0.09f, -0.04f, 0.66f), new Vector3(-0.27f, -0.05f, 0.74f) };
         m.Tube(pts, new[] { 0.12f, 0.11f, 0.09f, 0.06f, 0f }, 6, col, Vector3.Up, 0.55f);
         // Dents sur le bord interne.
