@@ -77,6 +77,14 @@ public partial class ResultsScreen : CanvasLayer
         foot.AddChild(Total($"+{Report.ArmorGained:0}", "PV d'armure", UiKit.Info));
         foot.AddChild(Total($"+{Report.CreditsGained}", "crédits", UiKit.Gold));
         foot.AddChild(Total($"{Report.Weapons.Count}", "armes", UiKit.Text));
+        var cls = Profile.I.Data.SelectedClass;
+        var lvl = UiKit.VBox(4);
+        lvl.AddChild(UiKit.Label(Report.LevelAfter > Report.LevelBefore ? $"Niveau {Report.LevelAfter} !" : $"Niveau {Report.LevelAfter}", 30, Report.LevelAfter > Report.LevelBefore ? UiKit.Accent : UiKit.Text, true));
+        var xpBar = new ProgressBar { ShowPercentage = false, MaxValue = 1, Value = Profile.I.LevelProgress(cls), CustomMinimumSize = new Vector2(180, 4) };
+        xpBar.AddThemeStyleboxOverride("fill", UiKit.Box(UiKit.Accent, default, 0, 0, 0, 0));
+        lvl.AddChild(xpBar);
+        lvl.AddChild(UiKit.Label($"+{Report.XpGained} XP · {Classes.Get(cls).Name}", 13, UiKit.Muted));
+        foot.AddChild(lvl);
         if (Report.AutoCollected > 0) foot.AddChild(Total($"{Report.AutoCollected}", "caisses auto-collectées", UiKit.Muted));
 
         var actions = UiKit.HBox(12);

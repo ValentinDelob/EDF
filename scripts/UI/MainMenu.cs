@@ -62,7 +62,7 @@ public partial class MainMenu : Control
         var card = UiKit.VBox(2);
         var name = UiKit.Label(Settings.I.PlayerName, 20, UiKit.Text, true);
         card.AddChild(name);
-        card.AddChild(UiKit.Label($"{Classes.Get(cls).Name} · {p.Armor(cls):0} PV · {p.Data.Credits} crédits", 14, UiKit.Muted));
+        card.AddChild(UiKit.Label($"{Classes.Get(cls).Name} niv. {p.Level(cls)} · {p.Armor(cls):0} PV · {p.Data.Credits} crédits", 14, UiKit.Muted));
         var cleared = Missions.All.Count(mm => Enumerable.Range(0, 5).Any(d => p.IsCleared(mm.Index, (Difficulty)d)));
         card.AddChild(UiKit.Label($"{cleared}/{Missions.All.Length} missions · {p.Data.Arsenal.Count} armes · v{ProjectSettings.GetSetting("application/config/version")}", 13, UiKit.Dim));
         AddChild(card);

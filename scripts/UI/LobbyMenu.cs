@@ -159,7 +159,7 @@ public partial class LobbyMenu : MenuScreen
             UiKit.FillRect(v);
             v.OffsetLeft = 20; v.OffsetTop = 8;
             v.AddChild(UiKit.Label(cd.Name.ToUpperInvariant(), 19, cls == sel ? UiKit.Text : UiKit.Muted, true));
-            v.AddChild(UiKit.Label($"{Profile.I.Armor(cls):0} PV", 13, UiKit.Muted));
+            v.AddChild(UiKit.Label($"Niv. {Profile.I.Level(cls)} · {Profile.I.Armor(cls):0} PV", 13, UiKit.Muted));
             b.AddChild(v);
             grid.AddChild(b);
         }

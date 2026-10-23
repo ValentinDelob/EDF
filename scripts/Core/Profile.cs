@@ -18,6 +18,8 @@ public class ProfileData
     public Dictionary<string, int> Cleared { get; set; } = new();
     public int PityCounter { get; set; }
     public int TotalKills { get; set; }
+    /// <summary>Expérience cumulée par classe.</summary>
+    public Dictionary<string, int> ClassXp { get; set; } = new();
     public int MissionsPlayed { get; set; }
 }
 
@@ -37,7 +39,36 @@ public partial class Profile : Node
     }
 
     public float Armor(SoldierClass c) =>
-        Classes.Get(c).BaseArmor + (Data.ArmorBonus.TryGetValue(c.ToString(), out var b) ? b : 0);
+        Classes.Get(c).BaseArmor + (Data.ArmorBonus.TryGetValue(c.ToString(), out var b) ? b : 0) + (Level(c) - 1) * 3f;
+
+    public const int MaxLevel = 60;
+
+    /// <summary>Expérience nécessaire pour passer du niveau n au niveau n+1.</summary>
+    public static int XpForLevel(int n) => (int)(300 * Mathf.Pow(n, 1.3f));
+
+    public int Xp(SoldierClass c) => Data.ClassXp.TryGetValue(c.ToString(), out var x) ? x : 0;
+
+    public int Level(SoldierClass c)
+    {
+        var xp = Xp(c);
+        var lvl = 1;
+        while (lvl < MaxLevel && xp >= XpForLevel(lvl)) { xp -= XpForLevel(lvl); lvl++; }
+        return lvl;
+    }
+
+    /// <summary>Progression (0..1) dans le niveau courant.</summary>
+    public float LevelProgress(SoldierClass c)
+    {
+        var xp = Xp(c);
+        var lvl = 1;
+        while (lvl < MaxLevel && xp >= XpForLevel(lvl)) { xp -= XpForLevel(lvl); lvl++; }
+        return lvl >= MaxLevel ? 1f : xp / (float)XpForLevel(lvl);
+    }
+
+    /// <summary>Bonus de dégâts de classe (+1 % par niveau au-delà du premier).</summary>
+    public float DamageBonus(SoldierClass c) => 1f + (Level(c) - 1) * 0.01f;
+
+    public void AddXp(SoldierClass c, int amount) => Data.ClassXp[c.ToString()] = Xp(c) + amount;
 
     public void AddArmor(SoldierClass c, float amount)
     {
