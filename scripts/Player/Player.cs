@@ -289,7 +289,7 @@ public partial class Player : CharacterBody3D
             _netTimer = 0.05f;
             var flags = (horiz.Length() > 0.5f ? 1 : 0) | (speed > Def.WalkSpeed + 0.1f ? 2 : 0) | (!IsOnFloor() ? 4 : 0) | (Aiming ? 8 : 0)
                         | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0) | (Downed ? 32 : 0) | (Flying ? 64 : 0)
-                        | ((int)Model.Style & 7) << 8;
+                        | ((int)Model.Style & 7) << 8 | (Weapon != null && Weapon.Reloading ? 1 << 11 : 0);
             Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, flags, Health, Current, Velocity);
         }
     }
@@ -344,7 +344,11 @@ public partial class Player : CharacterBody3D
         Model.Animate(dt, horiz.Length(), _pitch, !IsOnFloor(), Flying, Downed, Aiming, _recoil);
 
         Model.Visible = Vehicle == null;
-        if (Weapon != null) Model.SetWeaponStyle(SoldierModel.StyleFor(Weapon.W.T));
+        if (Weapon != null)
+        {
+            Model.SetWeaponStyle(SoldierModel.StyleFor(Weapon.W.T));
+            Model.Reloading = Weapon.Reloading;
+        }
         if (Vehicle != null)
         {
             _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Aiming ? 7f : 11f, Mathf.Clamp(dt * 6f, 0, 1));

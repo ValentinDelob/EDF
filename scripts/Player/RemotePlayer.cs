@@ -54,6 +54,7 @@ public partial class RemotePlayer : Node3D
         Downed = (flags & 32) != 0;
         Model.Visible = (flags & 128) == 0;
         Model.SetWeaponStyle((WeaponStyle)((flags >> 8) & 7));
+        Model.Reloading = (flags & (1 << 11)) != 0;
         if ((flags & 16) != 0) _recoil = 0.6f;
     }
 

@@ -169,6 +169,9 @@ public partial class SoldierModel : Node3D
     }
 
     public WeaponStyle Style { get; private set; } = (WeaponStyle)(-1);
+    /// <summary>Vrai pendant un rechargement : l'arme est abaissée et inclinée.</summary>
+    public bool Reloading;
+    private float _reloadBlend;
 
     /// <summary>Reconstruit le modèle de l'arme tenue.</summary>
     public void SetWeaponStyle(WeaponStyle style)
@@ -307,8 +310,14 @@ public partial class SoldierModel : Node3D
         _foreR.Rotation = new Vector3(-0.35f, 0, 0);
         _armL.Rotation = new Vector3(-1.2f - pitch * 0.55f + recoil * 0.25f, -0.55f, 0);
         _foreL.Rotation = new Vector3(-0.6f, 0, 0);
-        _gun.Rotation = new Vector3(-pitch * 0.55f + recoil * 0.2f, 0, 0);
-        _gun.Position = new Vector3(-0.12f, 0.28f, 0.32f - recoil * 0.06f);
+        _reloadBlend = Mathf.MoveToward(_reloadBlend, Reloading ? 1f : 0f, dt * 6f);
+        _gun.Rotation = new Vector3(-pitch * 0.55f + recoil * 0.2f + _reloadBlend * 0.7f, _reloadBlend * 0.4f, _reloadBlend * 0.5f);
+        _gun.Position = new Vector3(-0.12f + _reloadBlend * 0.05f, 0.28f - _reloadBlend * 0.12f, 0.32f - recoil * 0.06f - _reloadBlend * 0.08f);
+        if (_reloadBlend > 0.01f)
+        {
+            _armL.Rotation += new Vector3(_reloadBlend * (0.6f + Mathf.Sin(_t * 9f) * 0.15f), 0.3f * _reloadBlend, 0);
+            _armR.Rotation += new Vector3(_reloadBlend * 0.5f, 0, 0);
+        }
         if (_jetFlames != null)
         {
             _jetFlames.Visible = flying;
