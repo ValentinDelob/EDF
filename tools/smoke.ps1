@@ -24,9 +24,24 @@ $missionCount = (Select-String -Path "scripts/Data/Missions.cs" -Pattern '^\s+ne
 $pattern = 'ERROR|Exception|Unhandled'
 $failures = @()
 
+# Le jeu lancé depuis l'éditeur utilise l'assemblage Debug : on le compile d'abord.
+dotnet build (Join-Path $RepoRoot "Rempart.csproj") -nologo -v q | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Error "Compilation C# en échec."; exit 1 }
+
+# Lance Godot avec un délai maximal (un jeu bloqué ne doit jamais figer la CI).
+function Invoke-Timed([string[]]$allArgs, [int]$timeoutSec) {
+    $log = [System.IO.Path]::GetTempFileName()
+    $p = Start-Process -FilePath $Godot -ArgumentList $allArgs -RedirectStandardOutput $log -RedirectStandardError "$log.err" -PassThru -NoNewWindow
+    if (-not $p.WaitForExit($timeoutSec * 1000)) {
+        $p.Kill()
+        return @("ERROR: délai dépassé ($timeoutSec s), processus arrêté") + (Get-Content $log, "$log.err" -ErrorAction SilentlyContinue)
+    }
+    return Get-Content $log, "$log.err" -ErrorAction SilentlyContinue
+}
+
 function Run-Godot([string]$label, [string[]]$gameArgs) {
     $all = @("--headless", "--path", ".", "--") + $gameArgs
-    $out = & $Godot @all 2>&1 | ForEach-Object { $_.ToString() }
+    $out = Invoke-Timed $all ($Seconds + 60)
     $bad = $out | Where-Object { $_ -match $pattern }
     if ($bad) {
         Write-Host "ECHEC  $label" -ForegroundColor Red
@@ -52,7 +67,7 @@ if (-not $SkipLan) {
     $proc = Start-Process -FilePath $Godot -ArgumentList $hostArgs -RedirectStandardOutput $hostLog -RedirectStandardError "$hostLog.err" -PassThru -NoNewWindow
     Start-Sleep -Seconds 3
     $clientOk = Run-Godot "LAN client" @("--autojoin=127.0.0.1", "--bot", "--name=Client", "--quit-after=$($Seconds + 8)")
-    $proc.WaitForExit(60000) | Out-Null
+    if (-not $proc.WaitForExit(90000)) { $proc.Kill(); Add-Content $hostLog "ERROR: délai dépassé, hôte arrêté" }
     $hostBad = Get-Content $hostLog, "$hostLog.err" -ErrorAction SilentlyContinue | Where-Object { $_ -match $pattern }
     if ($hostBad) { Write-Host "ECHEC  LAN hôte" -ForegroundColor Red; $hostBad | Select-Object -First 12 | ForEach-Object { Write-Host "   $_" }; $failures += "LAN hôte" }
     else { Write-Host "OK     LAN hôte" -ForegroundColor Green }
@@ -65,4 +80,5 @@ if ($failures.Count -gt 0) {
 }
 Write-Host "Tous les tests de non-régression sont passés." -ForegroundColor Green
 exit 0
-
+
+
