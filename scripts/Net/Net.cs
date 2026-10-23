@@ -469,35 +469,40 @@ public partial class Net : Node
 
     // ---------- Véhicules ----------
 
-    public void SendTankState(int id, Vector3 pos, float yaw, float turret, float pitch, float hp, float speed)
+    /// <summary>
+    /// État d'un véhicule, diffusé par son conducteur. <paramref name="a"/> et <paramref name="b"/> dépendent du type
+    /// (char : tourelle et canon ; hélicoptère : régime du rotor et tourelle de nez).
+    /// </summary>
+    public void SendVehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float hp, float speed)
     {
         if (IsSolo) return;
         foreach (var pid in Players.Keys)
-            if (pid != MyId) RpcId(pid, MethodName.TankState, id, pos, yaw, turret, pitch, hp, speed);
+            if (pid != MyId) RpcId(pid, MethodName.VehicleState, id, pos, rot, a, b, hp, speed);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 6)]
-    private void TankState(int id, Vector3 pos, float yaw, float turret, float pitch, float hp, float speed) =>
-        W?.OnTankState(id, pos, yaw, turret, pitch, hp, speed);
+    private void VehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float hp, float speed) =>
+        W?.OnVehicleState(id, pos, rot, a, b, hp, speed);
 
-    public void RequestTankSeat(int id, bool enter) => ToHost(MethodName.TankSeatRequest, id, enter);
+    public void RequestVehicleSeat(int id, bool enter) => ToHost(MethodName.VehicleSeatRequest, id, enter);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void TankSeatRequest(int id, bool enter)
+    private void VehicleSeatRequest(int id, bool enter)
     {
-        if (!IsHost || W == null || !W.Tanks.TryGetValue(id, out var t) || t.Wrecked) return;
+        if (!IsHost || W == null || !W.Vehicles.TryGetValue(id, out var v) || v.Wrecked) return;
         var who = Sender;
-        if (enter && t.Driver == 0) ToAll(MethodName.TankDriver, id, who);
-        else if (!enter && t.Driver == who) ToAll(MethodName.TankDriver, id, 0L);
+        // Une seule place par joueur : pas de second véhicule tant qu'on en conduit un.
+        if (enter && v.Driver == 0 && !W.Vehicles.Values.Any(o => o.Driver == who)) ToAll(MethodName.VehicleDriver, id, who);
+        else if (!enter && v.Driver == who) ToAll(MethodName.VehicleDriver, id, 0L);
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void TankDriver(int id, long driver) => W?.OnTankDriver(id, driver);
+    private void VehicleDriver(int id, long driver) => W?.OnVehicleDriver(id, driver);
 
-    public void SendTankWrecked(int id) => ToAll(MethodName.TankWrecked, id);
+    public void SendVehicleWrecked(int id) => ToAll(MethodName.VehicleWrecked, id);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void TankWrecked(int id) => W?.OnTankWrecked(id);
+    private void VehicleWrecked(int id) => W?.OnVehicleWrecked(id);
 
     // ---------- Alliés PNJ ----------
 

@@ -86,14 +86,14 @@ public partial class GuideMenu : MenuScreen
         Keys(("move_forward", "Avancer"), ("move_back", "Reculer"), ("move_left", "Gauche"), ("move_right", "Droite"),
             ("jump", "Sauter / voler"), ("sprint", "Courir / propulsion"), ("dodge", "Roulade / esquive"), ("fire", "Tirer"),
             ("aim", "Viser"), ("reload", "Recharger"), ("weapon_swap", "Arme suivante"), ("ability", "Capacité de classe"),
-            ("grenade", "Grenade"), ("interact", "Relever, monter dans le char"), ("scoreboard", "Tableau des scores"), ("=Échap", "Pause"));
+            ("grenade", "Grenade"), ("interact", "Relever, monter dans un véhicule"), ("scoreboard", "Tableau des scores"), ("=Échap", "Pause"));
         Para("Toutes les touches et la sensibilité de la souris se règlent dans Options › Contrôles. Une manette est aussi reconnue.");
         Section("Radar");
         Para("Le radar (en haut à droite) tourne avec la caméra : le haut est toujours devant vous et le repère « N » indique le nord. Points rouges : insectes ; orange : ennemis volants ; grands points : boss et nids ; bleus : alliés et équipiers ; petits carrés : caisses, de la couleur de leur contenu ; losanges : marqueurs de l'escouade.");
         Section("Multijoueur en réseau local");
         Para("Un joueur choisit « Héberger (LAN) », les autres « Rejoindre (LAN) » : la partie apparaît automatiquement, sinon saisissez l'adresse IP de l'hôte. Un soldat à terre peut être relevé par un équipier qui maintient la touche d'interaction près de lui. Si toute l'escouade est à terre, la mission échoue.");
         Section("Véhicules et alliés");
-        Para("Un char de combat attend près du point de départ : approchez-vous et appuyez sur la touche d'interaction. Des escouades de soldats alliés vous suivent et tirent sur les insectes.");
+        Para("Un char de combat attend près du point de départ : approchez-vous et appuyez sur la touche d'interaction. Un hélicoptère d'attaque est garé de l'autre côté de la place : saut pour monter, course ou roulade pour descendre, avancer/reculer pour piquer ou cabrer, la caméra oriente le nez ; minigun au clic gauche, salves de roquettes au clic droit, posez-vous pour en sortir. Des escouades de soldats alliés vous suivent et tirent sur les insectes.");
     }
 
     private void BuildClasses()

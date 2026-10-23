@@ -33,7 +33,7 @@ public partial class Player : CharacterBody3D
     public long ReviveTarget;
     public bool SecondChanceUsed;
     public float DownedTime;
-    public Tank Vehicle;
+    public Vehicle Vehicle;
     /// <summary>Mode automatique pour les tests : vise et tire seul sur l'ennemi le plus proche.</summary>
     public static bool Bot;
     private bool _botFire;
@@ -114,9 +114,14 @@ public partial class Player : CharacterBody3D
         if (Downed) return;
         if (e.IsActionPressed("interact"))
         {
-            if (Vehicle != null) { Net.I.RequestTankSeat(Vehicle.Id, false); return; }
-            var t = World.TankNear(GlobalPosition, 6f);
-            if (t != null && World.DownedTeammateNear(GlobalPosition, 3.5f) == 0) { Net.I.RequestTankSeat(t.Id, true); return; }
+            if (Vehicle != null)
+            {
+                if (Vehicle.CanExit) Net.I.RequestVehicleSeat(Vehicle.Id, false);
+                else World.Hud?.Toast("Posez l'hélicoptère pour descendre.");
+                return;
+            }
+            var t = World.VehicleNear(GlobalPosition);
+            if (t != null && World.DownedTeammateNear(GlobalPosition, 3.5f) == 0) { Net.I.RequestVehicleSeat(t.Id, true); return; }
         }
         if (e.IsActionPressed("ping"))
         {
@@ -172,7 +177,7 @@ public partial class Player : CharacterBody3D
             if (_netTimer <= 0)
             {
                 _netTimer = 0.05f;
-                Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, 128, Health, Current, Vector3.Zero);
+                Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, 128, Health, Current, Vehicle.Velocity);
             }
             return;
         }
@@ -332,9 +337,10 @@ public partial class Player : CharacterBody3D
         Aiming = canAct && Input.IsActionPressed("aim");
 
         // Caméra : visée, tremblement
-        var zoom = Aiming ? (Weapon != null && Weapon.W.T.Zoom > 1 ? Weapon.W.T.Zoom : 1.4f) : 1f;
+        var zoom = Aiming ? (Vehicle != null ? Vehicle.AimZoom : Weapon != null && Weapon.W.T.Zoom > 1 ? Weapon.W.T.Zoom : 1.4f) : 1f;
         Camera.Fov = Mathf.Lerp(Camera.Fov, Settings.I.Fov / zoom, Mathf.Clamp(dt * 12f, 0, 1));
         _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Aiming ? 2.4f : (Def.Id == SoldierClass.Heavy ? 5f : 4.2f), Mathf.Clamp(dt * 10f, 0, 1));
+        _arm.Position = _arm.Position.Lerp(new Vector3(0.85f, 0.15f + (Vehicle?.CameraLift ?? 0f), 0), Mathf.Clamp(dt * 4f, 0, 1));
         _shake = Mathf.MoveToward(_shake, 0, dt * 2.5f);
         Camera.HOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f;
         Camera.VOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f + _recoil * 0.02f;
@@ -358,11 +364,12 @@ public partial class Player : CharacterBody3D
         }
         if (Vehicle != null)
         {
-            _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Aiming ? 7f : 11f, Mathf.Clamp(dt * 6f, 0, 1));
+            _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Vehicle.CameraDistance(Aiming), Mathf.Clamp(dt * 6f, 0, 1));
             if (Bot && canAct)
             {
                 BotAim(dt);
                 if (_botFire) Input.ActionPress("fire"); else Input.ActionRelease("fire");
+                if (Vehicle is Helicopter h) BotFly(h);
             }
             HandleRevive(dt);
             return;
@@ -432,6 +439,7 @@ public partial class Player : CharacterBody3D
         var to = from + dir * range;
         var q = PhysicsRayQueryParameters3D.Create(from, to, 1u | (1u << 2));
         q.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        if (Vehicle != null) q.Exclude.Add(Vehicle.GetRid()); // la caméra regarde à travers son propre véhicule
         var hit = GetWorld3D().DirectSpaceState.IntersectRay(q);
         collider = null;
         if (hit.Count == 0) return to;
@@ -698,11 +706,12 @@ public partial class Player : CharacterBody3D
 
     // ------------------------------------------------------------------ Santé
 
-    public void EnterVehicle(Tank t)
+    public void EnterVehicle(Vehicle v)
     {
-        Vehicle = t;
+        Vehicle = v;
         CollisionLayer = 0;
-        World.Hud?.Toast("Char de combat : clic gauche canon, clic droit mitrailleuse, E pour descendre.");
+        _arm.AddExcludedObject(v.GetRid());
+        World.Hud?.Toast(v.EnterHint);
     }
 
     public void ExitVehicle()
@@ -711,7 +720,10 @@ public partial class Player : CharacterBody3D
         var t = Vehicle;
         Vehicle = null;
         CollisionLayer = 1 << 1;
+        _arm.RemoveExcludedObject(t.GetRid());
+        if (Bot) foreach (var a in new[] { "fire", "aim", "jump", "sprint", "move_forward" }) Input.ActionRelease(a);
         GlobalPosition = t.GlobalPosition + t.GlobalBasis.X * 3.5f + Vector3.Up * 0.5f;
+        Velocity = Vector3.Zero;
     }
 
     public void TakeDamage(float dmg, Vector3 from)
@@ -720,9 +732,11 @@ public partial class Player : CharacterBody3D
         if (Vehicle != null)
         {
             // Le blindage encaisse à la place du soldat.
-            Vehicle.Health -= dmg * 0.6f;
+            if (Vehicle.Wrecked || Vehicle.IgnoresDamageFrom(from)) return;
+            Vehicle.Health -= dmg * Vehicle.ArmorFactor;
             AddShake(0.1f);
-            if (Vehicle.Health <= 0) Net.I.SendTankWrecked(Vehicle.Id);
+            World.Hud?.DamageFrom(from);
+            if (Vehicle.Health <= 0) Net.I.SendVehicleWrecked(Vehicle.Id);
             return;
         }
         if (_dodgeTime > 0) return; // invulnérable pendant la roulade
@@ -805,6 +819,24 @@ public partial class Player : CharacterBody3D
             if (!Overheated && Energy > 60) Input.ActionPress("jump");
             else if (Energy < 25 || Overheated) Input.ActionRelease("jump");
         }
+    }
+
+    /// <summary>Bot en hélicoptère : tient ~25 m d'altitude, avance vers les ennemis lointains, tire des roquettes.</summary>
+    private void BotFly(Helicopter h)
+    {
+        if (h.Altitude < 23f) Input.ActionPress("jump"); else Input.ActionRelease("jump");
+        if (h.Altitude > 28f) Input.ActionPress("sprint"); else Input.ActionRelease("sprint");
+        var e = World.NearestEnemy(GlobalPosition, 400f);
+        var far = e != null && new Vector2(e.GlobalPosition.X - GlobalPosition.X, e.GlobalPosition.Z - GlobalPosition.Z).Length() > 70f;
+        if (e != null && far)
+        {
+            // Pas de cible à portée : cap sur l'ennemi le plus proche.
+            var to = e.GlobalPosition - GlobalPosition;
+            _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(-to.X, -to.Z), 0.05f);
+            _pitch = Mathf.Lerp(_pitch, -0.25f, 0.05f);
+        }
+        if (far && h.Altitude > 15f) Input.ActionPress("move_forward"); else Input.ActionRelease("move_forward");
+        if (_botFire && h.RocketsReady >= 1f) Input.ActionPress("aim"); else Input.ActionRelease("aim");
     }
 
     public void AddShake(float amount) => _shake = Mathf.Min(1.2f, _shake + amount);

@@ -56,6 +56,7 @@ public partial class App : Node
             var old = _screen;
             old.MouseFilter = Control.MouseFilterEnum.Ignore;
             old.ProcessMode = ProcessModeEnum.Disabled;
+            // Tween porté par App : celui de l'écran désactivé ne serait jamais traité (l'écran resterait affiché).
             var tw = old.CreateTween();
             tw.TweenProperty(old, "modulate:a", 0f, 0.12f);
             tw.TweenCallback(Callable.From(old.QueueFree));
@@ -229,6 +230,22 @@ public partial class App : Node
 /// </summary>
 public static class AutoTest
 {
+    /// <summary>Attend que la mission soit chargée (durée variable, partie LAN), puis demande la place du véhicule.</summary>
+    private static void BoardWhenReady(App app, int vehicleId, Vector3 near)
+    {
+        app.GetTree().CreateTimer(1f).Timeout += () =>
+        {
+            var w = app.CurrentWorld;
+            if (w?.LocalPlayer == null || !GodotObject.IsInstanceValid(w.LocalPlayer)) { BoardWhenReady(app, vehicleId, near); return; }
+            app.GetTree().CreateTimer(1.5f).Timeout += () =>
+            {
+                if (w.LocalPlayer == null || !GodotObject.IsInstanceValid(w.LocalPlayer)) return;
+                w.LocalPlayer.GlobalPosition = near;
+                Net.I.RequestVehicleSeat(vehicleId, true);
+            };
+        };
+    }
+
     public static void Run(App app)
     {
         var dir = Screenshot.CmdArg("shots");
@@ -266,15 +283,10 @@ public static class AutoTest
                 w.CratesCollected[(int)CrateType.Credits] += 3;
                 w.EndMission(true);
             };
-        // --tank : le joueur monte dans le char au bout de 4 s.
-        if (Screenshot.CmdArg("tank") != null)
-            app.GetTree().CreateTimer(5f).Timeout += () =>
-            {
-                var w = app.CurrentWorld;
-                if (w?.LocalPlayer == null) return;
-                w.LocalPlayer.GlobalPosition = new Vector3(14, 1, 17);
-                Net.I.RequestTankSeat(1, true);
-            };
+        // --tank / --heli : le joueur monte dans le char ou l'hélicoptère peu après le chargement de la mission
+        // (le bot fait voler l'hélicoptère).
+        if (Screenshot.CmdArg("tank") != null) BoardWhenReady(app, 1, new Vector3(14, 1, 17));
+        if (Screenshot.CmdArg("heli") != null) BoardWhenReady(app, 2, new Vector3(-16, 1, 19));
         // --board=N : affiche le tableau des scores (Tab) à partir de N secondes.
         if (Screenshot.CmdArg("board") is { } bd && float.TryParse(bd, NumberStyles.Float, CultureInfo.InvariantCulture, out var boardAt))
             app.GetTree().CreateTimer(boardAt).Timeout += () => Input.ActionPress("scoreboard");

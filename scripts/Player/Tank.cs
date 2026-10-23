@@ -3,39 +3,25 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Char de combat pilotable. Le conducteur le simule localement et diffuse son état ;
-/// l'hôte attribue les places (une seule à la fois).
+/// Char de combat pilotable (simulation par le conducteur et réseau : voir <see cref="Vehicle"/>).
 /// </summary>
-public partial class Tank : CharacterBody3D
+public partial class Tank : Vehicle
 {
-    public int Id;
-    public long Driver;
-    public float Health = 1600;
-    public float MaxHealth = 1600;
-    public bool Wrecked;
-    private World _world;
     private Node3D _hull, _turret, _barrel, _muzzle;
     private Node3D[] _wheels = new Node3D[6];
     private float _turretYaw, _barrelPitch;
     private float _speed;
     private float _fireCd, _mgCd;
-    private Vector3 _netPos;
-    private float _netYaw, _netTurret, _netPitch;
-    private float _netTimer;
     private float _treads;
-    private Label3D _prompt;
 
     public const float CannonDamage = 380f;
     public const float CannonRadius = 10f;
 
     public static Tank Create(World w, int id, Vector3 pos, float yaw)
     {
-        var t = new Tank { _world = w, Id = id, Name = $"Tank{id}", CollisionLayer = 1, CollisionMask = 1 };
+        var t = new Tank { Name = $"Tank{id}" };
+        t.InitCommon(w, id, pos, yaw, 1600);
         t.Build();
-        t.Position = pos;
-        t.Rotation = new Vector3(0, yaw, 0);
-        t._netPos = pos;
-        t._netYaw = yaw;
         return t;
     }
 
@@ -76,22 +62,24 @@ public partial class Tank : CharacterBody3D
         _muzzle = new Node3D { Position = new Vector3(0, 0, 4.1f) };
         _barrel.AddChild(_muzzle);
         AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(3.6f, 2.0f, 7.0f) }, Position = new Vector3(0, 1.1f, 0) });
-        _prompt = new Label3D
-        {
-            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, FontSize = 40, OutlineSize = 10, PixelSize = 0.006f,
-            Position = new Vector3(0, 3.4f, 0), Font = UiKit.BodyFont, Visible = false, NoDepthTest = true,
-        };
-        AddChild(_prompt);
-        foreach (var n in FindChildren("*", "MeshInstance3D", true, false)) ((MeshInstance3D)n).CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
+        _prompt.Position = new Vector3(0, 3.4f, 0);
+        CastShadows();
     }
 
-    public bool IsLocalDriver => Driver == Net.I.MyId && Driver != 0;
     public float CannonReady => Mathf.Clamp(1f - _fireCd / 1.6f, 0, 1);
-    public Vector3 SeatPosition => GlobalPosition + Vector3.Up * 2.2f;
     public Vector3 MuzzlePosition => _muzzle.GlobalPosition;
+    public override Vector3 SeatPosition => GlobalPosition + Vector3.Up * 2.2f;
+    public override string DisplayName => "Char de combat";
+    public override string PromptText => "Monter dans le char";
+    public override string EnterHint => "Char de combat : clic gauche canon, clic droit mitrailleuse, E pour descendre.";
+    public override string WreckedHint => "Char détruit ! Évacuation.";
+    public override string HudAmmo => CannonReady >= 1 ? "PRÊT" : $"{Mathf.RoundToInt(CannonReady * 100)}";
+    public override string HudMag => "CANON";
+    public override float HudReady => CannonReady;
+    public override string HudOther => "Clic droit : mitrailleuse";
 
     /// <summary>Simulation par le conducteur local : déplacement, tourelle, tir.</summary>
-    public void DriveTick(Player p, float dt, float camYaw, float camPitch)
+    public override void DriveTick(Player p, float dt, float camYaw, float camPitch)
     {
         if (Wrecked) return;
         var input = _world.Paused ? Vector2.Zero : Input.GetVector("move_left", "move_right", "move_forward", "move_back");
@@ -119,12 +107,7 @@ public partial class Tank : CharacterBody3D
         if (!_world.Paused && Input.IsActionPressed("fire") && _fireCd <= 0) FireCannon(p);
         if (!_world.Paused && Input.IsActionPressed("aim") && _mgCd <= 0) FireMg(p);
 
-        _netTimer -= dt;
-        if (_netTimer <= 0)
-        {
-            _netTimer = 0.05f;
-            Net.I.SendTankState(Id, GlobalPosition, Rotation.Y, _turretYaw, _barrelPitch, Health, _speed);
-        }
+        BroadcastState(dt, Rotation, _turretYaw, _barrelPitch, _speed);
     }
 
     private void ApplyPose(float dt)
@@ -147,7 +130,6 @@ public partial class Tank : CharacterBody3D
         Effects.Smoke(_world, from, 2f, 1.5f);
         Sfx.Ui("explosion_small", 0f, 0.7f);
         p.AddShake(0.35f);
-        _hull.Position = Vector3.Back * 0.0f;
         var tw = CreateTween();
         tw.TweenProperty(_barrel, "position:z", 0.4f, 0.05f);
         tw.TweenProperty(_barrel, "position:z", 0.9f, 0.35f);
@@ -179,42 +161,24 @@ public partial class Tank : CharacterBody3D
         Net.I.SendShotFx(0, from, end);
     }
 
-    public void ApplyState(Vector3 pos, float yaw, float turret, float pitch, float hp, float speed)
+    protected override void RemoteTick(float dt)
     {
-        _netPos = pos;
-        _netYaw = yaw;
-        _netTurret = turret;
-        _netPitch = pitch;
-        Health = hp;
-        _speed = speed;
+        var k = Mathf.Clamp(dt * 12f, 0, 1);
+        InterpolatePosition(dt);
+        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, _netRot.Y, k), 0);
+        _turretYaw = Mathf.LerpAngle(_turretYaw, _netA, k);
+        _barrelPitch = Mathf.Lerp(_barrelPitch, _netB, k);
+        _speed = _netSpeed;
+        ApplyPose(dt);
     }
 
-    public override void _Process(double delta)
-    {
-        var dt = (float)delta;
-        if (!IsLocalDriver && !Wrecked)
-        {
-            GlobalPosition = GlobalPosition.DistanceSquaredTo(_netPos) > 100 ? _netPos : GlobalPosition.Lerp(_netPos, Mathf.Clamp(dt * 12f, 0, 1));
-            Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, _netYaw, Mathf.Clamp(dt * 12f, 0, 1)), 0);
-            _turretYaw = Mathf.LerpAngle(_turretYaw, _netTurret, Mathf.Clamp(dt * 12f, 0, 1));
-            _barrelPitch = Mathf.Lerp(_barrelPitch, _netPitch, Mathf.Clamp(dt * 12f, 0, 1));
-            ApplyPose(dt);
-        }
-        // Invite « monter à bord » pour le joueur local à proximité.
-        var lp = _world.LocalPlayer;
-        var near = !Wrecked && Driver == 0 && lp != null && !lp.Downed && lp.Vehicle == null && lp.GlobalPosition.DistanceTo(GlobalPosition) < 6f;
-        _prompt.Visible = near;
-        if (near) _prompt.Text = $"[{UiKit.KeyName("interact")}] Monter dans le char";
-    }
-
-    public void Wreck()
+    public override void Wreck()
     {
         if (Wrecked) return;
         Wrecked = true;
         Driver = 0;
         Effects.Explosion(_world, GlobalPosition + Vector3.Up * 1.5f, 12f, 0);
-        foreach (var n in FindChildren("*", "MeshInstance3D", true, false))
-            ((MeshInstance3D)n).MaterialOverride = Mats.Painted(new Color(0.08f, 0.07f, 0.06f), 0.95f);
+        BlackenMeshes();
         _turret.Rotation = new Vector3(0.2f, _turretYaw + 0.6f, 0.15f);
         Effects.Smoke(_world, GlobalPosition + Vector3.Up * 2f, 3f, 6f);
     }

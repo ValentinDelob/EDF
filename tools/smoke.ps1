@@ -58,6 +58,7 @@ for ($m = 0; $m -lt $missionCount; $m++) {
     }
 }
 if (-not (Run-Godot "char de combat" @("--autostart=0", "--bot", "--tank", "--quit-after=$Seconds"))) { $failures += "char" }
+if (-not (Run-Godot "hélicoptère" @("--autostart=0", "--bot", "--heli", "--quit-after=$($Seconds + 8)"))) { $failures += "hélicoptère" }
 if (-not (Run-Godot "fin de mission + bilan" @("--autostart=0", "--end-after=4", "--quit-after=$($Seconds + 2)"))) { $failures += "bilan" }
 
 if (-not $SkipLan) {

@@ -47,7 +47,8 @@ public partial class World : Node3D
     private MissionDirector _director;
     private WeatherFx _weather;
     public AllyManager Allies;
-    public readonly Dictionary<int, Tank> Tanks = new();
+    /// <summary>Véhicules pilotables par identifiant (char 1, hélicoptère 2 : identiques chez tous les pairs).</summary>
+    public readonly Dictionary<int, Vehicle> Vehicles = new();
     private int _nextEnemyId = 1;
     private int _nextCrateId = 1;
     private float _snapshotTimer;
@@ -122,10 +123,9 @@ public partial class World : Node3D
         Input.MouseMode = Input.MouseModeEnum.Captured;
 
         Allies = new AllyManager(this);
-        // Char de combat garé près du point de départ (même identifiant chez tous les pairs).
-        var tank = Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi);
-        AddChild(tank);
-        Tanks[1] = tank;
+        // Char de combat et hélicoptère d'attaque garés près du point de départ (mêmes identifiants chez tous les pairs).
+        AddVehicle(Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi));
+        AddVehicle(Helicopter.Create(this, 2, new Vector3(-16, 0.3f, 24), Mathf.Pi));
         if (Net.I.IsHost)
         {
             _director = new MissionDirector(this);
@@ -361,37 +361,61 @@ public partial class World : Node3D
 
     // ------------------------------------------------------------------ Véhicules
 
-    public Tank TankNear(Vector3 pos, float radius)
+    private void AddVehicle(Vehicle v)
     {
-        foreach (var t in Tanks.Values)
-            if (!t.Wrecked && t.Driver == 0 && t.GlobalPosition.DistanceTo(pos) <= radius) return t;
+        AddChild(v);
+        Vehicles[v.Id] = v;
+    }
+
+    /// <summary>Véhicule libre le plus proche à portée d'interaction.</summary>
+    public Vehicle VehicleNear(Vector3 pos)
+    {
+        Vehicle best = null;
+        var bestD = float.MaxValue;
+        foreach (var v in Vehicles.Values)
+        {
+            if (v.Wrecked || v.Driver != 0) continue;
+            var d = v.GlobalPosition.DistanceTo(pos);
+            if (d <= v.InteractRadius && d < bestD) { best = v; bestD = d; }
+        }
+        return best;
+    }
+
+    /// <summary>Véhicule conduit par ce joueur (ou null).</summary>
+    public Vehicle VehicleOf(long peer)
+    {
+        foreach (var v in Vehicles.Values)
+            if (v.Driver == peer && !v.Wrecked) return v;
         return null;
     }
 
-    public void OnTankState(int id, Vector3 pos, float yaw, float turret, float pitch, float hp, float speed)
+    /// <summary>Rayon d'impact supplémentaire d'un joueur à bord d'un véhicule (plus gros qu'un soldat).</summary>
+    private float VehicleHitBonus(long peer) => VehicleOf(peer)?.HitRadius ?? 0f;
+
+    public void OnVehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float hp, float speed)
     {
-        if (Tanks.TryGetValue(id, out var t) && !t.IsLocalDriver) t.ApplyState(pos, yaw, turret, pitch, hp, speed);
+        if (Vehicles.TryGetValue(id, out var v) && !v.IsLocalDriver) v.ApplyState(pos, rot, a, b, hp, speed);
     }
 
-    public void OnTankDriver(int id, long driver)
+    public void OnVehicleDriver(int id, long driver)
     {
-        if (!Tanks.TryGetValue(id, out var t)) return;
-        var previous = t.Driver;
-        t.Driver = driver;
-        if (driver == Net.I.MyId && LocalPlayer != null) LocalPlayer.EnterVehicle(t);
+        if (!Vehicles.TryGetValue(id, out var v)) return;
+        var previous = v.Driver;
+        v.Driver = driver;
+        if (driver == Net.I.MyId && LocalPlayer != null) LocalPlayer.EnterVehicle(v);
         else if (previous == Net.I.MyId && LocalPlayer != null) LocalPlayer.ExitVehicle();
-        Sfx.At("dash", t.GlobalPosition, -4f, 0.5f);
+        Sfx.At("dash", v.GlobalPosition, -4f, 0.5f);
     }
 
-    public void OnTankWrecked(int id)
+    public void OnVehicleWrecked(int id)
     {
-        if (!Tanks.TryGetValue(id, out var t)) return;
-        var driver = t.Driver;
-        t.Wreck();
+        if (!Vehicles.TryGetValue(id, out var v)) return;
+        var driver = v.Driver;
+        v.Wreck();
         if (driver == Net.I.MyId && LocalPlayer != null)
         {
             LocalPlayer.ExitVehicle();
-            Hud?.Toast("Char détruit ! Évacuation.");
+            Hud?.Toast(v.WreckedHint);
         }
     }
 
@@ -806,7 +830,7 @@ public partial class World : Node3D
         {
             var c = pos + Vector3.Up * 1f;
             var closest = Geometry3D.GetClosestPointToSegment(c, a, b);
-            if (closest.DistanceTo(c) < 0.9f + p.Radius * 0.2f) return true;
+            if (closest.DistanceTo(c) < 0.9f + p.Radius * 0.2f + VehicleHitBonus(peer)) return true;
         }
         return false;
     }
@@ -816,7 +840,7 @@ public partial class World : Node3D
         foreach (var (peer, ppos) in PlayerTargets())
         {
             var d = (ppos + Vector3.Up).DistanceTo(pos);
-            if (d <= p.Radius + 0.6f) Net.I.DamagePlayer(peer, p.Damage, pos);
+            if (d <= p.Radius + 0.6f + VehicleHitBonus(peer)) Net.I.DamagePlayer(peer, p.Damage, pos);
         }
     }
 
@@ -827,6 +851,7 @@ public partial class World : Node3D
         foreach (var (peer, ppos) in PlayerTargets())
         {
             var d = (ppos + Vector3.Up).DistanceTo(pos);
+            d = Mathf.Max(0, d - VehicleHitBonus(peer));
             if (d <= radius) Net.I.DamagePlayer(peer, dmg * Mathf.Clamp(1.2f - d / radius, 0.4f, 1f), pos);
         }
         foreach (var b in Buildings)
