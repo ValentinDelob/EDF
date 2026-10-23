@@ -114,15 +114,65 @@ public partial class App : Node
         ShowLobby();
     }
 
-    private void StartMission(int mission, Difficulty d, int seed)
+    private static readonly string[] Tips =
+    {
+        "Les caisses rouges contiennent des armes : plus la difficulté est haute, plus elles sont puissantes.",
+        "Les charognards avalent les caisses au sol. Tuez-les pour tout récupérer, avec un bonus.",
+        "Visez la tête des insectes : les points faibles infligent 50 % de dégâts en plus.",
+        "Les nids ne craignent vraiment que les explosifs : roquettes, grenades et frappes d'artillerie.",
+        "Le char de combat attend près du point de départ : approchez-vous et appuyez sur la touche d'interaction.",
+        "Le Commando aéroporté partage la même énergie pour voler et recharger : ne tombez pas à court en plein ciel.",
+        "L'Opérateur d'appui remplit sa jauge en infligeant des dégâts ; pleine, elle déclenche un barrage d'artillerie.",
+        "Un équipier à terre se relève en maintenant la touche d'interaction près de lui.",
+    };
+
+    private Control BuildLoading(MissionDef m, Difficulty d)
+    {
+        var root = new Control { Theme = UiKit.Theme, MouseFilter = Control.MouseFilterEnum.Stop };
+        UiKit.FillRect(root);
+        root.AddChild(new ColorRect { Color = UiKit.Bg, AnchorRight = 1, AnchorBottom = 1 });
+        var v = UiKit.VBox(8);
+        v.Position = new Vector2(UiKit.ScreenX, 0);
+        v.AnchorTop = 0.5f;
+        v.AnchorBottom = 0.5f;
+        v.GrowVertical = Control.GrowDirection.Both;
+        v.AddChild(UiKit.Eyebrow($"Mission {m.Index + 1:00} · {Difficulties.Names[(int)d]}", UiKit.Accent));
+        v.AddChild(UiKit.Heading(m.Name, 72));
+        var brief = UiKit.Label(m.Briefing, 18, new Color(UiKit.Text, 0.85f));
+        brief.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        brief.CustomMinimumSize = new Vector2(760, 0);
+        v.AddChild(brief);
+        root.AddChild(v);
+        var foot = UiKit.VBox(6);
+        foot.AddChild(UiKit.Label("DÉPLOIEMENT…", 16, UiKit.Muted, true));
+        var tip = UiKit.Label("Conseil : " + Tips[(int)(GD.Randi() % Tips.Length)], 15, UiKit.Muted);
+        tip.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        tip.CustomMinimumSize = new Vector2(900, 0);
+        foot.AddChild(tip);
+        root.AddChild(foot);
+        foot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
+        foot.Position = new Vector2(UiKit.ScreenX, foot.Position.Y - UiKit.ScreenBottom - 30);
+        return root;
+    }
+
+    private async void StartMission(int mission, Difficulty d, int seed)
     {
         CleanupWorld();
         _screen?.QueueFree();
         _screen = null;
+        // Écran de chargement affiché pendant la génération de la ville (deux images pour qu'il soit dessiné).
+        var loading = BuildLoading(Missions.All[mission], d);
+        _ui.AddChild(loading);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         _bg?.QueueFree();
         _bg = null;
         _world = World.Create(mission, d, seed);
         AddChild(_world);
+        var fade = loading.CreateTween();
+        fade.TweenInterval(0.3f);
+        fade.TweenProperty(loading, "modulate:a", 0f, 0.5f);
+        fade.TweenCallback(Callable.From(loading.QueueFree));
         _world.Finished += success =>
         {
             _results = new ResultsScreen
