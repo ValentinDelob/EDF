@@ -1,5 +1,14 @@
 # Journal des versions
 
+## v0.6.0 — Nouvelles interfaces
+
+- **Interfaces entièrement refaites** (maquettes validées, ADN Earth Defense Force) : palette verte, fond animé (grille, radar, circuits, balayage), boutons communs en plaques, polices Share Tech Mono et Saira Condensed.
+- **Sélection de mission** : seules les missions débloquées sont affichées (déblocage en chaîne) ; un clic sur une mission demande la difficulté, un clic sur la difficulté lance la mission (en LAN, dès que l'escouade est prête). « Très difficile » devient « Chaos ».
+- **HUD épuré** : armure graduée, radar, pile d'armes, petit réticule, barre de vie fine au-dessus de chaque allié, marqueur des alliés à terre.
+- **Armes** : plus de rareté, plus d'amélioration ni de recyclage ; chaque caractéristique (dégâts, cadence, chargeur, rechargement, précision, portée) a son propre niveau d'étoiles (0 à 5) qui donne un bonus chiffré. Anciennes sauvegardes converties.
+- **Arsenal** : une colonne par type d'arme, armes équipées assombries, noms longs défilants, bonus affichés par caractéristique.
+- **Pause, bilan, options, guide, rejoindre** au même style ; option « Réduire les animations ».
+
 ## v0.5.0 — Lisière
 
 ### Direction artistique « invasion »
