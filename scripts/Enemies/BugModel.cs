@@ -54,6 +54,9 @@ public partial class BugModel : Node3D
         var m = new MeshInstance3D
         {
             Mesh = new CylinderMesh { TopRadius = r1, BottomRadius = r0, Height = length, RadialSegments = 7, Rings = 1, Material = mat },
+            // Niveau de détail : les segments fins disparaissent au loin et ne projettent pas d'ombre.
+            VisibilityRangeEnd = 90f,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         m.Position = new Vector3(0, -length / 2, 0);
         return m;
@@ -146,8 +149,13 @@ public partial class BugModel : Node3D
             knee.AddChild(lower);
             _legs.Add(new Leg { Hip = hip, Knee = upperPivot, Phase = (i % 2 == 0 ? 0 : Mathf.Pi) + (side > 0 ? 0 : Mathf.Pi), Side = side, BaseYaw = yaw });
         }
+        // Ombres seulement pour les grosses pièces (corps), pas pour les pattes ni les antennes.
         foreach (var n in FindChildren("*", "MeshInstance3D", true, false))
-            ((MeshInstance3D)n).CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
+        {
+            var mi = (MeshInstance3D)n;
+            if (mi.Mesh is SphereMesh && mi.Scale.X > 0.5f) mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
+            else if (mi.Mesh is not CylinderMesh) { mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off; mi.VisibilityRangeEnd = 60f; }
+        }
     }
 
     private static StandardMaterial3D _wingMat;
@@ -296,7 +304,12 @@ public partial class BugModel : Node3D
             l.Knee.RotationDegrees = new Vector3(0, 0, (-70 + lift * 16f) * l.Side);
         }
         if (_bodyPivot != null)
-            _bodyPivot.Position = new Vector3(0, 1.05f + Mathf.Abs(Mathf.Sin(_gait * 2)) * 0.05f * Mathf.Min(speed, 6) / 6f, 0);
+        {
+            // Bond vers l'avant pendant la morsure.
+            var lunge = Mathf.Sin(Mathf.Clamp(attack, 0, 1) * Mathf.Pi);
+            _bodyPivot.Position = new Vector3(0, 1.05f + Mathf.Abs(Mathf.Sin(_gait * 2)) * 0.05f * Mathf.Min(speed, 6) / 6f + lunge * 0.15f, lunge * 0.6f);
+            _bodyPivot.Rotation = new Vector3(lunge * 0.18f, 0, 0);
+        }
         if (_head != null) _head.RotationDegrees = new Vector3(-attack * 25f + Mathf.Sin(_t * 2f) * 3f, Mathf.Sin(_t * 1.3f) * 6f, 0);
         if (_mandL != null)
         {

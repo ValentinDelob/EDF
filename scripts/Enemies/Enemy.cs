@@ -97,9 +97,13 @@ public partial class Enemy : CharacterBody3D
 
     // ---------------- Hôte ----------------
 
+    /// <summary>Fige l'IA (mode vitrine pour contrôler les modèles).</summary>
+    public static bool Frozen;
+
     public void HostTick(float dt)
     {
         if (State == EnemyState.Dead) return;
+        if (Frozen && State != EnemyState.Emerging) { Model.Animate(dt, 2f, Mathf.Max(0, Mathf.Sin(Time.GetTicksMsec() / 600f))); return; }
         if (State == EnemyState.Emerging)
         {
             _emergeT += dt;

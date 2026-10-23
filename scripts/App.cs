@@ -230,6 +230,35 @@ public static class AutoTest
             Net.I.SetLobbyMission(mission, diff);
             Net.I.HostStartMission();
         };
+        // --stress=N : fait apparaître N fourmis autour du joueur (test de performance), --novsync.
+        if (Screenshot.CmdArg("novsync") != null) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+        if (Screenshot.CmdArg("stress") is { } st && int.TryParse(st, out var stressN))
+            app.GetTree().CreateTimer(4f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w == null) return;
+                for (var i = 0; i < stressN; i++)
+                {
+                    var a = i * 2.399f;
+                    var r = 40f + (i % 30) * 3f;
+                    w.HostSpawnEnemy(i % 7 == 0 ? EnemyType.RedAnt : EnemyType.BlackAnt, new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r - 40));
+                }
+            };
+        // --showcase : un spécimen de chaque ennemi, figé, aligné devant le joueur.
+        if (Screenshot.CmdArg("showcase") != null)
+            app.GetTree().CreateTimer(3f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w == null) return;
+                Enemy.Frozen = true;
+                var types = new[] { EnemyType.BlackAnt, EnemyType.RedAnt, EnemyType.AcidAnt, EnemyType.Scavenger, EnemyType.Wasp };
+                for (var i = 0; i < types.Length; i++)
+                {
+                    var e = w.HostSpawnEnemy(types[i], new Vector3(-14 + i * 7, 0, -16));
+                    e.GlobalPosition = new Vector3(-14 + i * 7, types[i] == EnemyType.Wasp ? 3.5f : 0, -16);
+                    e.Rotation = new Vector3(0, 0.6f, 0);
+                }
+            };
         // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
         if (Screenshot.CmdArg("end-after") is { } ea && float.TryParse(ea, NumberStyles.Float, CultureInfo.InvariantCulture, out var endAfter))
             app.GetTree().CreateTimer(endAfter).Timeout += () =>

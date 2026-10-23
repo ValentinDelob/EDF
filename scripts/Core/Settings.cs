@@ -117,12 +117,21 @@ public partial class Settings : Node
                 "9" => "Souris 5",
                 _ => "Souris " + parts[1],
             };
-        return parts[1] switch
+        var label = parts[1];
+        // Les touches sont liées par position physique : on affiche la lettre de la disposition réelle (ZQSD en AZERTY).
+        var phys = OS.FindKeycodeFromString(parts[1]);
+        if (phys != Key.None)
+        {
+            var local = DisplayServer.KeyboardGetLabelFromPhysical(phys);
+            if (local != Key.None) label = OS.GetKeycodeString(local);
+        }
+        return label switch
         {
             "Space" => "Espace",
             "Shift" => "Maj",
             "Ctrl" => "Ctrl",
-            _ => parts[1],
+            "Tab" => "Tab",
+            _ => label,
         };
     }
 

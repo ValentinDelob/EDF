@@ -253,6 +253,25 @@ void fragment() {
         b.CustomMinimumSize = new Vector2(560, 0);
         v.AddChild(b);
         Anchor(v, Control.LayoutPreset.CenterLeft, new Vector2(UiKit.ScreenX, -140));
+
+        // Rappel des commandes en bas au centre pendant les premières secondes.
+        var keys = UiKit.HBox(24);
+        string K(string a) => UiKit.KeyName(a);
+        var ability = World.LocalPlayer?.Def.Id switch
+        {
+            SoldierClass.Airborne => $"{K("jump")} Voler · {K("sprint")} Propulsion",
+            SoldierClass.Heavy => $"{K("sprint")} Poussée · {K("jump")} Saut assisté",
+            _ => $"{K("sprint")} Courir · {K("dodge")} Roulade",
+        };
+        foreach (var t in new[] { $"{K("move_forward")}{K("move_left")}{K("move_back")}{K("move_right")} Se déplacer", ability, $"{K("reload")} Recharger", $"1 / 2 / 3 Armes", $"{K("ability")} Capacité", $"{K("grenade")} Grenade", $"{K("interact")} Relever" })
+            keys.AddChild(UiKit.HudLabel(t, 14, new Color(UiKit.Text, 0.85f)));
+        Anchor(keys, Control.LayoutPreset.CenterBottom, new Vector2(0, -24));
+        keys.GrowHorizontal = Control.GrowDirection.Both;
+        var kt = keys.CreateTween();
+        kt.TweenInterval(12f);
+        kt.TweenProperty(keys, "modulate:a", 0f, 1.5f);
+        kt.TweenCallback(Callable.From(keys.QueueFree));
+
         var tw = v.CreateTween();
         v.Modulate = new Color(1, 1, 1, 0);
         tw.TweenProperty(v, "modulate:a", 1f, 0.5f);
@@ -306,6 +325,8 @@ void fragment() {
     }
 
     private float _squadRefresh;
+    private Label _fps;
+    private float _fpsLog;
 
     public override void _Process(double delta)
     {
@@ -422,6 +443,21 @@ void fragment() {
             ? (Net.I.IsSolo && !p.SecondChanceUsed ? "À TERRE — UN INFIRMIER ARRIVE" : "À TERRE — ATTENDEZ UN ÉQUIPIER")
             : "";
         _crosshair.Visible = !p.Downed;
+
+        // Compteur d'images (F3) et journal pour les tests (--fps).
+        if (Input.IsKeyPressed(Key.F3) && _fps == null)
+        {
+            _fps = UiKit.HudLabel("", 13, UiKit.Muted);
+            Anchor(_fps, Control.LayoutPreset.TopRight, new Vector2(-M, 8));
+            _fps.GrowHorizontal = Control.GrowDirection.Begin;
+        }
+        if (_fps != null) _fps.Text = $"{Engine.GetFramesPerSecond()} i/s · {World.EnemiesById.Count} ennemis";
+        _fpsLog -= dt;
+        if (_fpsLog <= 0 && Screenshot.CmdArg("fps") != null)
+        {
+            _fpsLog = 3f;
+            GD.Print($"FPS {Engine.GetFramesPerSecond()} ennemis {World.EnemiesById.Count} t={World.Elapsed:0}");
+        }
     }
 }
 
