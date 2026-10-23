@@ -3,7 +3,13 @@ using Godot;
 namespace Rempart;
 
 /// <summary>Typologie d'immeuble (choisit les détails : balcons, couronnement, équipements de toit).</summary>
-public enum BuildingKind { Office, Residential, Tower, Industrial }
+public enum BuildingKind { Office, Residential, Tower, Industrial, House }
+
+/// <summary>Usage d'un bâtiment de type <see cref="BuildingKind.House"/> (banlieue pavillonnaire).</summary>
+public enum HouseUse { Home, Garage, Church, Belfry, Gym, Market, Hall }
+
+/// <summary>Forme de toit des bâtiments de type <see cref="BuildingKind.House"/>.</summary>
+public enum RoofShape { Gable, Hip, Spire, Flat }
 
 /// <summary>Paramètres visuels d'un immeuble (n'affectent ni l'empreinte ni la collision).</summary>
 public struct BuildingStyle
@@ -13,6 +19,15 @@ public struct BuildingStyle
     public bool Shops;        // rez-de-chaussée commercial (vitrines, enseignes, stores)
     public bool Night;
     public float Clearance;   // place libre devant les façades (retrait sur le trottoir), en m
+
+    // Bâtiments de type House uniquement (voir Building.House.cs).
+    public HouseUse Use;
+    public RoofShape Roof;
+    public int Facing;        // façade principale : 0 = +Z, 1 = -Z, 2 = +X, 3 = -X
+    public float RoofPitch;   // hauteur du faîtage / demi-portée
+    public Color WallColor;
+    public Color RoofColor;
+    public Color TrimColor;   // volets, porte, portail
 }
 
 /// <summary>Immeuble destructible : s'effondre (enfoncement + poussière + débris) à 0 PV.</summary>
@@ -67,6 +82,15 @@ public partial class Building : StaticBody3D
         // Tous les détails (vitrines, corniches, balcons, équipements de toit) sont fusionnés dans
         // le maillage unique de l'immeuble : ils s'enfoncent avec lui lors de l'effondrement.
         var rng = new RandomNumberGenerator { Seed = (ulong)(id * 7919 + 3) };
+        if (style.Kind == BuildingKind.House)
+        {
+            // Maison ou équipement de bourg : le toit en pente a sa propre forme de collision.
+            b.Visual = new MeshInstance3D { Mesh = BuildHouseMesh(size, style, rng, out var roofShape) };
+            b.AddChild(b.Visual);
+            b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });
+            if (roofShape != null) b.AddChild(new CollisionShape3D { Shape = roofShape });
+            return b;
+        }
         b.Visual = new MeshInstance3D { Mesh = style.Kind == BuildingKind.Industrial ? BuildPlainMesh(size, facade, roof) : BuildMesh(size, facade, roof, style, rng) };
         b.AddChild(b.Visual);
         b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });

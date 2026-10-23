@@ -838,6 +838,244 @@ void fragment() {
         return mat;
     }
 
+    // ───────────────────────── Banlieue ─────────────────────────
+
+    /// <summary>
+    /// Tuiles (ou ardoises) teintées par sommet : rangs de 25 cm à joints décalés, ombre sous le rang supérieur.
+    /// UV en mètres / 2 : U le long de l'égout, V croissant vers le bas de la pente.
+    /// </summary>
+    public static StandardMaterial3D RoofTiles()
+    {
+        if (Cache.TryGetValue("rooftiles", out var m)) return (StandardMaterial3D)m;
+        const int size = 256; // 2 m : 8 rangs de 32 px, tuiles de 32 px de large
+        var alb = new Px(size, size);
+        var bump = new Px(size, size);
+        for (var y = 0; y < size; y++)
+        for (var x = 0; x < size; x++)
+        {
+            var row = y / 32;
+            var ly = (y % 32) / 32f;
+            var ox = x + (row % 2) * 16;
+            var col = (ox / 32) % 8;
+            var lx = (ox % 32) / 32f;
+            var tile = Hash(col, row, 201);
+            // Profil galbé de la tuile, épaississement vers son bord bas, ombre portée du rang du dessus.
+            var round = Mathf.Sin(lx * Mathf.Pi);
+            var shade = Mathf.Lerp(0.55f, 1f, Mathf.SmoothStep(0f, 0.3f, ly));
+            var grain = ValueNoise(x, y, 8, size / 8, 202) * 0.12f;
+            var moss = Mathf.Max(0, ValueNoise(x, y, 32, size / 32, 203) - 0.72f) * 1.4f;
+            var v = (0.72f + tile * 0.22f + grain) * shade * (0.82f + 0.18f * round);
+            var c = new Color(v, v, v).Lerp(new Color(0.42f, 0.45f, 0.3f), moss);
+            alb.Set(x, y, c);
+            var hh = 0.25f + 0.55f * ly + 0.2f * round;
+            if (lx < 0.04f) hh *= 0.6f;
+            bump.Set(x, y, new Color(hh, hh, hh));
+        }
+        var nimg = bump.ToImage(false);
+        nimg.BumpMapToNormalMap(5f);
+        nimg.GenerateMipmaps();
+        var mat = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            VertexColorIsSrgb = true,
+            AlbedoTexture = ImageTexture.CreateFromImage(alb.ToImage()),
+            NormalEnabled = true,
+            NormalTexture = ImageTexture.CreateFromImage(nimg),
+            NormalScale = 0.9f,
+            Roughness = 0.78f,
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmapsAnisotropic,
+        };
+        Cache["rooftiles"] = mat;
+        return mat;
+    }
+
+    /// <summary>Maçonnerie de moellons équarris (église, ponts, murets), teintée par sommet, triplanaire en coordonnées monde.</summary>
+    public static StandardMaterial3D Masonry()
+    {
+        if (Cache.TryGetValue("masonry", out var m)) return (StandardMaterial3D)m;
+        const int size = 256; // 2 m
+        var alb = new Px(size, size);
+        var bump = new Px(size, size);
+        // Assises de hauteur variable, blocs de longueur variable.
+        var rowTop = new List<int> { 0 };
+        while (rowTop[^1] < size)
+        {
+            var hgt = 26 + (int)(Hash(rowTop.Count, 0, 211) * 18);
+            rowTop.Add(Mathf.Min(size, rowTop[^1] + hgt));
+        }
+        rowTop[^1] = size;
+        for (var r = 0; r + 1 < rowTop.Count; r++)
+        {
+            var y0 = rowTop[r];
+            var y1 = rowTop[r + 1];
+            var x = (int)(Hash(r, 1, 212) * 40);
+            var bi = 0;
+            while (x < size + 60)
+            {
+                var len = 34 + (int)(Hash(r, bi, 213) * 50);
+                var tone = 0.78f + Hash(r, bi, 214) * 0.3f;
+                for (var y = y0; y < y1; y++)
+                for (var xx = x; xx < x + len; xx++)
+                {
+                    var px = ((xx % size) + size) % size;
+                    var joint = y - y0 < 3 || xx - x < 3;
+                    var n = ValueNoise(px, y, 6, size / 6, 215) * 0.18f;
+                    var v = joint ? 0.62f : tone * (0.88f + n);
+                    alb.Set(px, y, new Color(v, v * 0.98f, v * 0.94f));
+                    var edge = Mathf.Min(Mathf.Min(y - y0, y1 - 1 - y), Mathf.Min(xx - x, x + len - 1 - xx));
+                    var hh = joint ? 0.1f : Mathf.Clamp(0.5f + edge * 0.08f, 0, 0.9f) + n;
+                    bump.Set(px, y, new Color(hh, hh, hh));
+                }
+                x += len;
+                bi++;
+            }
+        }
+        var nimg = bump.ToImage(false);
+        nimg.BumpMapToNormalMap(5f);
+        nimg.GenerateMipmaps();
+        var mat = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            VertexColorIsSrgb = true,
+            AlbedoTexture = ImageTexture.CreateFromImage(alb.ToImage()),
+            NormalEnabled = true,
+            NormalTexture = ImageTexture.CreateFromImage(nimg),
+            NormalScale = 1f,
+            Roughness = 0.9f,
+            Uv1Triplanar = true,
+            Uv1WorldTriplanar = true,
+            Uv1Scale = new Vector3(0.5f, 0.5f, 0.5f),
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmapsAnisotropic,
+        };
+        Cache["masonry"] = mat;
+        return mat;
+    }
+
+    /// <summary>Vitrail : losanges colorés sombres, lumineux la nuit.</summary>
+    public static StandardMaterial3D StainedGlass(bool night)
+    {
+        var key = $"stained{night}";
+        if (Cache.TryGetValue(key, out var m)) return (StandardMaterial3D)m;
+        const int size = 64;
+        var alb = new Px(size, size);
+        Color[] pal = { new(0.1f, 0.18f, 0.45f), new(0.5f, 0.08f, 0.08f), new(0.55f, 0.42f, 0.1f), new(0.12f, 0.32f, 0.18f), new(0.25f, 0.12f, 0.35f) };
+        for (var y = 0; y < size; y++)
+        for (var x = 0; x < size; x++)
+        {
+            var u = x + y;
+            var v = x - y + size;
+            var lead = u % 16 < 2 || v % 16 < 2;
+            var c = lead ? new Color(0.03f, 0.03f, 0.03f) : pal[(int)(Hash(u / 16, v / 16, 221) * pal.Length) % pal.Length];
+            alb.Set(x, y, c);
+        }
+        var tex = ImageTexture.CreateFromImage(alb.ToImage());
+        var mat = new StandardMaterial3D
+        {
+            AlbedoTexture = tex,
+            Roughness = 0.15f,
+            Metallic = 0.2f,
+            Uv1Triplanar = true,
+            Uv1WorldTriplanar = true,
+            Uv1Scale = new Vector3(1.5f, 1.5f, 1.5f),
+        };
+        if (night)
+        {
+            mat.EmissionEnabled = true;
+            mat.EmissionTexture = tex;
+            mat.EmissionEnergyMultiplier = 1.6f;
+        }
+        Cache[key] = mat;
+        return mat;
+    }
+
+    /// <summary>Gravier et galets (allées, berges), teinté par sommet.</summary>
+    public static StandardMaterial3D Gravel()
+    {
+        if (Cache.TryGetValue("gravel", out var m)) return (StandardMaterial3D)m;
+        var mat = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            VertexColorIsSrgb = true,
+            AlbedoTexture = ColorNoise(231, 0.6f, new Color(0.62f, 0.6f, 0.56f), new Color(1f, 0.98f, 0.94f), 256),
+            NormalEnabled = true,
+            NormalTexture = Noise(232, 0.5f, true, 256, 8f, FastNoiseLite.NoiseTypeEnum.Cellular, 2),
+            NormalScale = 0.8f,
+            Roughness = 0.95f,
+            Uv1Triplanar = true,
+            Uv1WorldTriplanar = true,
+            Uv1Scale = new Vector3(0.35f, 0.35f, 0.35f),
+        };
+        Cache["gravel"] = mat;
+        return mat;
+    }
+
+    /// <summary>Sol naturel teinté par sommet (pelouses, prés, sous-bois) : herbe neutre multipliée par la couleur.</summary>
+    public static StandardMaterial3D GroundTint()
+    {
+        if (Cache.TryGetValue("groundtint", out var m)) return (StandardMaterial3D)m;
+        var mat = new StandardMaterial3D
+        {
+            VertexColorUseAsAlbedo = true,
+            VertexColorIsSrgb = true,
+            AlbedoTexture = ColorNoise(241, 0.05f, new Color(0.62f, 0.66f, 0.56f), new Color(1f, 1f, 0.94f)),
+            NormalEnabled = true,
+            NormalTexture = Noise(242, 0.3f, true, 512, 4f),
+            Roughness = 0.95f,
+            Uv1Triplanar = true,
+            Uv1WorldTriplanar = true,
+            Uv1Scale = new Vector3(0.2f, 0.2f, 0.2f),
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmapsAnisotropic,
+        };
+        Cache["groundtint"] = mat;
+        return mat;
+    }
+
+    /// <summary>
+    /// Eau de rivière peu profonde : transparente, courant vers +X, opacité par sommet (alpha) pour fondre les berges.
+    /// </summary>
+    public static ShaderMaterial RiverWater(TimeOfDay time)
+    {
+        var key = $"river{time}";
+        if (Cache.TryGetValue(key, out var m)) return (ShaderMaterial)m;
+        var shader = new Shader
+        {
+            Code = @"
+shader_type spatial;
+render_mode blend_mix, cull_back, depth_draw_opaque;
+uniform vec3 deep : source_color = vec3(0.025, 0.07, 0.075);
+uniform vec3 shallow : source_color = vec3(0.13, 0.19, 0.15);
+uniform sampler2D n1 : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D n2 : hint_normal, filter_linear_mipmap, repeat_enable;
+varying vec3 wpos;
+void vertex() {
+    wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+void fragment() {
+    vec2 uv = wpos.xz * 0.11;
+    vec3 a = texture(n1, uv + vec2(TIME * 0.045, 0.004 * TIME)).rgb;
+    vec3 b = texture(n2, uv * 1.9 + vec2(TIME * 0.07, -0.01 * TIME)).rgb;
+    NORMAL_MAP = normalize(mix(a, b, 0.5));
+    NORMAL_MAP_DEPTH = 0.9;
+    float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+    ALBEDO = mix(shallow, deep, COLOR.a);
+    ALPHA = clamp(COLOR.a * (0.78 + 0.2 * fres), 0.0, 1.0);
+    ROUGHNESS = 0.02;
+    METALLIC = 0.0;
+    SPECULAR = 0.65;
+}"
+        };
+        var mat = new ShaderMaterial { Shader = shader };
+        mat.SetShaderParameter("n1", Noise(251, 0.03f, true, 512, 5f));
+        mat.SetShaderParameter("n2", Noise(252, 0.05f, true, 512, 3f));
+        if (time == TimeOfDay.Night)
+        {
+            mat.SetShaderParameter("deep", new Color(0.01f, 0.02f, 0.025f));
+            mat.SetShaderParameter("shallow", new Color(0.03f, 0.05f, 0.05f));
+        }
+        Cache[key] = mat;
+        return mat;
+    }
+
     public static void ClearNightVariants()
     {
         // Les façades nuit/jour sont mises en cache séparément : rien à faire pour l'instant.
