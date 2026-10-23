@@ -251,14 +251,14 @@ public partial class BugModel : Node3D
 
     private static StandardMaterial3D _flashMat;
     private List<GeometryInstance3D> _meshes;
-    private float _flashT;
+    private float _flashT = -1f;
 
     /// <summary>Bref flash blanc à l'impact (retour visuel des tirs).</summary>
     public void Flash()
     {
         _flashMat ??= new StandardMaterial3D
         {
-            AlbedoColor = new Color(1f, 0.92f, 0.75f, 0.55f),
+            AlbedoColor = new Color(1f, 0.85f, 0.6f, 0.3f),
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             BlendMode = BaseMaterial3D.BlendModeEnum.Add,
@@ -268,18 +268,21 @@ public partial class BugModel : Node3D
             _meshes = new List<GeometryInstance3D>();
             foreach (var n in FindChildren("*", "MeshInstance3D", true, false)) _meshes.Add((GeometryInstance3D)n);
         }
-        if (_flashT <= 0) foreach (var m in _meshes) m.MaterialOverlay = _flashMat;
-        _flashT = 0.07f;
+        // Pas plus d'un flash toutes les 0,2 s : sous un feu continu, l'insecte ne doit pas rester blanc.
+        if (_flashT > -0.13f) return;
+        foreach (var m in _meshes) m.MaterialOverlay = _flashMat;
+        _flashT = 0.06f;
     }
 
     /// <summary>Anime la démarche (vitesse en m/s), l'attaque (0..1) et le vol.</summary>
     public void Animate(float dt, float speed, float attack)
     {
         _t += dt;
-        if (_flashT > 0)
+        if (_flashT > -1f)
         {
+            var was = _flashT;
             _flashT -= dt;
-            if (_flashT <= 0 && _meshes != null) foreach (var m in _meshes) m.MaterialOverlay = null;
+            if (was > 0 && _flashT <= 0 && _meshes != null) foreach (var m in _meshes) m.MaterialOverlay = null;
         }
         if (Type == EnemyType.Nest)
         {
