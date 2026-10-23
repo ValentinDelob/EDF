@@ -28,6 +28,9 @@ $failures = @()
 dotnet build (Join-Path $RepoRoot "Rempart.csproj") -nologo -v q | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Error "Compilation C# en échec."; exit 1 }
 
+# Importe les ressources nouvelles ou modifiées (polices, textures) avant de lancer le jeu.
+& $Godot --headless --path $RepoRoot --import *> $null
+
 # Lance Godot avec un délai maximal (un jeu bloqué ne doit jamais figer la CI).
 function Invoke-Timed([string[]]$allArgs, [int]$timeoutSec) {
     $log = [System.IO.Path]::GetTempFileName()
