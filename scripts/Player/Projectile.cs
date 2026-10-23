@@ -2,7 +2,7 @@ using Godot;
 
 namespace Rempart;
 
-public enum ProjectileKind { Rocket = 0, Plasma = 1, Grenade = 2, Missile = 3, Shell = 4, Acid = 10, Stinger = 11, AcidBig = 12 }
+public enum ProjectileKind { Rocket = 0, Plasma = 1, Grenade = 2, Missile = 3, Shell = 4, Acid = 10, Stinger = 11, AcidBig = 12, Web = 13, Laser = 14 }
 
 /// <summary>
 /// Projectile simulé localement. S'il appartient au joueur local (ou à l'hôte pour les ennemis),
@@ -29,7 +29,7 @@ public partial class Projectile : Node3D
         p.Gravity = kind switch
         {
             ProjectileKind.Grenade => 18f,
-            ProjectileKind.Acid or ProjectileKind.AcidBig => 9f,
+            ProjectileKind.Acid or ProjectileKind.AcidBig or ProjectileKind.Web => 9f,
             ProjectileKind.Shell => 2f,
             _ => 0f,
         };
@@ -42,6 +42,8 @@ public partial class Projectile : Node3D
             case ProjectileKind.Grenade: color = new Color(0.25f, 0.3f, 0.2f); size = 0.14f; break;
             case ProjectileKind.Stinger: color = new Color(1f, 0.85f, 0.4f); size = 0.12f; break;
             case ProjectileKind.AcidBig: color = new Color(0.7f, 0.95f, 0.15f); size = 0.9f; break;
+            case ProjectileKind.Web: color = new Color(0.92f, 0.92f, 0.88f); size = 0.5f; break;
+            case ProjectileKind.Laser: color = new Color(1f, 0.15f, 0.1f); size = 0.12f; break;
             default: color = new Color(0.7f, 0.95f, 0.15f); size = 0.45f; break;
         }
         var glow = kind != ProjectileKind.Grenade;
@@ -50,7 +52,8 @@ public partial class Projectile : Node3D
             Mesh = new SphereMesh { Radius = size, Height = size * 2, RadialSegments = 10, Rings = 5 },
             MaterialOverride = glow ? Mats.Glow(color, enemyShot ? 2.5f : 5f) : Mats.Metal(color),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            Scale = kind is ProjectileKind.Rocket or ProjectileKind.Missile or ProjectileKind.Shell or ProjectileKind.Stinger ? new Vector3(1, 1, 4) : Vector3.One,
+            Scale = kind is ProjectileKind.Rocket or ProjectileKind.Missile or ProjectileKind.Shell or ProjectileKind.Stinger ? new Vector3(1, 1, 4)
+                : kind == ProjectileKind.Laser ? new Vector3(1, 1, 10) : Vector3.One,
         });
         if (kind is ProjectileKind.Rocket or ProjectileKind.Missile or ProjectileKind.Plasma or ProjectileKind.Shell)
         {
@@ -149,7 +152,8 @@ public partial class Projectile : Node3D
         var enemyShot = (int)Kind >= 10;
         if (enemyShot)
         {
-            Effects.Goo(_world, pos, new Color(0.7f, 0.95f, 0.15f), Kind == ProjectileKind.AcidBig ? 2f : 0.8f, 8);
+            if (Kind == ProjectileKind.Laser) Effects.Sparks(_world, pos, normal);
+            else Effects.Goo(_world, pos, Kind == ProjectileKind.Web ? new Color(0.9f, 0.9f, 0.85f) : new Color(0.7f, 0.95f, 0.15f), Kind == ProjectileKind.AcidBig ? 2f : 0.8f, 8);
             if (Authoritative) _world.HostEnemyProjectileImpact(this, pos);
         }
         else if (Authoritative)

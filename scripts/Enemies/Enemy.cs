@@ -32,6 +32,8 @@ public partial class Enemy : CharacterBody3D
     private float _altitude;
     private float _orbit;
     private int _targetCrate = -1;
+    private float _leapT = -1f;
+    private Vector3 _leapFrom, _leapTo;
     private float _specialCd;
 
     // Interpolation côté client
@@ -60,7 +62,7 @@ public partial class Enemy : CharacterBody3D
             e.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 6f, Height = 4.5f }, Position = new Vector3(0, 2.2f, 0) });
             e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 2.2f }, Position = new Vector3(0, 4.3f, 0) });
         }
-        else if (type == EnemyType.Wasp)
+        else if (type is EnemyType.Wasp or EnemyType.Drone)
         {
             e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.6f, 1.4f, 3.4f) * s }, Position = new Vector3(0, 0, -0.5f) * s });
             e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 0.55f * s }, Position = new Vector3(0, 0, 0.75f) * s });
@@ -169,6 +171,29 @@ public partial class Enemy : CharacterBody3D
         var toGoal = goal - pos;
         toGoal.Y = 0;
         var dist = toGoal.Length();
+
+        // Araignée : bonds paraboliques vers la cible.
+        if (Def.Type == EnemyType.Spider)
+        {
+            if (_leapT >= 0)
+            {
+                _leapT += dt / 0.9f;
+                var k = Mathf.Min(_leapT, 1f);
+                var p = _leapFrom.Lerp(_leapTo, k);
+                p.Y = Mathf.Sin(k * Mathf.Pi) * 9f;
+                GlobalPosition = p;
+                _speedNow = 0;
+                if (_leapT >= 1f) { _leapT = -1f; GlobalPosition = new Vector3(_leapTo.X, 0, _leapTo.Z); Sfx.At("hit", _leapTo, -2f, 0.6f); }
+                return;
+            }
+            if (_specialCd <= 0 && dist > 8f && dist < 60f)
+            {
+                _specialCd = (float)GD.RandRange(4, 7);
+                _leapFrom = pos;
+                var land = pos + toGoal.Normalized() * Mathf.Min(dist - 5f, 28f);
+                if (!_world.Flow.IsBlocked(land)) { _leapTo = land; _leapT = 0f; Sfx.At("screech", pos, -2f, 1.4f); return; }
+            }
+        }
         var reach = Def.AttackRange * (Def.Ranged ? 0.85f : 1f) + (Def.Boss ? 2f : 0);
         var desired = Vector3.Zero;
         var attacking = goal == target && dist <= reach;
@@ -217,7 +242,7 @@ public partial class Enemy : CharacterBody3D
             else if (Def.Ranged && (!Def.Boss || dist > 10f))
             {
                 var from = Center + Basis.Z * 1.5f * Def.Size;
-                _world.HostEnemyProjectile(this, 0, from, target + Vector3.Up, Def.Boss ? 3 : 1);
+                _world.HostEnemyProjectile(this, Def.Type == EnemyType.Spider ? 2 : 0, from, target + Vector3.Up, Def.Boss ? 3 : 1);
                 Net.I.BroadcastEnemyAttack(Id, 1, target);
             }
             else
@@ -270,7 +295,7 @@ public partial class Enemy : CharacterBody3D
                 _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul);
                 Projectile.Spawn(_world, ProjectileKind.Stinger, pos + Vector3.Down * 0.8f, (target + Vector3.Up - pos).Normalized() * 60f, false, 0, 0);
             }
-            else _world.HostEnemyProjectile(this, 1, pos + Vector3.Down * 0.8f, target + Vector3.Up * 1f, 1);
+            else _world.HostEnemyProjectile(this, Def.Type == EnemyType.Drone ? 3 : 1, pos + Vector3.Down * 0.8f, target + Vector3.Up * 1f, 1);
             Net.I.BroadcastEnemyAttack(Id, 3, target);
         }
         State = EnemyState.Moving;

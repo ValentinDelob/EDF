@@ -162,7 +162,7 @@ public class WeaponInstance
     public int TotalStars => Stars.Sum();
 }
 
-public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen }
+public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone }
 
 public record EnemyDef(
     EnemyType Type,
@@ -190,6 +190,8 @@ public static class Enemies
         new(EnemyType.Scavenger, "Charognard", 90, 12f, 5, 3f, 1.2f, 0.85f, 0.5f),
         new(EnemyType.Nest, "Nid", 3000, 0, 0, 0, 0, 1f, 1f, Static: true),
         new(EnemyType.Queen, "Reine", 40000, 5f, 40, 9f, 1.8f, 3.8f, 1f, Ranged: true, Boss: true),
+        new(EnemyType.Spider, "Araignée", 70, 11f, 7, 26f, 2.0f, 1f, 0.3f, Ranged: true),
+        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.3f, Flying: true, Ranged: true),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];

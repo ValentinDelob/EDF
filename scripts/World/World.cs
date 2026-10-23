@@ -677,13 +677,14 @@ public partial class World : Node3D
         {
             case 0: Sfx.At("hit", e.GlobalPosition, 0f, 0.7f); break;
             case 1:
-                Projectile.Spawn(this, e.IsBoss ? ProjectileKind.AcidBig : ProjectileKind.Acid, e.Center + e.Basis.Z * 1.5f * e.Def.Size,
+                Projectile.Spawn(this, e.IsBoss ? ProjectileKind.AcidBig : e.Def.Type == EnemyType.Spider ? ProjectileKind.Web : ProjectileKind.Acid, e.Center + e.Basis.Z * 1.5f * e.Def.Size,
                     BallisticVelocity(e.Center, target + Vector3.Up, 30f, 9f), false, 0, 0);
                 Sfx.At("spit", e.GlobalPosition, 0f);
                 break;
             case 2: Sfx.At("screech", e.GlobalPosition, 8f, 0.6f); break;
             case 3:
-                Projectile.Spawn(this, ProjectileKind.Stinger, e.GlobalPosition + Vector3.Down * 0.8f, (target + Vector3.Up - e.GlobalPosition).Normalized() * 60f, false, 0, 0);
+                var drone = e.Def.Type == EnemyType.Drone;
+                Projectile.Spawn(this, drone ? ProjectileKind.Laser : ProjectileKind.Stinger, e.GlobalPosition + Vector3.Down * 0.8f, (target + Vector3.Up - e.GlobalPosition).Normalized() * (drone ? 90f : 60f), false, 0, 0);
                 Sfx.At("buzz", e.GlobalPosition, 0f);
                 break;
         }
@@ -702,7 +703,17 @@ public partial class World : Node3D
     public void HostEnemyProjectile(Enemy e, int kind, Vector3 from, Vector3 target, int size)
     {
         Projectile p;
-        if (kind == 0)
+        if (kind == 2)
+        {
+            p = Projectile.Spawn(this, ProjectileKind.Web, from, BallisticVelocity(from, target, 32f, 9f), true, e.Def.Damage * DamageMul, 2.5f);
+            Sfx.At("spit", from, 0f, 1.3f);
+        }
+        else if (kind == 3)
+        {
+            p = Projectile.Spawn(this, ProjectileKind.Laser, from, (target - from).Normalized() * 90f, true, e.Def.Damage * DamageMul, 1.2f);
+            Sfx.At("laser", from, -2f, 0.7f);
+        }
+        else if (kind == 0)
         {
             var pk = size >= 3 ? ProjectileKind.AcidBig : ProjectileKind.Acid;
             p = Projectile.Spawn(this, pk, from, BallisticVelocity(from, target, size >= 3 ? 26f : 30f, 9f), true, e.Def.Damage * DamageMul, size >= 3 ? 5f : 2.5f);

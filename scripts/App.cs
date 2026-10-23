@@ -252,10 +252,10 @@ public static class AutoTest
                 if (w == null) return;
                 Enemy.Frozen = true;
                 var big = Screenshot.CmdArg("showcase") == "big";
-                var types = big ? new[] { EnemyType.Nest, EnemyType.Queen } : new[] { EnemyType.BlackAnt, EnemyType.RedAnt, EnemyType.AcidAnt, EnemyType.Scavenger, EnemyType.Wasp };
+                var types = big ? new[] { EnemyType.Nest, EnemyType.Queen } : new[] { EnemyType.BlackAnt, EnemyType.Spider, EnemyType.AcidAnt, EnemyType.Drone, EnemyType.Wasp };
                 for (var i = 0; i < types.Length; i++)
                 {
-                    var p = big ? new Vector3(-16 + i * 30, 0, -34) : new Vector3(-14 + i * 7, types[i] == EnemyType.Wasp ? 3.5f : 0, -16);
+                    var p = big ? new Vector3(-16 + i * 30, 0, -34) : new Vector3(-14 + i * 7, types[i] is EnemyType.Wasp or EnemyType.Drone ? 3.5f : 0, -16);
                     var e = w.HostSpawnEnemy(types[i], p);
                     e.GlobalPosition = p;
                     e.Rotation = new Vector3(0, 0.6f, 0);

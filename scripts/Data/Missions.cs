@@ -68,5 +68,31 @@ public static class Missions
                 new PhaseDef(0, 180,
                     new WaveDef("south", 0, "Nouvel essaim au sud !", (EnemyType.Wasp, 16), (EnemyType.AcidAnt, 10))),
             }),
+        new(3, "La toile",
+            "Des araignées géantes ont tissé leurs toiles entre les immeubles. Elles bondissent sur leurs proies : gardez vos distances et couvrez-vous mutuellement.",
+            MissionGoal.Exterminate, TimeOfDay.Dusk, 0.008f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Mouvements suspects au nord… des araignées !", (EnemyType.Spider, 12))),
+                new PhaseDef(6, 0,
+                    new WaveDef("east", 0, "Elles arrivent par l'est, avec des fourmis !", (EnemyType.Spider, 10), (EnemyType.BlackAnt, 14)),
+                    new WaveDef("west", 6, null, (EnemyType.Spider, 8))),
+                new PhaseDef(6, 0,
+                    new WaveDef("south", 0, "Dernière vague : tout le nid se réveille !", (EnemyType.Spider, 16), (EnemyType.RedAnt, 8), (EnemyType.Scavenger, 4))),
+            }),
+        new(4, "Ciel noir",
+            "Une flotte de drones extraterrestres escorte des essaims de guêpes au-dessus du quartier d'affaires. Abattez tout ce qui vole.",
+            MissionGoal.Exterminate, TimeOfDay.Day, 0.003f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Contacts aériens ! Des drones d'attaque !", (EnemyType.Drone, 12))),
+                new PhaseDef(5, 0,
+                    new WaveDef("east", 0, "Guêpes et drones à l'est !", (EnemyType.Drone, 10), (EnemyType.Wasp, 12)),
+                    new WaveDef("south", 5, "Fourmis acides au sol !", (EnemyType.AcidAnt, 12))),
+                new PhaseDef(6, 0,
+                    new WaveDef("west", 0, "Escadrille lourde à l'ouest, tenez bon !", (EnemyType.Drone, 18), (EnemyType.Wasp, 14), (EnemyType.RedAnt, 10))),
+            }),
     };
 }
