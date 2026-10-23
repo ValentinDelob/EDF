@@ -104,6 +104,20 @@ public static class Weapons
         new("cs90", "CS-90 Bélier", SoldierClass.Heavy, WeaponKind.Projectile, "Canon de siège", 260, 0.5f, 1, 2.5f, 450, 0.2f, BlastRadius: 9, ProjectileSpeed: 110, Automatic: false),
         new("mh2", "MH-2 Enclume", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 220, 1.1f, 1, 0.6f, 6, 0, BlastRadius: 4, Automatic: false),
         new("ms6", "MS-6 Essaim", SoldierClass.Heavy, WeaponKind.Projectile, "Lance-missiles", 60, 6, 6, 3f, 350, 4f, BlastRadius: 4, ProjectileSpeed: 60, MinLevel: 12),
+        // Armes de haut niveau (difficultés élevées)
+        new("fa40", "FA-40 Garde", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil d'assaut", 20, 9, 45, 1.7f, 320, 0.8f, MinLevel: 30),
+        new("ca20", "CA-20 Tempête", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil à pompe", 9, 4.5f, 20, 2.6f, 60, 8f, Pellets: 9, MinLevel: 25),
+        new("fp120", "FP-120 Titan", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil de précision", 420, 0.5f, 3, 3f, 1000, 0.02f, Zoom: 6f, Automatic: false, MinLevel: 40),
+        new("lr9", "LR-9 Hydre", SoldierClass.Rifleman, WeaponKind.Projectile, "Lance-roquettes", 95, 0.6f, 1, 2.6f, 380, 3f, Pellets: 3, BlastRadius: 6, ProjectileSpeed: 80, Automatic: false, MinLevel: 35),
+        new("lz5", "LZ-5 Faisceau", SoldierClass.Airborne, WeaponKind.Beam, "Laser à rayon", 150, 1, 100, 1.6f, 260, 0, EnergyCost: 38, MinLevel: 30),
+        new("ae9", "AE-9 Arc", SoldierClass.Airborne, WeaponKind.Hitscan, "Lance électrique", 48, 2.2f, 1, 0.9f, 55, 7f, Pellets: 10, EnergyCost: 22, Automatic: false, MinLevel: 25),
+        new("pl12", "PL-12 Supernova", SoldierClass.Airborne, WeaponKind.Projectile, "Canon à plasma", 420, 1, 1, 2.6f, 320, 0.2f, BlastRadius: 13, ProjectileSpeed: 65, EnergyCost: 55, Automatic: false, MinLevel: 45),
+        new("pdw9", "PDW-9 Rafale", SoldierClass.Support, WeaponKind.Hitscan, "Arme de défense", 13, 13, 60, 1.5f, 200, 1.6f, MinLevel: 25),
+        new("trt5", "Tourelle TR-5 Lourde", SoldierClass.Support, WeaponKind.Turret, "Tourelle automatique", 22, 9, 1, 30f, 100, 2f, Automatic: false, MinLevel: 30),
+        new("art8", "Balise SALVE-8", SoldierClass.Support, WeaponKind.Airstrike, "Bombardement en ligne", 330, 1, 1, 22f, 300, 0, BlastRadius: 10, Pellets: 16, Automatic: false, MinLevel: 40),
+        new("gt60", "GT-60 Typhon", SoldierClass.Heavy, WeaponKind.Hitscan, "Mitrailleuse rotative", 18, 20, 300, 4f, 240, 2.2f, MinLevel: 30),
+        new("cs150", "CS-150 Colosse", SoldierClass.Heavy, WeaponKind.Projectile, "Canon de siège", 700, 0.35f, 1, 3.2f, 500, 0.15f, BlastRadius: 14, ProjectileSpeed: 120, Automatic: false, MinLevel: 45),
+        new("mh6", "MH-6 Marteau-pilon", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 520, 0.9f, 1, 0.7f, 7, 0, BlastRadius: 5.5f, Automatic: false, MinLevel: 35),
     };
 
     public static WeaponTemplate Get(string id) => All.FirstOrDefault(w => w.Id == id) ?? All[0];

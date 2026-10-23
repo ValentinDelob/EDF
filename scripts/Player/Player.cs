@@ -562,17 +562,24 @@ public partial class Player : CharacterBody3D
         var aim = AimPoint(ws.W.Range, out var col);
         var muzzle = MuzzlePos;
         var dir = Spread((aim - muzzle).Normalized(), Mathf.DegToRad(ws.W.Spread), World.Rng);
-        var kind = t.Id switch
+        var kind = t.Category switch
         {
-            "pl7" => ProjectileKind.Plasma,
-            "gl6" => ProjectileKind.Grenade,
-            "ms6" => ProjectileKind.Missile,
-            "cs90" => ProjectileKind.Shell,
+            "Canon à plasma" => ProjectileKind.Plasma,
+            "Lance-grenades" => ProjectileKind.Grenade,
+            "Lance-missiles" => ProjectileKind.Missile,
+            "Canon de siège" => ProjectileKind.Shell,
             _ => ProjectileKind.Rocket,
         };
+        // Les armes à plusieurs projectiles (ex. LR-9 Hydre) tirent une salve en éventail.
+        Projectile p = null;
+        for (var shot = 0; shot < Mathf.Max(1, t.Pellets); shot++)
+        {
+            var d = shot == 0 ? dir : Spread((aim - muzzle).Normalized(), Mathf.DegToRad(Mathf.Max(ws.W.Spread, 3f)), World.Rng);
+            var v = d * t.ProjectileSpeed;
+            if (kind == ProjectileKind.Grenade) v += Vector3.Up * 6f;
+            p = Projectile.Spawn(World, kind, muzzle, v, true, ws.W.Damage * DamageMul, ws.W.BlastRadius);
+        }
         var vel = dir * t.ProjectileSpeed;
-        if (kind == ProjectileKind.Grenade) vel += Vector3.Up * 6f;
-        var p = Projectile.Spawn(World, kind, muzzle, vel, true, ws.W.Damage * DamageMul, ws.W.BlastRadius);
         if (kind == ProjectileKind.Missile)
         {
             var target = World.EnemyNearRay(Camera.GlobalPosition, -Camera.GlobalBasis.Z, 0.25f, ws.W.Range);
