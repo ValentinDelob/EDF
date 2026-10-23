@@ -102,6 +102,9 @@ runs:
       shell: pwsh
       env:
         GODOT_MONO: ${{ steps.paths.outputs.exe }}
+        DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+        DOTNET_NOLOGO: "1"
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
       run: |
         $ErrorActionPreference = "Stop"
         if ("${{ inputs.debug }}" -eq "true") {

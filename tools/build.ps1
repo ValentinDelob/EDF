@@ -71,7 +71,16 @@ if (Test-Path $OutputFull) { Remove-Item -Force $OutputFull }
 if (-not $SkipImport) {
     Invoke-Godot "Import des ressources" @("--headless", "--path", ".", "--import")
 }
-Invoke-Godot "Compilation C#" @("--headless", "--path", ".", "--build-solutions", "--quit")
+# Compilation C# directe (rapide, erreurs visibles tout de suite). L'export publie ensuite les assemblies.
+Write-Host ""
+Write-Host "==> Compilation C# (dotnet build)" -ForegroundColor Cyan
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+$env:DOTNET_NOLOGO = "1"
+dotnet build (Join-Path $RepoRoot "Rempart.csproj") -c ExportRelease -nologo -v q
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Echec de la compilation C#."
+    exit $LASTEXITCODE
+}
 
 $exportFlag = if ($Debug) { "--export-debug" } else { "--export-release" }
 Invoke-Godot "Export '$Preset' ($exportFlag)" @("--headless", "--path", ".", $exportFlag, $Preset, $Output)
