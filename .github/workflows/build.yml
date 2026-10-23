@@ -23,7 +23,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Godot build
+        id: godot
         uses: ./.github/actions/godot-build
+
+      - name: Tests de non-régression (missions, char, bilan, LAN)
+        shell: pwsh
+        env:
+          GODOT_MONO: ${{ steps.godot.outputs.godot-exe }}
+        run: ./tools/smoke.ps1 -Seconds 8
 
       - name: Package
         shell: pwsh

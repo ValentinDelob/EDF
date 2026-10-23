@@ -106,9 +106,20 @@ public partial class Settings : Node
         Save();
     }
 
+    private static readonly Dictionary<string, string> DescribeCache = new();
+
+    /// <summary>Libellé lisible d'une liaison (mis en cache : appelé à chaque image par le HUD).</summary>
     public static string Describe(string binding)
     {
         if (string.IsNullOrEmpty(binding)) return "—";
+        if (DescribeCache.TryGetValue(binding, out var cached)) return cached;
+        var text = DescribeUncached(binding);
+        DescribeCache[binding] = text;
+        return text;
+    }
+
+    private static string DescribeUncached(string binding)
+    {
         var parts = binding.Split(':');
         if (parts[0] == "mouse")
             return parts[1] switch
@@ -125,7 +136,7 @@ public partial class Settings : Node
         var label = parts[1];
         // Les touches sont liées par position physique : on affiche la lettre de la disposition réelle (ZQSD en AZERTY).
         var phys = OS.FindKeycodeFromString(parts[1]);
-        if (phys != Key.None)
+        if (phys != Key.None && DisplayServer.GetName() != "headless")
         {
             var local = DisplayServer.KeyboardGetLabelFromPhysical(phys);
             if (local != Key.None) label = OS.GetKeycodeString(local);

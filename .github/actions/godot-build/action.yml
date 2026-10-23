@@ -23,6 +23,9 @@ outputs:
   exe-path:
     description: Chemin de l'executable exporte
     value: ${{ steps.export.outputs.exe-path }}
+  godot-exe:
+    description: Chemin de Godot .NET (console) installe par l'action
+    value: ${{ steps.paths.outputs.exe }}
 
 runs:
   using: composite
