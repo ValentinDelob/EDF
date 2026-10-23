@@ -2,11 +2,18 @@
 
 **Rempart** est un TPS coopératif de défense terrestre, inspiré de la série *Earth Defense Force* : des hordes d'insectes géants, des armes absurdes, des bâtiments qui s'effondrent et jusqu'à 4 joueurs pour tenir la ligne.
 
-Le projet est actuellement un **POC** :
+Le projet est actuellement un **POC** jouable :
 
-- 3 missions jouables ;
+- **6 missions** sur 2 cartes (ville côtière réaliste et zone portuaire), de jour, au crépuscule et de nuit, avec pluie et orage ;
+- **4 classes** (Fusilier, Commando aéroporté, Opérateur d'appui, Grenadier blindé), **32 armes** à statistiques (niveau, rareté, étoiles) ;
+- **9 types d'ennemis** (fourmis noires, rouges et acides, guêpes, charognards, araignées, drones, nids, reine) et variantes élites ;
+- **butin** : caisses d'armes, d'armure, de soin et de crédits ; arsenal, atelier, recyclage ; niveaux de classe ;
+- **char de combat** pilotable et **escouades alliées** ;
 - coop en **LAN de 1 à 4 joueurs** (hôte + clients, découverte automatique des parties) ;
+- musique et sons procéduraux, menus et HUD modernes, remappage complet clavier/souris, manette ;
 - Windows x64 en cible principale.
+
+Voir aussi [CHANGELOG.md](CHANGELOG.md) et [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Moteur : **Godot 4.7.2 .NET (C#)**.
 
