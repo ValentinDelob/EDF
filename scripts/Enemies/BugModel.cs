@@ -41,6 +41,7 @@ public partial class BugModel : Node3D
             case EnemyType.Nest: m.BuildNest(); break;
             case EnemyType.Spider: m.BuildSpider(); break;
             case EnemyType.Drone: m.BuildDrone(); break;
+            case EnemyType.Fortress: m.BuildFortress(); break;
         }
         return m;
     }

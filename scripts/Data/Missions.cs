@@ -112,5 +112,19 @@ public static class Missions
                 new PhaseDef(0, 120,
                     new WaveDef("west", 0, "Charognards et guêpes à l'ouest !", (EnemyType.Scavenger, 8), (EnemyType.Wasp, 12))),
             }, Weather.Rain, MapId.Port),
+        new(6, "La forteresse",
+            "Une forteresse marcheuse extraterrestre descend sur la ville par le nord, escortée de fourmis rouges. Elle écrase tout sur son passage. Visez le noyau lumineux à l'avant de la coque et fuyez la zone marquée en rouge quand son canon principal se charge.",
+            MissionGoal.Boss, TimeOfDay.Dusk, 0.007f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Contact colossal au nord : une forteresse marcheuse ! Visez son noyau !", (EnemyType.Fortress, 1), (EnemyType.RedAnt, 10))),
+                new PhaseDef(0, 60,
+                    new WaveDef("east", 0, "Escadrille de drones à l'est !", (EnemyType.Drone, 10))),
+                new PhaseDef(0, 120,
+                    new WaveDef("west", 0, "Nouvelle vague de drones à l'ouest, avec des fourmis !", (EnemyType.Drone, 12), (EnemyType.RedAnt, 8))),
+                new PhaseDef(0, 180,
+                    new WaveDef("south", 0, "Des araignées au sud ! Elles nous prennent à revers !", (EnemyType.Spider, 14))),
+            }, Weather.Storm),
     };
 }

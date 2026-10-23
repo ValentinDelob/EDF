@@ -35,6 +35,10 @@ public class MissionDirector
         }
     }
 
+    /// <summary>Premier boss annoncé par les vagues de la mission (la reine par défaut).</summary>
+    private EnemyType BossType => _m.Phases.SelectMany(p => p.Waves).SelectMany(w => w.Groups)
+        .Select(g => g.type).Where(t => Enemies.Get(t).Boss).DefaultIfEmpty(EnemyType.Queen).First();
+
     private float PlayerScale => 1f + 0.4f * (Net.I.Players.Count - 1);
 
     public void Tick(float dt)
@@ -50,7 +54,7 @@ public class MissionDirector
             if (_queue[i].at > t) continue;
             var (_, type, pos) = _queue[i];
             var e = _w.HostSpawnEnemy(type, pos);
-            if (type == EnemyType.Queen) _boss = e;
+            if (e.Def.Boss) _boss = e;
             _queue.RemoveAt(i--);
             active++;
         }
@@ -106,7 +110,7 @@ public class MissionDirector
             var zone = _w.City.Zones.TryGetValue(wave.Zone, out var z) ? z : Vector3.Zero;
             foreach (var (type, count) in wave.Groups)
             {
-                var n = type == EnemyType.Queen ? count : Mathf.CeilToInt(count * PlayerScale);
+                var n = Enemies.Get(type).Boss ? count : Mathf.CeilToInt(count * PlayerScale);
                 for (var i = 0; i < n; i++)
                     _queue.Add((_w.Elapsed + wave.Delay + i * 0.25f, type, PickSpawn(zone, type)));
             }
@@ -136,7 +140,8 @@ public class MissionDirector
                 _w.ObjectiveText = alive > 0 ? $"Détruire les nids · {alive} restant(s)" : "Éliminer les derniers ennemis";
                 break;
             case MissionGoal.Boss:
-                _w.ObjectiveText = _bossKilled ? "Éliminer les derniers ennemis" : "Abattre la reine";
+                _w.ObjectiveText = _bossKilled ? "Éliminer les derniers ennemis"
+                    : BossType == EnemyType.Fortress ? "Détruire la forteresse marcheuse" : "Abattre la reine";
                 break;
         }
         _w.EnemiesRemaining = remaining;
@@ -159,7 +164,7 @@ public class MissionDirector
         {
             _bossKilled = true;
             _queue.Clear();
-            Net.I.BroadcastMessage("La reine est morte ! Nettoyez la zone.", 1);
+            Net.I.BroadcastMessage(e.Def.Type == EnemyType.Fortress ? "La forteresse s'effondre ! Nettoyez la zone." : "La reine est morte ! Nettoyez la zone.", 1);
         }
         if (e.Def.Type == EnemyType.Nest)
         {

@@ -1,3 +1,4 @@
+using System.Linq;
 using Godot;
 
 namespace Rempart;
@@ -79,6 +80,20 @@ public partial class Enemy : CharacterBody3D
             e.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 6f, Height = 4.5f }, Position = new Vector3(0, 2.2f, 0) });
             e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 2.2f }, Position = new Vector3(0, 4.3f, 0) });
         }
+        else if (type == EnemyType.Fortress)
+        {
+            // 0 = coque, 1 = noyau (point faible), puis une colonne par patte (position de repos).
+            e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(18.5f, 10f, 24f) }, Position = new Vector3(0, BugModel.FortHullY, -0.5f) });
+            e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = BugModel.FortCoreRadius }, Position = BugModel.FortCorePos });
+            for (var i = 0; i < 4; i++)
+            {
+                var f = BugModel.FortressFootRest(i);
+                e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(3.4f, 24f, 3.4f) }, Position = new Vector3(f.X, 12f, f.Z) });
+            }
+            // Arrive déjà debout (pas de sortie de terre) ; chaque pas secoue le sol.
+            e.State = EnemyState.Moving;
+            e.Model.Stomp += e.OnFortressStomp;
+        }
         else if (type is EnemyType.Wasp or EnemyType.Drone)
         {
             e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.6f, 1.4f, 3.4f) * s }, Position = new Vector3(0, 0, -0.5f) * s });
@@ -112,7 +127,16 @@ public partial class Enemy : CharacterBody3D
         }
     }
 
-    public Vector3 Center => GlobalPosition + Vector3.Up * (Def.Flying ? 0 : 1.1f * Def.Size);
+    public Vector3 Center => IsFortress ? GlobalPosition + Vector3.Up * BugModel.FortHullY
+        : GlobalPosition + Vector3.Up * (Def.Flying ? 0 : 1.1f * Def.Size);
+
+    private bool IsFortress => Def.Type == EnemyType.Fortress;
+
+    private void AnimateModel(float dt, float speed, float attack)
+    {
+        if (IsFortress) Model.AnimateFortress(dt, speed, attack);
+        else Model.Animate(dt, speed, attack);
+    }
 
     // ---------------- Hôte ----------------
 
@@ -122,7 +146,7 @@ public partial class Enemy : CharacterBody3D
     public void HostTick(float dt)
     {
         if (State == EnemyState.Dead) return;
-        if (Frozen && State != EnemyState.Emerging) { Model.Animate(dt, 2f, Mathf.Max(0, Mathf.Sin(Time.GetTicksMsec() / 600f))); return; }
+        if (Frozen && State != EnemyState.Emerging) { AnimateModel(dt, 2f, Mathf.Max(0, Mathf.Sin(Time.GetTicksMsec() / 600f))); return; }
         if (State == EnemyState.Emerging)
         {
             _emergeT += dt;
@@ -140,7 +164,13 @@ public partial class Enemy : CharacterBody3D
         if (!_world.NearestPlayer(GlobalPosition, out var peer, out var target))
         {
             _speedNow = Mathf.Lerp(_speedNow, 0, dt * 4);
-            Model.Animate(dt, _speedNow, _attackAnim);
+            AnimateModel(dt, _speedNow, _attackAnim);
+            return;
+        }
+        if (IsFortress)
+        {
+            TickFortress(dt, peer, target);
+            AnimateModel(dt, _speedNow, _attackAnim);
             return;
         }
 
@@ -358,7 +388,7 @@ public partial class Enemy : CharacterBody3D
         _yaw = Mathf.LerpAngle(_yaw, _netYaw, Mathf.Clamp(dt * 10f, 0, 1));
         Rotation = new Vector3(0, _yaw, 0);
         _attackAnim = Mathf.Max(0, _attackAnim - dt * 3f);
-        Model.Animate(dt, _speedNow, _attackAnim);
+        AnimateModel(dt, _speedNow, _attackAnim);
     }
 
     public void PlayAttack() => _attackAnim = 1f;
@@ -370,6 +400,7 @@ public partial class Enemy : CharacterBody3D
         if (State == EnemyState.Dead) return;
         State = EnemyState.Dead;
         CollisionLayer = 0;
+        if (IsFortress) { FortressDie(); return; }
         var pos = Center;
         var color = Def.Type switch
         {
@@ -394,6 +425,243 @@ public partial class Enemy : CharacterBody3D
     public void FlashHit()
     {
         _attackAnim = Mathf.Max(_attackAnim, 0.25f);
-        Model.Flash();
+        if (!IsFortress) Model.Flash(); // cible touchée en continu : pas de flash
+    }
+
+    // ---------------- Forteresse marcheuse ----------------
+
+    private float _fLaserCd = 5f, _fMissileCd = 11f, _fCannonCd = 17f, _fDroneCd, _fCrushT;
+    private int _fVolley, _fMissiles;
+    private float _fVolleyT, _fMissileT, _fChargeT = -1f;
+    private Vector3 _fCannonTarget;
+    private bool _fEnraged;
+
+    /// <summary>
+    /// IA de la forteresse (hôte) : marche lente vers le joueur le plus proche en écrasant les immeubles,
+    /// salves laser des tourelles, barrages de missiles, canon principal chargé 2 s. Sous 50 % : drones et cadence accrue.
+    /// </summary>
+    private void TickFortress(float dt, long peer, Vector3 target)
+    {
+        var pos = GlobalPosition;
+        var to = target - pos;
+        to.Y = 0;
+        var dist = to.Length();
+        if (!_fEnraged && Health < MaxHealth * 0.5f)
+        {
+            _fEnraged = true;
+            _fDroneCd = 1.5f;
+            Net.I.BroadcastMessage("La forteresse est endommagée : elle libère ses drones et redouble de violence !", 1);
+        }
+        var rate = _fEnraged ? 1.6f : 1f;
+
+        // Lourde rotation sur place, puis avance tant que la cible n'est pas sous elle.
+        if (dist > 0.5f)
+        {
+            _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(to.X, to.Z), Mathf.Clamp(dt * 0.3f, 0, 1));
+            Rotation = new Vector3(0, _yaw, 0);
+        }
+        var fwd = new Vector3(Mathf.Sin(_yaw), 0, Mathf.Cos(_yaw));
+        var align = dist > 0.5f ? fwd.Dot(to / dist) : 0f;
+        var want = dist > 14f ? Def.Speed * Mathf.Clamp((align + 0.2f) / 1.2f, 0.3f, 1f) : 0f;
+        _speedNow = Mathf.MoveToward(_speedNow, want, dt * 1.2f);
+        GlobalPosition = pos + fwd * _speedNow * dt;
+
+        _fCrushT -= dt;
+        if (_fCrushT <= 0)
+        {
+            _fCrushT = 0.25f;
+            CrushBuildings(GlobalPosition, 13f);
+        }
+
+        Model.FortressAim(target + Vector3.Up);
+        _fLaserCd -= dt * rate;
+        _fMissileCd -= dt * rate;
+        _fCannonCd -= dt * rate;
+        _attackAnim = Mathf.Max(_attackAnim, _fChargeT >= 0 ? _fChargeT * 0.5f : 0f);
+
+        // Salve laser : chaque tourelle tire deux fois, en alternance.
+        var turrets = Model.FortressTurretCount;
+        if (_fVolley > 0)
+        {
+            _fVolleyT -= dt;
+            if (_fVolleyT <= 0)
+            {
+                _fVolleyT = 0.14f;
+                _fVolley--;
+                var i = _fVolley % turrets;
+                var aim = target + Vector3.Up + new Vector3((float)GD.RandRange(-3, 3), (float)GD.RandRange(-0.5, 1.5), (float)GD.RandRange(-3, 3));
+                _world.HostEnemyProjectile(this, 3, Model.FortressTurretMuzzle(i), aim, 1);
+                Net.I.BroadcastEnemyAttack(Id, 20 + i, aim);
+            }
+        }
+        else if (_fLaserCd <= 0 && dist < Def.AttackRange)
+        {
+            _fLaserCd = Def.AttackCooldown * (float)GD.RandRange(0.8, 1.2);
+            _fVolley = turrets * 2;
+        }
+
+        // Barrage de missiles en cloche autour de la cible.
+        if (_fMissiles > 0)
+        {
+            _fMissileT -= dt;
+            if (_fMissileT <= 0)
+            {
+                _fMissileT = 0.18f;
+                _fMissiles--;
+                var a = (float)GD.RandRange(0, Mathf.Tau);
+                var r = Mathf.Sqrt((float)GD.Randf()) * 12f;
+                var aim = new Vector3(target.X + Mathf.Cos(a) * r, 0, target.Z + Mathf.Sin(a) * r);
+                FireBomb(_fMissiles % 2, aim, true);
+                Net.I.BroadcastEnemyAttack(Id, 30 + _fMissiles % 2, aim);
+            }
+        }
+        else if (_fMissileCd <= 0 && dist < Def.AttackRange)
+        {
+            _fMissileCd = (float)GD.RandRange(12, 15);
+            _fMissiles = _fEnraged ? 12 : 8;
+        }
+
+        // Canon principal : 2 s de charge visible (zone marquée au sol), puis tir dévastateur.
+        if (_fChargeT >= 0)
+        {
+            _fChargeT += dt;
+            if (_fChargeT >= 2f)
+            {
+                _fChargeT = -1f;
+                FortressFx(11, _fCannonTarget);
+                Net.I.BroadcastEnemyAttack(Id, 11, _fCannonTarget);
+                _world.HostEnemyBlast(_fCannonTarget, 10f, Def.Damage * 20f * _world.DamageMul * DamageScale);
+            }
+        }
+        else if (_fCannonCd <= 0 && dist < Def.AttackRange)
+        {
+            _fCannonCd = (float)GD.RandRange(14, 18);
+            _fChargeT = 0f;
+            _fCannonTarget = new Vector3(target.X, 0.3f, target.Z);
+            FortressFx(10, _fCannonTarget);
+            Net.I.BroadcastEnemyAttack(Id, 10, _fCannonTarget);
+        }
+
+        // Seconde phase : lâcher de drones depuis la coque.
+        if (_fEnraged)
+        {
+            _fDroneCd -= dt;
+            if (_fDroneCd <= 0)
+            {
+                _fDroneCd = 20f;
+                var n = _world.EnemiesById.Values.Count(e => e.Def.Type == EnemyType.Drone && e.State != EnemyState.Dead);
+                for (var i = 0; i < 4 && n < 16; i++, n++)
+                {
+                    var a = i * Mathf.Tau / 4 + _yaw;
+                    _world.HostSpawnEnemy(EnemyType.Drone, GlobalPosition + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * 12f);
+                }
+                FortressFx(12, target);
+                Net.I.BroadcastEnemyAttack(Id, 12, target);
+            }
+        }
+        State = _fVolley > 0 || _fMissiles > 0 || _fChargeT >= 0 ? EnemyState.Attacking : EnemyState.Moving;
+    }
+
+    /// <summary>Écrase les immeubles dont l'emprise touche le cercle donné (hôte).</summary>
+    private void CrushBuildings(Vector3 c, float radius)
+    {
+        foreach (var b in _world.Buildings)
+        {
+            if (b.Destroyed) continue;
+            var local = c - b.GlobalPosition;
+            var dx = local.X - Mathf.Clamp(local.X, -b.Size.X / 2, b.Size.X / 2);
+            var dz = local.Z - Mathf.Clamp(local.Z, -b.Size.Z / 2, b.Size.Z / 2);
+            if (dx * dx + dz * dz <= radius * radius) _world.HostBuildingDamage(b.Id, b.MaxHealth + b.Health + 1e5f);
+        }
+    }
+
+    /// <summary>Missile en cloche tiré d'un lance-missiles latéral (autoritaire sur l'hôte, visuel ailleurs).</summary>
+    private void FireBomb(int pod, Vector3 aim, bool host)
+    {
+        var from = Model.FortressPod(pod) + Vector3.Up * 0.6f;
+        var flat = new Vector3(aim.X - from.X, 0, aim.Z - from.Z);
+        var t = Mathf.Clamp(flat.Length() / 22f, 2.4f, 5f);
+        var v = flat / t + Vector3.Up * ((aim.Y - from.Y + 0.5f * Projectile.BombGravity * t * t) / t);
+        var p = Projectile.Spawn(_world, ProjectileKind.Bomb, from, v, host, host ? Def.Damage * 3f * _world.DamageMul * DamageScale : 0, 5f);
+        if (host) p.SourceEnemy = this;
+        Sfx.At("launcher", from, 4f, 0.55f);
+    }
+
+    /// <summary>Effets des attaques de la forteresse, joués chez tous les pairs (10 = charge, 11 = tir, 12 = drones, 2x = laser, 3x = missile).</summary>
+    public void FortressFx(int kind, Vector3 target)
+    {
+        if (!IsFortress || State == EnemyState.Dead) return;
+        switch (kind)
+        {
+            case 10:
+                Model.FortressCharge();
+                Effects.Ring(_world, target, 10f, new Color(1f, 0.15f, 0.1f), 2f);
+                Effects.Ring(_world, target, 4f, new Color(1f, 0.15f, 0.1f), 2f);
+                Sfx.At("wave", Model.FortressMuzzle, 12f, 0.45f, 0);
+                break;
+            case 11:
+                Model.FortressFire();
+                var from = Model.FortressMuzzle;
+                Effects.Tracer(_world.FxRoot, from, target, new Color(0.6f, 0.95f, 1f), 1.3f, 0.3f);
+                Effects.Tracer(_world.FxRoot, from, target, new Color(1f, 1f, 1f), 0.45f, 0.35f);
+                Sfx.At("plasma", from, 12f, 0.35f, 0);
+                _world.ShakeCamera(target, 1f, 60f);
+                break;
+            case 12:
+                Sfx.At("buzz", GlobalPosition + Vector3.Up * 30f, 10f, 0.5f);
+                break;
+            case >= 20 and < 30:
+                var m = Model.FortressTurretMuzzle(kind - 20);
+                Model.FortressAim(target);
+                Projectile.Spawn(_world, ProjectileKind.Laser, m, (target - m).Normalized() * 90f, false, 0, 0);
+                Sfx.At("laser", m, -2f, 0.7f);
+                break;
+            case >= 30 and < 40:
+                Model.FortressAim(target);
+                FireBomb(kind - 30, target, false);
+                break;
+        }
+    }
+
+    /// <summary>Un pied se pose : poussière, secousse ; sur l'hôte, écrasement et dégâts de piétinement.</summary>
+    private void OnFortressStomp(Vector3 p)
+    {
+        if (State == EnemyState.Dead) return;
+        Effects.Dust(_world, p, new Vector3(9f, 3f, 9f));
+        _world.ShakeCamera(p, 0.55f, 70f);
+        Sfx.At("hammer", p, 10f, 0.3f, 80);
+        if (!Net.I.IsHost) return;
+        CrushBuildings(p, 5f);
+        if (_world.NearestPlayer(p, out var peer, out var at) && at.DistanceTo(p) < 7f)
+            Net.I.DamagePlayer(peer, Def.Damage * 6f * _world.DamageMul * DamageScale, p);
+    }
+
+    /// <summary>Mort de la forteresse : chapelet d'explosions sur la coque, effondrement, déflagration finale, enfouissement.</summary>
+    private void FortressDie()
+    {
+        Model.FortressDeath();
+        Sfx.At("collapse", Center, 12f, 0.6f, 0);
+        var tw = CreateTween();
+        var rng = new RandomNumberGenerator();
+        for (var i = 0; i < 10; i++)
+        {
+            tw.TweenCallback(Callable.From(() =>
+            {
+                var o = new Vector3(rng.RandfRange(-9, 9), rng.RandfRange(-4, 5), rng.RandfRange(-11, 11));
+                Effects.Explosion(_world, Model.FortressHullCenter + Basis * o, rng.RandfRange(6f, 11f), 0);
+            }));
+            tw.TweenInterval(0.38f);
+        }
+        tw.TweenCallback(Callable.From(() =>
+        {
+            var c = Model.FortressHullCenter;
+            Effects.Explosion(_world, c, 22f, 0);
+            Effects.Explosion(_world, c + Vector3.Up * 5f, 15f, 2);
+            Effects.Dust(_world, new Vector3(c.X, 0, c.Z), new Vector3(46f, 14f, 46f));
+            _world.ShakeCamera(c, 1.2f, 160f);
+        }));
+        tw.TweenInterval(12f);
+        tw.TweenProperty(Model, "position:y", -32f, 6f).SetEase(Tween.EaseType.In);
+        tw.TweenCallback(Callable.From(QueueFree));
     }
 }

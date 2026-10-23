@@ -616,6 +616,7 @@ public partial class World : Node3D
         AddChild(e);
         EnemiesById[id] = e;
         if (type == EnemyType.Queen) Sfx.At("screech", pos, 10f, 0.5f);
+        else if (type == EnemyType.Fortress) Sfx.At("wave", pos, 12f, 0.35f);
     }
 
     public void OnEnemySnapshot(byte[] data)
@@ -640,6 +641,8 @@ public partial class World : Node3D
         if (!EnemiesById.TryGetValue(id, out var e) || e.State == EnemyState.Dead) return;
         // Les nids ne craignent vraiment que les explosifs.
         if (e.Def.Type == EnemyType.Nest) dmg *= 0.35f;
+        // Noyau de la forteresse : ×2,5 au total (le tireur a déjà appliqué ×1,5).
+        if (weak && e.Def.Type == EnemyType.Fortress) dmg *= 2.5f / 1.5f;
         e.Health -= dmg;
         if (by != Net.I.MyId) Net.I.BroadcastEnemyHit(id, at);
         if (e.Health <= 0)
@@ -693,7 +696,8 @@ public partial class World : Node3D
 
     public void LocalHitFx(Enemy e, Vector3 at, bool sound = true, float damage = 0, bool weak = false)
     {
-        Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
+        if (e.Def.Type == EnemyType.Fortress) Effects.Sparks(this, at, Vector3.Up);
+        else Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
         if (damage > 0 && Settings.I.DamageNumbers)
         {
@@ -740,6 +744,7 @@ public partial class World : Node3D
     public void OnEnemyAttack(int id, int kind, Vector3 target)
     {
         if (!EnemiesById.TryGetValue(id, out var e)) return;
+        if (kind >= 10) { e.FortressFx(kind, target); return; }
         e.PlayAttack();
         switch (kind)
         {
@@ -812,6 +817,24 @@ public partial class World : Node3D
         {
             var d = (ppos + Vector3.Up).DistanceTo(pos);
             if (d <= p.Radius + 0.6f) Net.I.DamagePlayer(peer, p.Damage, pos);
+        }
+    }
+
+    /// <summary>Explosion ennemie (canon de la forteresse) : effet chez tous, dégâts aux joueurs et aux immeubles proches.</summary>
+    public void HostEnemyBlast(Vector3 pos, float radius, float dmg)
+    {
+        Net.I.BroadcastExplosionFx(pos, radius, 0);
+        foreach (var (peer, ppos) in PlayerTargets())
+        {
+            var d = (ppos + Vector3.Up).DistanceTo(pos);
+            if (d <= radius) Net.I.DamagePlayer(peer, dmg * Mathf.Clamp(1.2f - d / radius, 0.4f, 1f), pos);
+        }
+        foreach (var b in Buildings)
+        {
+            if (b.Destroyed) continue;
+            var local = pos - b.GlobalPosition;
+            var closest = new Vector3(Mathf.Clamp(local.X, -b.Size.X / 2, b.Size.X / 2), Mathf.Clamp(local.Y, 0, b.Size.Y), Mathf.Clamp(local.Z, -b.Size.Z / 2, b.Size.Z / 2));
+            if (closest.DistanceTo(local) <= radius) HostBuildingDamage(b.Id, dmg * 4f);
         }
     }
 
