@@ -282,6 +282,7 @@ public static class UiKit
     }
 
     private static bool _silentFocus;
+    public static bool SilentFocus => _silentFocus;
 
     /// <summary>Donne le focus sans jouer le son de survol (ouverture d'écran, reconstruction de liste).</summary>
     public static void FocusSilently(Control c)
@@ -565,44 +566,45 @@ public partial class MenuScreen : Control
     protected Label TitleLabel;
     protected Label HeaderRight;
 
+    /// <summary>Scène 1280×720 (coordonnées des maquettes E) mise à l'échelle de la fenêtre.</summary>
+    protected EStage Stage;
+
+    /// <summary>
+    /// Cadre « direction E » : fond animé, bandeau de titre (onglets à droite du titre), corps de 1160×500 sous le
+    /// bandeau, action principale en bas à droite au-dessus de la bande basse, aides clavier dans la bande basse.
+    /// (Les paramètres <paramref name="scrim"/> et <paramref name="shade"/> sont conservés pour compatibilité.)
+    /// </summary>
     protected void BuildFrame(string title, float scrim = 0f, float shade = 0f)
     {
-        Theme = UiKit.Theme;
+        Theme = UiE.Theme;
         UiKit.FillRect(this);
-        if (scrim > 0) AddChild(UiKit.Scrim(scrim));
-        if (shade > 0) AddChild(UiKit.SideShade(shade));
-        var m = UiKit.Margin(UiKit.ScreenX, UiKit.ScreenTop, UiKit.ScreenX, UiKit.ScreenBottom);
-        UiKit.FillRect(m);
-        m.MouseFilter = MouseFilterEnum.Ignore;
-        AddChild(m);
-        var v = UiKit.VBox(28);
-        v.MouseFilter = MouseFilterEnum.Ignore;
-        m.AddChild(v);
+        MouseFilter = MouseFilterEnum.Stop; // écran opaque : rien ne passe au menu de dessous
+        Stage = EFrame.Build(this, title, out TitleLabel);
 
-        Header = UiKit.HBox(40);
-        TitleLabel = UiKit.Heading(title, 48);
-        Header.AddChild(TitleLabel);
-        Tabs = UiKit.HBox(24);
+        Header = UiKit.HBox(24);
+        Header.MouseFilter = MouseFilterEnum.Ignore;
+        Header.Position = new Vector2(Mathf.Max(500, 60 + TitleLabel.GetMinimumSize().X + 40), 30);
+        Header.Size = new Vector2(1220 - Header.Position.X, 44);
+        Tabs = UiKit.HBox(18);
         Tabs.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         Header.AddChild(Tabs);
         Header.AddChild(UiKit.Spacer(false, true));
-        HeaderRight = UiKit.Label("", 14, UiKit.Muted);
+        HeaderRight = UiE.Label("", 17, UiE.Mint);
         HeaderRight.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         Header.AddChild(HeaderRight);
-        v.AddChild(Header);
+        Stage.AddChild(Header);
 
-        Body = new Control { SizeFlagsVertical = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore };
-        v.AddChild(Body);
+        Body = new Control { MouseFilter = MouseFilterEnum.Ignore, Position = new Vector2(60, 112), Size = new Vector2(1160, 456) };
+        Stage.AddChild(Body);
 
-        var foot = UiKit.HBox(24);
-        foot.CustomMinimumSize = new Vector2(0, 60);
-        FooterLeft = UiKit.HBox(28);
-        FooterLeft.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        foot.AddChild(FooterLeft);
-        foot.AddChild(UiKit.Spacer(false, true));
+        // Action principale : au-dessus de la bande basse, alignée à droite.
         FooterRight = UiKit.HBox(12);
-        foot.AddChild(FooterRight);
-        v.AddChild(foot);
+        FooterRight.Alignment = BoxContainer.AlignmentMode.End;
+        FooterRight.Position = new Vector2(560, 578);
+        FooterRight.Size = new Vector2(660, 52);
+        Stage.AddChild(FooterRight);
+        // Aides clavier : dans l'aplat sombre de la bande basse, à droite (jamais sous un bouton).
+        FooterLeft = EFrame.Hints(Stage);
         UiKit.FadeIn(this);
     }
 

@@ -11,21 +11,22 @@ public partial class GuideMenu : MenuScreen
     public override void _Ready()
     {
         BuildFrame("Guide", 0.88f);
-        _scroll = Scroll(980);
-        UiKit.FillRect(_scroll);
-        _scroll.AnchorRight = 0;
-        _scroll.OffsetRight = 980;
+        var panel = UiE.Panel(3, 22, 16);
+        panel.Position = new Vector2(0, 0);
+        panel.Size = new Vector2(1160, 516);
+        panel.MouseFilter = MouseFilterEnum.Pass;
+        Body.AddChild(panel);
+        _scroll = Scroll(1110);
         _col = UiKit.VBox(8);
-        _col.CustomMinimumSize = new Vector2(940, 0);
+        _col.CustomMinimumSize = new Vector2(1080, 0);
         _scroll.AddChild(_col);
-        Body.AddChild(_scroll);
+        panel.AddChild(_scroll);
         AddTab("Les bases", BuildBasics);
         AddTab("Classes", BuildClasses);
         AddTab("Butin et progression", BuildLoot);
-        FooterLeft.AddChild(UiKit.KeyHint("Échap", "Retour", () => App.I.ShowMain()));
-        FooterLeft.AddChild(UiKit.KeyHint("Q / E", "Onglets"));
-        FooterLeft.AddChild(UiKit.KeyHint("↑ / ↓", "Défiler"));
-        App.I.Background?.SetMode(MenuBackground.Mode.Title);
+        FooterLeft.AddChild(UiE.KeyHint("Q/E:Onglets"));
+        FooterLeft.AddChild(UiE.KeyHint("↑↓:Défiler"));
+        FooterLeft.AddChild(UiE.KeyHint("Échap:Retour", () => App.I.ShowMain()));
         SelectTab(0);
     }
 
@@ -52,15 +53,29 @@ public partial class GuideMenu : MenuScreen
     private void Section(string title)
     {
         if (UiKit.HasLiveChildren(_col)) _col.AddChild(UiKit.Gap(18));
-        _col.AddChild(UiKit.Eyebrow(title, UiKit.Accent));
+        _col.AddChild(UiE.Title(title.ToUpperInvariant(), 24, UiE.Mint, UiE.CondSemi));
     }
 
     private void Para(string text)
     {
-        var l = UiKit.Label(text, 17, new Color(UiKit.Text, 0.88f));
+        var l = UiE.Label(text, 17, UiE.TextDim);
         l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        l.CustomMinimumSize = new Vector2(920, 0);
+        l.CustomMinimumSize = new Vector2(1070, 0);
         _col.AddChild(l);
+    }
+
+    /// <summary>Touche encadrée de vert + action.</summary>
+    private static Control KeyCap(string key, string label)
+    {
+        var h = UiKit.HBox(10);
+        var k = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(96, 0) };
+        k.AddThemeStyleboxOverride("panel", UiKit.Box(new Color(UiE.Frame, 0.16f), UiE.Edge, 1, 0, 8, 1));
+        var kl = UiE.Label(key, 16, UiE.Mint);
+        kl.HorizontalAlignment = HorizontalAlignment.Center;
+        k.AddChild(kl);
+        h.AddChild(k);
+        h.AddChild(UiE.Label(label, 17, UiE.Text));
+        return h;
     }
 
     private void Keys(params (string action, string label)[] items)
@@ -71,7 +86,7 @@ public partial class GuideMenu : MenuScreen
         foreach (var (action, label) in items)
         {
             var k = action.StartsWith("=") ? action[1..] : UiKit.KeyName(action);
-            grid.AddChild(UiKit.KeyHint(k, label));
+            grid.AddChild(KeyCap(k, label));
         }
         _col.AddChild(grid);
         _col.AddChild(UiKit.Gap(4));
@@ -121,9 +136,9 @@ public partial class GuideMenu : MenuScreen
         Section("Caisses");
         Para("Rouge : arme · vert : armure (points de vie maximum permanents) · rose : soin immédiat · jaune : crédits. Les caisses proches sont attirées vers vous. Attention aux charognards : ils avalent les caisses au sol, tuez-les pour les récupérer.");
         Section("Armes");
-        Para("Chaque arme a un niveau (0 à 100), une rareté (Standard, Renforcée, Élite, Prototype, Légendaire) et des étoiles par statistique. Un doublon ajoute une étoile à l'arme déjà possédée. Plus la difficulté est élevée, plus les armes trouvées sont puissantes.");
+        Para("Chaque arme a un niveau (0 à 100) et des étoiles par caractéristique. Un doublon ajoute une étoile à l'arme déjà possédée. Plus la difficulté est élevée, plus les armes trouvées sont puissantes.");
         Section("Progression");
-        Para("L'armure ramassée s'ajoute définitivement à la classe jouée. L'expérience fait monter la classe de niveau : +1 % de dégâts et +3 PV par niveau. Les crédits servent à améliorer les armes dans l'arsenal.");
+        Para("L'armure ramassée s'ajoute définitivement à la classe jouée. L'expérience fait monter la classe de niveau : +1 % de dégâts et +3 PV par niveau. Les crédits s'accumulent dans le profil.");
         Section("Échec");
         Para("En cas d'échec, les armes ramassées sont conservées et l'armure est réduite de moitié ; les crédits sont perdus.");
     }

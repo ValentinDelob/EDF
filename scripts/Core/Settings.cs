@@ -60,6 +60,7 @@ public partial class Settings : Node
     // Interface
     public float HudScale = 1f;
     public bool DamageNumbers = true;
+    public bool ReduceMotion; // coupe les animations décoratives des menus
 
     // Joueur
     public string PlayerName = "Soldat";
@@ -298,6 +299,7 @@ public partial class Settings : Node
         cfg.SetValue("audio", "music", MusicVolume);
         cfg.SetValue("ui", "hud_scale", HudScale);
         cfg.SetValue("ui", "damage_numbers", DamageNumbers);
+        cfg.SetValue("ui", "reduce_motion", ReduceMotion);
         cfg.SetValue("player", "name", PlayerName);
         cfg.SetValue("player", "last_ip", LastIp);
         cfg.Save(FilePath);
@@ -323,6 +325,7 @@ public partial class Settings : Node
         MusicVolume = (float)cfg.GetValue("audio", "music", MusicVolume);
         HudScale = (float)cfg.GetValue("ui", "hud_scale", HudScale);
         DamageNumbers = (bool)cfg.GetValue("ui", "damage_numbers", DamageNumbers);
+        ReduceMotion = (bool)cfg.GetValue("ui", "reduce_motion", ReduceMotion);
         PlayerName = (string)cfg.GetValue("player", "name", PlayerName);
         LastIp = (string)cfg.GetValue("player", "last_ip", LastIp);
     }

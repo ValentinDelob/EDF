@@ -21,7 +21,8 @@ public partial class OptionsMenu : MenuScreen
         // Focus d'origine (menu principal, pause) rendu à la fermeture.
         _returnFocus = GetViewport().GuiGetFocusOwner();
         BuildFrame("Options", 0.96f);
-        var row = UiKit.HBox(64);
+        Body.Size = new Vector2(1160, 516);
+        var row = UiKit.HBox(32);
         UiKit.FillRect(row);
         row.MouseFilter = MouseFilterEnum.Ignore;
         Body.AddChild(row);
@@ -39,21 +40,26 @@ public partial class OptionsMenu : MenuScreen
         var desc = UiKit.VBox(12);
         desc.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         desc.CustomMinimumSize = new Vector2(280, 0);
-        _descTitle = UiKit.Label("", 28, UiKit.Text, true);
-        _descText = UiKit.Label("", 16, new Color(UiKit.Text, 0.78f));
+        _descTitle = UiE.Title("", 28);
+        _descText = UiE.Label("", 17, UiE.TextDim);
         _descText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         desc.AddChild(_descTitle);
         desc.AddChild(_descText);
-        row.AddChild(desc);
+        var descPanel = UiE.Panel(3, 18, 14);
+        descPanel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        descPanel.SizeFlagsVertical = SizeFlags.ShrinkBegin;
+        descPanel.CustomMinimumSize = new Vector2(320, 220);
+        descPanel.AddChild(desc);
+        row.AddChild(descPanel);
 
         AddTab("Contrôles", BuildControls);
         AddTab("Vidéo", BuildVideo);
         AddTab("Audio", BuildAudio);
         AddTab("Jeu", BuildGame);
-        FooterLeft.AddChild(UiKit.KeyHint("Échap", "Retour", Close));
-        FooterLeft.AddChild(UiKit.KeyHint("Q / E", "Onglets"));
-        _resetHint = UiKit.KeyHint("R", "Rétablir les touches", () => { Settings.I.ResetBindings(); RefreshBindings(); });
+        FooterLeft.AddChild(UiE.KeyHint("Q/E:Onglets"));
+        _resetHint = UiE.KeyHint("R:Rétablir", () => { Settings.I.ResetBindings(); RefreshBindings(); });
         FooterLeft.AddChild(_resetHint);
+        FooterLeft.AddChild(UiE.KeyHint("Échap:Retour", Close));
         SelectTab(0);
     }
 
@@ -117,20 +123,20 @@ public partial class OptionsMenu : MenuScreen
     private void Section(string title)
     {
         if (UiKit.HasLiveChildren(_col)) _col.AddChild(UiKit.Gap(20));
-        _col.AddChild(UiKit.Eyebrow(title));
+        _col.AddChild(UiE.Title(title.ToUpperInvariant(), 22, UiE.Mint, UiE.CondSemi));
         _col.AddChild(UiKit.Gap(4));
     }
 
     private void Row(string label, Control control, string description, int height = 52)
     {
         var panel = new PanelContainer { CustomMinimumSize = new Vector2(0, height), MouseFilter = MouseFilterEnum.Pass };
-        var normal = UiKit.Box(new Color(0, 0, 0, 0), default, 0, 0, 22, 6);
+        var normal = UiKit.Box(new Color(3 / 255f, 22 / 255f, 10 / 255f, 0.55f), default, 0, 0, 22, 6);
         // Même marge intérieure qu'au repos : la barre d'accent ne décale pas le contenu.
-        var hot = UiKit.Bar(UiKit.Panel, UiKit.Accent, 4, 22, 6);
+        var hot = UiKit.Bar(new Color(14 / 255f, 80 / 255f, 34 / 255f, 0.85f), UiE.Mint, 4, 22, 6);
         panel.AddThemeStyleboxOverride("panel", normal);
         var h = UiKit.HBox(24);
         h.MouseFilter = MouseFilterEnum.Pass;
-        var l = UiKit.Label(label, 17);
+        var l = UiE.Label(label, 18);
         l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         l.VerticalAlignment = VerticalAlignment.Center;
         h.AddChild(l);
@@ -176,8 +182,7 @@ public partial class OptionsMenu : MenuScreen
     {
         var h = UiKit.HBox(16);
         var s = new HSlider { MinValue = min, MaxValue = max, Step = step, Value = value, CustomMinimumSize = new Vector2(200, 24), FocusMode = FocusModeEnum.All, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        var l = UiKit.Label(fmt(value), 17, UiKit.Text);
-        l.AddThemeFontOverride("font", UiKit.BodyMedium);
+        var l = UiE.Label(fmt(value), 18, UiE.Text);
         l.CustomMinimumSize = new Vector2(64, 0);
         l.HorizontalAlignment = HorizontalAlignment.Right;
         s.ValueChanged += v =>
@@ -218,8 +223,8 @@ public partial class OptionsMenu : MenuScreen
             {
                 _waitingAction = id;
                 b.Text = "Appuyez…";
-                b.AddThemeStyleboxOverride("normal", UiKit.Box(UiKit.Accent, default, 0, 0, 20, 8));
-                b.AddThemeColorOverride("font_color", UiKit.OnAccent);
+                b.AddThemeStyleboxOverride("normal", UiKit.Box(UiE.Frame, UiE.Mint, 1, 0, 20, 8));
+                b.AddThemeColorOverride("font_color", UiE.Ink);
             };
             _bindButtons[a.Id] = b;
             Row(a.Label, b, "Cliquez puis appuyez sur la nouvelle touche ou le bouton de souris. Échap annule. Une touche déjà utilisée est retirée de l'autre action.", 46);
@@ -273,6 +278,8 @@ public partial class OptionsMenu : MenuScreen
             "Taille des éléments affichés en mission (vie, armes, objectif, radar).");
         Row("Chiffres de dégâts", Selector(OnOff, Settings.I.DamageNumbers ? 1 : 0, i => Settings.I.DamageNumbers = i == 1),
             "Affiche les dégâts infligés au-dessus des ennemis touchés (en jaune sur un point faible).");
+        Row("Réduire les animations", Selector(OnOff, Settings.I.ReduceMotion ? 1 : 0, i => Settings.I.ReduceMotion = i == 1),
+            "Fige le fond animé des menus (grille, radar, circuits, particules) et les reflets des boutons.");
         Section("Joueur");
         var name = new LineEdit { Text = Settings.I.PlayerName, MaxLength = 20, CustomMinimumSize = new Vector2(320, 42) };
         name.TextChanged += t => Settings.I.PlayerName = string.IsNullOrWhiteSpace(t) ? "Soldat" : t.Trim();
@@ -282,7 +289,7 @@ public partial class OptionsMenu : MenuScreen
         var confirm = false;
         reset.Pressed += () =>
         {
-            if (!confirm) { confirm = true; reset.Text = "Confirmer ?"; reset.AddThemeColorOverride("font_color", UiKit.Danger); return; }
+            if (!confirm) { confirm = true; reset.Text = "Confirmer ?"; reset.AddThemeColorOverride("font_color", UiE.Danger); return; }
             Profile.I.ResetProfile();
             reset.Text = "Effacé";
             reset.Disabled = true;
