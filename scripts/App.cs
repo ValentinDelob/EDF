@@ -50,7 +50,16 @@ public partial class App : Node
 
     private void SetScreen(Control c)
     {
-        _screen?.QueueFree();
+        // Fondu de sortie court de l'écran précédent (le nouvel écran a son propre fondu d'entrée).
+        if (_screen != null && IsInstanceValid(_screen))
+        {
+            var old = _screen;
+            old.MouseFilter = Control.MouseFilterEnum.Ignore;
+            old.ProcessMode = ProcessModeEnum.Disabled;
+            var tw = old.CreateTween();
+            tw.TweenProperty(old, "modulate:a", 0f, 0.12f);
+            tw.TweenCallback(Callable.From(old.QueueFree));
+        }
         _screen = c;
         _ui.AddChild(c);
     }

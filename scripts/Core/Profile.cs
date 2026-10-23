@@ -160,6 +160,9 @@ public partial class Profile : Node
 
     private void Load()
     {
+        // Les lancements de test repartent d'un profil neuf (résultats reproductibles), sauf --keep-profile.
+        if (IsTestRun && !System.Array.Exists(OS.GetCmdlineUserArgs(), a => a == "--keep-profile") && FileAccess.FileExists(FilePath))
+            DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(FilePath));
         if (FileAccess.FileExists(FilePath))
         {
             try

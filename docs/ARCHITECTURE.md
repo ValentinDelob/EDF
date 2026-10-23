@@ -23,6 +23,12 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 - La ville est générée avec une graine fixe : les identifiants d'immeubles sont identiques chez tous les pairs.
 - En solo, le jeu utilise `OfflineMultiplayerPeer` : le même code passe par les mêmes RPC.
 
+## Interface
+
+- `UiKit` regroupe les jetons de design (couleurs, polices, marges) et les fabriques de contrôles ; `MenuScreen` est le gabarit commun (titre, onglets Q/E, barre d'aide, action principale en bas à droite).
+- `Stepper` : sélecteur « ‹ valeur › » focalisable (gauche/droite changent la valeur, Entrée fait défiler).
+- Focus : chaque écran donne le focus à son premier élément actionnable ; après reconstruction d'une liste, `SetFocusKey` / `RestoreFocus` (dans `MenuScreen`) rendent le focus au même élément.
+
 ## Ajouter du contenu
 
 - **Une arme** : une ligne dans `Weapons.All` (`scripts/Data/GameData.cs`). Le comportement dépend de `WeaponKind` et de la catégorie (modèle tenu, projectile, son).
