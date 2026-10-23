@@ -1,53 +1,125 @@
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
 namespace Rempart;
 
 /// <summary>
-/// Salon : colonne de gauche (onglets Opération / Équipement), escouade en 3D au centre,
-/// action principale en bas à droite (Déployer pour l'hôte, Prêt pour les clients).
+/// Sélection de mission (maquette E-Mission), en solo comme en LAN : liste des missions débloquées à gauche,
+/// briefing + vignette au centre, soldat, carte de classe et escouade à droite. Choisir une mission ouvre la
+/// fenêtre « Difficulté » ; choisir une difficulté lance la mission (en LAN, dès que l'escouade est prête).
+/// Les clients voient le choix de l'hôte et se déclarent prêts.
 /// </summary>
-public partial class LobbyMenu : MenuScreen
+public partial class LobbyMenu : Control
 {
-    private VBoxContainer _col;
-    private Button _primary;
-    private int _tab;
+    private EStage _stage;
+    private VBoxContainer _list;
+    private readonly Dictionary<int, EPlate> _plates = new();
+    private Label _brief, _choice;
+    private TextureRect _thumb;
+    private ECard _classCard, _squadCard;
+    private SoldierPortrait _soldier;
+    private EPlate _ready;
+    private HBoxContainer _hints;
+    private Control _diffLayer;
+    private readonly List<EPlate> _diffPlates = new();
+    private Label _diffMission;
+    private int _diffFor = -1;
+    private DeployOverlay _waiting;
+    private bool _launchPending;
+    private int _shownMission = -1;
+
+    private bool Host => Net.I.IsHost;
 
     public override void _Ready()
     {
-        BuildFrame(Net.I.IsSolo ? "Solo" : "Salon", 0f, 760);
-        AddTab("Opération", () => { _tab = 0; Refresh(); });
-        AddTab("Équipement", () => { _tab = 1; Refresh(); });
-        ((Button)Tabs.GetChild(0)).SetPressedNoSignal(true);
+        Theme = UiE.Theme;
+        UiKit.FillRect(this);
+        MouseFilter = MouseFilterEnum.Stop;
+        _stage = EFrame.Build(this, "Sélection de mission", out _);
+        if (!Net.I.IsSolo)
+        {
+            var session = UiE.Label("", 20, new Color("cfffd8"), UiE.CondSemi);
+            session.Name = "Session";
+            session.Position = new Vector2(500, 28);
+            _stage.AddChild(session);
+        }
 
-        // Colonne défilante : à 1280×720 le contenu dépasse la hauteur disponible.
-        var scroll = Scroll(440);
-        scroll.AnchorBottom = 1;
-        scroll.OffsetRight = 440;
-        Body.AddChild(scroll);
-        _col = UiKit.VBox(4);
-        _col.CustomMinimumSize = new Vector2(420, 0);
-        _col.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
-        scroll.AddChild(_col);
+        _soldier = new SoldierPortrait().At(936, 60, 330, 594);
+        _stage.AddChild(_soldier);
 
-        FooterLeft.AddChild(UiKit.KeyHint("Échap", "Retour", Leave));
-        FooterLeft.AddChild(UiKit.KeyHint("Q / E", "Onglets"));
-        _primary = UiKit.Button(Net.I.IsHost ? "Déployer" : "Prêt", OnPrimary, "Primary", 60);
-        _primary.CustomMinimumSize = new Vector2(240, 60);
-        FooterRight.AddChild(_primary);
-        App.I.Background?.SetMode(MenuBackground.Mode.Squad);
+        _list = new VBoxContainer { Position = new Vector2(112, 106), Size = new Vector2(330, 0), MouseFilter = MouseFilterEnum.Ignore };
+        _list.AddThemeConstantOverride("separation", 7);
+        _stage.AddChild(_list);
+
+        // Briefing (texte) + vignette.
+        var box = new Panel { Position = new Vector2(448, 108), Size = new Vector2(452, 494), MouseFilter = MouseFilterEnum.Ignore, ClipContents = true };
+        box.AddThemeStyleboxOverride("panel", UiE.PanelBox(3, 0, 0));
+        _stage.AddChild(box);
+        var text = new VBoxContainer { Position = new Vector2(18, 14), Size = new Vector2(416, 0), MouseFilter = MouseFilterEnum.Ignore };
+        text.AddThemeConstantOverride("separation", 0);
+        box.AddChild(text);
+        _brief = UiE.Label("", 18);
+        _brief.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _brief.CustomMinimumSize = new Vector2(412, 0);
+        _brief.AddThemeConstantOverride("line_spacing", -3);
+        text.AddChild(_brief);
+        _choice = UiE.Label("", 16, UiE.Mint);
+        _choice.CustomMinimumSize = new Vector2(412, 0);
+        text.AddChild(_choice);
+        _thumb = new TextureRect
+        {
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+            MouseFilter = MouseFilterEnum.Ignore,
+            ClipContents = true,
+        };
+        box.AddChild(_thumb);
+        var rule = new ColorRect { Color = UiE.Frame, MouseFilter = MouseFilterEnum.Ignore, Name = "ThumbRule" };
+        box.AddChild(rule);
+        text.Resized += () => LayoutThumb(text, rule);
+        _brief.Resized += () => LayoutThumb(text, rule);
+
+        // Carte de classe (← / → : classe ; Entrée sur une arme : arsenal).
+        _classCard = new ECard { Position = new Vector2(912, 384), Size = new Vector2(326, 0), StepRow = 0 };
+        _classCard.Interactive();
+        _classCard.OnStep = d =>
+        {
+            var n = Classes.All.Length;
+            var i = System.Array.FindIndex(Classes.All, c => c.Id == Profile.I.Data.SelectedClass);
+            Net.I.SetLocalClass(Classes.All[(i + d + n) % n].Id);
+            Refresh();
+        };
+        _classCard.OnRow = r => { if (r >= 2) App.I.ShowArsenal(() => App.I.ShowLobby()); else _classCard.OnStep(1); };
+        _stage.AddChild(_classCard);
+        _squadCard = new ECard { Position = new Vector2(912, 518), Size = new Vector2(326, 0), ColumnRule = false, Visible = !Net.I.IsSolo };
+        _stage.AddChild(_squadCard);
+
+        _hints = EFrame.Hints(_stage);
+        BuildDifficultyWindow();
         Refresh();
-        UiKit.FocusLater(_primary);
+        Callable.From(FocusInitial).CallDeferred();
+        UiKit.FadeIn(this);
     }
 
-    private void OnPrimary()
+    /// <summary>Focus d'ouverture : la mission choisie (hôte) ou « Prêt » (client). L'écran peut déjà être fermé.</summary>
+    private void FocusInitial()
     {
-        if (Net.I.IsHost) Net.I.HostStartMission();
-        else
-        {
-            var me = Net.I.Players.TryGetValue(Net.I.MyId, out var p) && p.Ready;
-            Net.I.SetLocalReady(!me);
-        }
+        if (!IsInstanceValid(this) || !IsInsideTree()) return;
+        Control target = Host
+            ? (_plates.TryGetValue(Net.I.LobbyMission, out var p) ? p : _plates.Values.LastOrDefault())
+            : _ready;
+        if (target != null && IsInstanceValid(target)) UiKit.FocusSilently(target);
+    }
+
+    private void LayoutThumb(Control text, ColorRect rule)
+    {
+        // Vignette sous le texte (au moins à 150 px du haut, comme la maquette), jusqu'au bas du cadre.
+        var top = Mathf.Max(150f, text.Position.Y + text.GetCombinedMinimumSize().Y + 10f);
+        rule.Position = new Vector2(0, top);
+        rule.Size = new Vector2(452, 3);
+        _thumb.Position = new Vector2(3, top + 3);
+        _thumb.Size = new Vector2(446, 494 - 3 - top - 3);
     }
 
     private void Leave()
@@ -58,184 +130,230 @@ public partial class LobbyMenu : MenuScreen
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e.IsActionPressed("ui_cancel")) { Leave(); GetViewport().SetInputAsHandled(); return; }
-        if (HandleTabKeys(e)) GetViewport().SetInputAsHandled();
+        if (!e.IsActionPressed("ui_cancel")) return;
+        GetViewport().SetInputAsHandled();
+        if (_waiting != null) { CancelLaunch(); return; }
+        if (_diffLayer.Visible) { CloseDifficulty(); return; }
+        Leave();
     }
 
-    protected override void FocusContent()
-    {
-        // Onglet changé : focus sur l'élément sélectionné (mission ou classe).
-        RestoreFocus(_tab == 0 ? $"m{Net.I.LobbyMission}" : $"c{(int)Profile.I.Data.SelectedClass}", _primary);
-    }
+    // ------------------------------------------------------------ Liste et panneaux
 
     public void Refresh()
     {
         if (!IsInsideTree()) return;
         var players = Net.I.Players.Values.OrderBy(p => p.Id).ToList();
-        App.I.Background?.SetSquad(players, Net.I.IsSolo);
-        HeaderRight.Text = Net.I.IsSolo ? "" : $"{Net.I.SessionName} · {players.Count}/{Net.MaxPlayers} joueurs";
-
-        // La liste est reconstruite : on retrouve ensuite l'élément qui avait le focus.
-        var focused = FocusedKey();
-        foreach (var c in _col.GetChildren()) c.QueueFree();
-        if (_tab == 0) BuildOperation();
-        else BuildEquipment();
-        if (focused != null) RestoreFocus(focused, _primary);
-
-        if (Net.I.IsHost)
-        {
-            var others = players.Where(p => p.Id != Net.I.MyId).ToList();
-            var waiting = others.Count(p => !p.Ready);
-            _primary.Text = waiting == 0 ? "DÉPLOYER" : $"DÉPLOYER ({others.Count - waiting}/{others.Count} PRÊTS)";
-        }
-        else
-        {
-            var ready = Net.I.Players.TryGetValue(Net.I.MyId, out var me) && me.Ready;
-            _primary.Text = ready ? "ANNULER" : "PRÊT";
-        }
+        if (_stage.GetNodeOrNull<Label>("Session") is { } s) s.Text = $"{Net.I.SessionName} · {players.Count}/{Net.MaxPlayers}";
+        BuildList();
+        ShowMission(Net.I.LobbyMission);
+        BuildCards(players);
+        BuildHints();
+        if (_launchPending) TryLaunch();
     }
 
-    private void Section(string text)
+    private void BuildList()
     {
-        if (UiKit.HasLiveChildren(_col)) _col.AddChild(UiKit.Gap(16));
-        _col.AddChild(UiKit.Eyebrow(text));
-        _col.AddChild(UiKit.Gap(4));
-    }
-
-    /// <summary>Ligne focalisable de la colonne : clé de focus et sortie à droite vers l'action principale.</summary>
-    private void Item(Control c, string key)
-    {
-        SetFocusKey(c, key);
-        _col.AddChild(c);
-        c.FocusNeighborRight = c.GetPathTo(_primary);
-    }
-
-    private void BuildOperation()
-    {
-        var host = Net.I.IsHost;
-        Section("Mission");
-        foreach (var m in Missions.All)
+        // Missions visibles : débloquées (et, chez un client, celle choisie par l'hôte).
+        var visible = Missions.All.Where(m => MissionProgress.Unlocked(m.Index) || (!Host && m.Index == Net.I.LobbyMission)).Select(m => m.Index).ToList();
+        var focusedMission = _plates.FirstOrDefault(kv => kv.Value.HasFocus()).Value != null ? _plates.First(kv => kv.Value.HasFocus()).Key : -1;
+        var readyFocused = _ready != null && _ready.HasFocus();
+        if (_plates.Count != visible.Count || !visible.All(_plates.ContainsKey))
         {
-            var idx = m.Index;
-            var locked = !MissionUnlocked(idx);
-            var sel = Net.I.LobbyMission == idx;
-            // Lignes compactes (une ligne) ; seule la mission choisie affiche son détail : 8+ missions tiennent sans défiler.
-            var b = UiKit.Button("", () => { Net.I.SetLobbyMission(idx, Net.I.LobbyDifficulty); Refresh(); }, "Row", sel ? 56 : 38);
-            b.ToggleMode = true;
-            b.SetPressedNoSignal(sel);
-            b.Disabled = !host || locked;
-            var v = UiKit.VBox(0);
-            v.MouseFilter = MouseFilterEnum.Ignore;
-            UiKit.FillRect(v);
-            v.OffsetLeft = 22; v.OffsetRight = -16; v.OffsetTop = sel ? 5 : 3;
-            var line = UiKit.HBox(12);
-            line.MouseFilter = MouseFilterEnum.Ignore;
-            var title = UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", sel ? 21 : 19, locked ? UiKit.Dim : sel ? UiKit.Text : UiKit.Muted, true);
-            title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            line.AddChild(title);
-            var cleared = Enumerable.Range(0, 5).Where(d => Profile.I.IsCleared(idx, (Difficulty)d)).Select(d => Difficulties.Names[d]).LastOrDefault();
-            if (locked) line.AddChild(UiKit.Label(idx >= 3 ? "après « La reine »" : "verrouillée", 13, UiKit.Dim));
-            else if (cleared != null && !sel) line.AddChild(UiKit.Label("✓", 15, UiKit.Good));
-            v.AddChild(line);
-            if (sel)
+            foreach (var c in _list.GetChildren()) c.QueueFree();
+            _plates.Clear();
+            _ready = null;
+            foreach (var i in visible)
             {
-                var goal = m.Goal switch { MissionGoal.Exterminate => "Extermination", MissionGoal.DestroyNests => "Destruction de nids", _ => "Boss" };
-                var time = m.Time switch { TimeOfDay.Day => "Jour", TimeOfDay.Dusk => "Crépuscule", _ => "Nuit" };
-                v.AddChild(UiKit.Label($"{goal} · {time}" + (cleared != null ? $" · ✓ {cleared}" : ""), 14, cleared != null ? UiKit.Good : UiKit.Muted));
+                var idx = i;
+                var m = Missions.All[i];
+                var p = new EPlate(m.Name, () => OpenDifficulty(idx), 300) { Number = $"{i + 1:00}", Check = MissionProgress.Cleared(i) };
+                if (!Host) { p.FocusMode = FocusModeEnum.None; p.MouseFilter = MouseFilterEnum.Ignore; p.MouseDefaultCursorShape = CursorShape.Arrow; }
+                // Survol / focus : le briefing suit la mission désignée.
+                p.FocusEntered += () => ShowMission(idx);
+                _list.AddChild(p);
+                _plates[i] = p;
             }
-            b.AddChild(v);
-            Item(b, $"m{idx}");
+            if (!Host)
+            {
+                _list.AddChild(UiKit.Gap(6));
+                _ready = new EPlate("Prêt", () => { var me = Net.I.Players.TryGetValue(Net.I.MyId, out var pi) && pi.Ready; Net.I.SetLocalReady(!me); }, 300) { Icon = UiE.Icon.Check };
+                _list.AddChild(_ready);
+                _ready.FocusNeighborRight = _ready.GetPathTo(_classCard);
+            }
+            var focusables = _plates.Values.Where(p => p.FocusMode != FocusModeEnum.None).Cast<Control>().ToList();
+            if (_ready != null) focusables.Add(_ready);
+            UiKit.ChainVertical(focusables.ToArray());
+            foreach (var f in focusables) f.FocusNeighborRight = f.GetPathTo(_classCard);
+            _classCard.FocusNeighborLeft = _classCard.GetPathTo(focusables.Count > 0 ? focusables[0] : _classCard);
+            _classCard.FocusNeighborTop = _classCard.GetPathTo(_classCard);
+            _classCard.FocusNeighborBottom = _classCard.GetPathTo(_classCard);
+            if (focusedMission >= 0 && _plates.TryGetValue(focusedMission, out var fp)) UiKit.FocusLater(fp);
+            else if (readyFocused && _ready != null) UiKit.FocusLater(_ready);
         }
-
-        Section("Difficulté");
-        var diff = new Stepper(Difficulties.Names.Select(n => n.ToUpperInvariant()).ToArray(), (int)Net.I.LobbyDifficulty,
-            i => { Net.I.SetLobbyMission(Net.I.LobbyMission, (Difficulty)i); Refresh(); }, 52) { Wrap = false, Disabled = !host };
-        diff.AddThemeFontOverride("font", UiKit.HeadFont);
-        diff.AddThemeFontSizeOverride("font_size", 24);
-        diff.SetIndex((int)Net.I.LobbyDifficulty);
-        diff.TooltipText = host ? "← / → pour changer" : "";
-        Item(diff, "diff");
-        var di = (int)Net.I.LobbyDifficulty;
-        _col.AddChild(UiKit.Gap(2));
-        _col.AddChild(UiKit.Label($"Armes niveau {Difficulties.LevelMin[di]}–{Difficulties.LevelMax[di]} · armure +{Difficulties.ArmorPerCrate[di]:0} par caisse", 14, UiKit.Muted));
-
-        _col.AddChild(UiKit.Gap(16));
-        var brief = UiKit.Label(Missions.All[Net.I.LobbyMission].Briefing, 16, new Color(UiKit.Text, 0.82f));
-        brief.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        brief.CustomMinimumSize = new Vector2(420, 0);
-        _col.AddChild(brief);
-        if (!host) _col.AddChild(UiKit.Label("L'hôte choisit la mission et la difficulté.", 14, UiKit.Dim));
-    }
-
-    /// <summary>Une mission est jouable si la précédente a été réussie (toutes difficultés) ; bonus après la reine.</summary>
-    private static bool MissionUnlocked(int idx)
-    {
-        if (idx == 0) return true;
-        var need = idx >= 3 ? 2 : idx - 1;
-        for (var d = 0; d < 5; d++)
-            if (Profile.I.IsCleared(need, (Difficulty)d)) return true;
-        return false;
-    }
-
-    private void BuildEquipment()
-    {
-        var sel = Profile.I.Data.SelectedClass;
-        Section("Classe");
-        var grid = new GridContainer { Columns = 2 };
-        grid.AddThemeConstantOverride("h_separation", 4);
-        grid.AddThemeConstantOverride("v_separation", 4);
-        _col.AddChild(grid);
-        foreach (var cd in Classes.All)
+        foreach (var (i, p) in _plates)
         {
-            var cls = cd.Id;
-            var b = UiKit.Button("", () => { Net.I.SetLocalClass(cls); Refresh(); }, "Card", 60);
-            b.ToggleMode = true;
-            b.SetPressedNoSignal(cls == sel);
-            b.CustomMinimumSize = new Vector2(208, 60);
-            SetFocusKey(b, $"c{(int)cls}");
-            var v = UiKit.VBox(0);
-            v.MouseFilter = MouseFilterEnum.Ignore;
-            UiKit.FillRect(v);
-            v.OffsetLeft = 20; v.OffsetTop = 8;
-            v.AddChild(UiKit.Label(cd.Name.ToUpperInvariant(), 19, cls == sel ? UiKit.Text : UiKit.Muted, true));
-            v.AddChild(UiKit.Label($"Niv. {Profile.I.Level(cls)} · {Profile.I.Armor(cls):0} PV", 13, UiKit.Muted));
-            b.AddChild(v);
-            grid.AddChild(b);
+            // Chez le client, la mission de l'hôte reste allumée ; chez l'hôte, celle dont la fenêtre est ouverte.
+            p.Lit = !Host ? i == Net.I.LobbyMission : _diffLayer != null && _diffLayer.Visible && i == _diffFor;
+            p.Check = MissionProgress.Cleared(i);
         }
-        // Colonne de droite de la grille : sortie à droite vers l'action principale.
-        for (var i = 1; i < grid.GetChildCount(); i += 2) ((Control)grid.GetChild(i)).FocusNeighborRight = ((Control)grid.GetChild(i)).GetPathTo(_primary);
-        var def = Classes.Get(sel);
-        var desc = UiKit.Label($"{def.Role}. {def.AbilityName} : {def.AbilityDescription}", 15, new Color(UiKit.Text, 0.8f));
-        desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        desc.CustomMinimumSize = new Vector2(420, 0);
-        _col.AddChild(UiKit.Gap(4));
-        _col.AddChild(desc);
+        if (_ready != null)
+        {
+            var me = Net.I.Players.TryGetValue(Net.I.MyId, out var pi) && pi.Ready;
+            _ready.Title = me ? "Prêt (annuler)" : "Prêt";
+            _ready.Lit = me; // prêt : plaque allumée
+            _ready.QueueRedraw();
+        }
+    }
 
-        Section("Armes");
-        var eq = Profile.I.Equipped(sel);
+    private void ShowMission(int idx)
+    {
+        if (idx < 0 || idx >= Missions.All.Length) return;
+        _shownMission = idx;
+        var m = Missions.All[idx];
+        var cond = $"Conditions : {MissionProgress.Time(m)}" + (m.Weather != Weather.Clear ? (m.Weather == Weather.Rain ? ", pluie" : ", orage") : "");
+        _brief.Text = $"Opération {idx + 1:00} : {m.Name}.\nType : {MissionProgress.Goal(m)}.\n{cond}. Zone : {MissionProgress.Zone(m)}.\n\n{m.Briefing}";
+        // Choix de l'hôte (clients et escouade), en vert sous le briefing.
+        _choice.Text = !Net.I.IsSolo ? (Host ? "" : $"Choix de l'hôte : {MissionProgress.Label(Missions.All[Net.I.LobbyMission])} · {Difficulties.Names[(int)Net.I.LobbyDifficulty]}") : "";
+        _choice.Visible = _choice.Text != "";
+        _thumb.Texture = MissionProgress.Thumbnail(idx);
+    }
+
+    private void BuildCards(List<PlayerInfo> players)
+    {
+        var p = Profile.I;
+        var cls = p.Data.SelectedClass;
+        _soldier.SetClass(cls);
+        var rows = new List<ECard.Row>
+        {
+            new(new[] { new ECard.Cell("Classe", 84), new ECard.Cell(Classes.Get(cls).Name, 0, 19), new ECard.Cell($"»Niv.{p.Level(cls)}", 70) }, 30, true),
+            new(new[] { new ECard.Cell("Armure:", 84), new ECard.Cell($"{p.Armor(cls):0}", 0, 19), new ECard.Cell("", 70) }, 26),
+        };
+        var eq = p.Equipped(cls);
         for (var i = 0; i < eq.Count; i++)
+            rows.Add(new(new[] { new ECard.Cell($"Arme {i + 1}", 84), new ECard.Cell(eq[i].T.Name), new ECard.Cell($"»Lv{eq[i].Level}", 70) }, i == eq.Count - 1 ? 28 : 24));
+        _classCard.SetRows(rows);
+
+        if (Net.I.IsSolo) return;
+        var sq = new List<ECard.Row>
         {
-            var w = eq[i];
-            var b = UiKit.Button("", () => App.I.ShowArsenal(() => App.I.ShowLobby()), "Row", 56);
-            var h = UiKit.HBox(14);
-            h.MouseFilter = MouseFilterEnum.Ignore;
-            UiKit.FillRect(h);
-            h.OffsetLeft = 18; h.OffsetRight = -18;
-            h.AddChild(new ColorRect { Color = UiKit.Good, CustomMinimumSize = new Vector2(3, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
-            var info = UiKit.VBox(0);
-            info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            info.AddChild(UiKit.Label($"{w.T.Name}  Nv.{w.Level}", 17));
-            info.AddChild(UiKit.Label($"{w.T.Category} · DPS {w.Dps:0}", 13, UiKit.Muted));
-            h.AddChild(info);
-            var slot = UiKit.Label($"ARME {i + 1}", 12, UiKit.Muted);
-            slot.AddThemeFontOverride("font", UiKit.BodyMedium);
-            slot.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            h.AddChild(slot);
-            b.AddChild(h);
-            Item(b, $"w{i}");
+            new(new[] { new ECard.Cell("Escouade", 0, 15, UiE.Mint), new ECard.Cell($"»{players.Count}/{Net.MaxPlayers}", 60, 15) }, 22, true),
+        };
+        foreach (var pl in players)
+        {
+            var hostTag = pl.Id == 1 ? " (hôte)" : "";
+            var status = pl.Id == 1 ? "»HÔTE" : pl.Ready ? "»PRÊT" : "»PAS PRÊT";
+            sq.Add(new(new[] { new ECard.Cell($"{pl.Name} · {Classes.Get(pl.Class).Name}{hostTag}", 0, 15), new ECard.Cell(status, 90, 15, pl.Id == 1 || pl.Ready ? UiE.Bright : UiE.DangerSoft) }, 20));
         }
-        _col.AddChild(UiKit.Gap(4));
-        _col.AddChild(UiKit.Label("Sélectionnez une arme pour ouvrir l'arsenal.", 14, UiKit.Dim));
+        for (var i = players.Count; i < Net.MaxPlayers; i++)
+            sq.Add(new(new[] { new ECard.Cell("— emplacement libre —", 0, 15, UiE.TextMuted) }, 20));
+        _squadCard.SetRows(sq);
+        // La carte de classe s'allonge avec le nombre d'armes : l'escouade reste en dessous.
+        _squadCard.Position = new Vector2(912, Mathf.Max(518, _classCard.Position.Y + _classCard.Size.Y + 16));
+    }
+
+    private void BuildHints()
+    {
+        foreach (var c in _hints.GetChildren()) c.QueueFree();
+        if (Host) _hints.AddChild(UiE.KeyHint("Entrée:Choisir"));
+        else _hints.AddChild(UiE.KeyHint("Entrée:Prêt"));
+        _hints.AddChild(UiE.KeyHint("←→:Classe", () => UiKit.FocusSilently(_classCard)));
+        _hints.AddChild(UiE.KeyHint("Échap:Retour", Leave));
+    }
+
+    // ------------------------------------------------------------ Fenêtre « Difficulté »
+
+    private void BuildDifficultyWindow()
+    {
+        _diffLayer = new Control { Visible = false, MouseFilter = MouseFilterEnum.Stop };
+        UiKit.FillRect(_diffLayer);
+        AddChild(_diffLayer);
+        _diffLayer.AddChild(new ColorRect { Color = new Color(2 / 255f, 12 / 255f, 6 / 255f, 0.55f), AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore });
+        var stage = new EStage();
+        _diffLayer.AddChild(stage);
+        var panel = new PanelContainer { Position = new Vector2(470, 150), Size = new Vector2(380, 0), MouseFilter = MouseFilterEnum.Stop };
+        var sb = UiE.PanelBox(3, 20, 18, 0.95f, 16);
+        sb.ContentMarginBottom = 14;
+        panel.AddThemeStyleboxOverride("panel", sb);
+        stage.AddChild(panel);
+        var v = new VBoxContainer();
+        v.AddThemeConstantOverride("separation", 10);
+        panel.AddChild(v);
+        _diffMission = UiE.Label("", 15, UiE.Mint);
+        v.AddChild(_diffMission);
+        v.AddChild(UiE.Title("Difficulté", 30));
+        var list = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        list.AddThemeConstantOverride("separation", 8);
+        v.AddChild(list);
+        for (var d = 0; d < Difficulties.Names.Length; d++)
+        {
+            var di = d;
+            var b = new EPlate(Difficulties.Names[d], () => PickDifficulty((Difficulty)di), 330) { Number = $"{d + 1}" };
+            list.AddChild(b);
+            _diffPlates.Add(b);
+        }
+        UiKit.ChainVertical(_diffPlates.Cast<Control>().ToArray());
+        var back = UiE.KeyHint("Échap:Retour", CloseDifficulty, 16);
+        back.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        back.CustomMinimumSize = new Vector2(0, 36);
+        v.AddChild(back);
+    }
+
+    public void OpenDifficulty(int mission)
+    {
+        if (!Host) return;
+        _diffFor = mission;
+        _diffMission.Text = MissionProgress.Label(Missions.All[mission]);
+        _diffLayer.Visible = true;
+        UiKit.FadeIn(_diffLayer, 0.12f);
+        foreach (var (i, p) in _plates) p.Lit = i == mission;
+        UiKit.FocusLater(_diffPlates[(int)Net.I.LobbyDifficulty]);
+    }
+
+    private void CloseDifficulty()
+    {
+        _diffLayer.Visible = false;
+        foreach (var p in _plates.Values) p.Lit = false;
+        if (_plates.TryGetValue(_diffFor, out var back)) UiKit.FocusLater(back);
+    }
+
+    private void PickDifficulty(Difficulty d)
+    {
+        Net.I.SetLobbyMission(_diffFor, d);
+        _diffLayer.Visible = false;
+        _launchPending = true;
+        TryLaunch();
+    }
+
+    /// <summary>Lance la mission choisie dès que tous les équipiers sont prêts (immédiatement en solo).</summary>
+    private void TryLaunch()
+    {
+        var others = Net.I.Players.Values.Where(p => p.Id != Net.I.MyId).ToList();
+        var ready = others.Count(p => p.Ready);
+        var label = $"{MissionProgress.Label(Missions.All[Net.I.LobbyMission])} · {Difficulties.Names[(int)Net.I.LobbyDifficulty]}";
+        if (ready == others.Count)
+        {
+            _launchPending = false;
+            Net.I.HostStartMission();
+            return;
+        }
+        if (_waiting == null)
+        {
+            _waiting = new DeployOverlay(label, "", false);
+            AddChild(_waiting);
+            var cancel = UiE.KeyHint("Échap:Annuler", CancelLaunch, 16);
+            _waiting.AddChild(cancel);
+            cancel.SetAnchorsAndOffsetsPreset(LayoutPreset.CenterBottom);
+            cancel.Position += new Vector2(-60, -80);
+            GetViewport().GuiReleaseFocus();
+        }
+        _waiting.Sub = $"En attente de l'escouade : {ready}/{others.Count} équipier{(others.Count > 1 ? "s" : "")} prêt{(ready > 1 ? "s" : "")}.";
+    }
+
+    private void CancelLaunch()
+    {
+        _launchPending = false;
+        _waiting?.QueueFree();
+        _waiting = null;
+        if (_plates.TryGetValue(Net.I.LobbyMission, out var p)) UiKit.FocusLater(p);
     }
 }

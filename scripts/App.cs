@@ -40,13 +40,11 @@ public partial class App : Node
         AutoTest.Run(this);
     }
 
-    private void EnsureBackground()
-    {
-        if (_bg != null) return;
-        _bg = new MenuBackground();
-        AddChild(_bg);
-        MoveChild(_bg, 0);
-    }
+    /// <summary>
+    /// Direction E : les menus ont un fond 2D animé (<see cref="MenuBackdrop"/>, dessiné par chaque écran) ;
+    /// la ville 3D (<see cref="MenuBackground"/>) n'est plus chargée derrière les menus.
+    /// </summary>
+    private void EnsureBackground() { }
 
     private void SetScreen(Control c)
     {
@@ -73,7 +71,6 @@ public partial class App : Node
     {
         EnsureBackground();
         Input.MouseMode = Input.MouseModeEnum.Visible;
-        _bg.SetMode(MenuBackground.Mode.Title);
         var m = new MainMenu();
         SetScreen(m);
         if (_pendingNotice != null) { m.Notice(_pendingNotice); _pendingNotice = null; }
@@ -142,31 +139,9 @@ public partial class App : Node
 
     private Control BuildLoading(MissionDef m, Difficulty d)
     {
-        var root = new Control { Theme = UiKit.Theme, MouseFilter = Control.MouseFilterEnum.Stop };
-        UiKit.FillRect(root);
-        root.AddChild(new ColorRect { Color = UiKit.Bg, AnchorRight = 1, AnchorBottom = 1 });
-        var v = UiKit.VBox(8);
-        v.Position = new Vector2(UiKit.ScreenX, 0);
-        v.AnchorTop = 0.5f;
-        v.AnchorBottom = 0.5f;
-        v.GrowVertical = Control.GrowDirection.Both;
-        v.AddChild(UiKit.Eyebrow($"Mission {m.Index + 1:00} · {Difficulties.Names[(int)d]}", UiKit.Accent));
-        v.AddChild(UiKit.Heading(m.Name, 72));
-        var brief = UiKit.Label(m.Briefing, 18, new Color(UiKit.Text, 0.85f));
-        brief.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        brief.CustomMinimumSize = new Vector2(760, 0);
-        v.AddChild(brief);
-        root.AddChild(v);
-        var foot = UiKit.VBox(6);
-        foot.AddChild(UiKit.Label("DÉPLOIEMENT…", 16, UiKit.Muted, true));
-        var tip = UiKit.Label("Conseil : " + Tips[(int)(GD.Randi() % Tips.Length)], 15, UiKit.Muted);
-        tip.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        tip.CustomMinimumSize = new Vector2(900, 0);
-        foot.AddChild(tip);
-        root.AddChild(foot);
-        foot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomLeft);
-        foot.Position = new Vector2(UiKit.ScreenX, foot.Position.Y - UiKit.ScreenBottom - 30);
-        return root;
+        // Écran « DÉPLOIEMENT » de la maquette E-Mission (mission · difficulté, barre animée), avec un conseil.
+        return new DeployOverlay($"{MissionProgress.Label(m)} · {Difficulties.Names[(int)d]}",
+            "Conseil : " + Tips[(int)(GD.Randi() % Tips.Length)], true);
     }
 
     private async void StartMission(int mission, Difficulty d, int seed)
@@ -195,6 +170,11 @@ public partial class App : Node
                 OnContinue = () =>
                 {
                     if (Net.I.IsHost) Net.I.HostReturnToLobby();
+                },
+                // Rejouer : même mission, même difficulté (l'hôte relance pour toute l'escouade).
+                OnReplay = () =>
+                {
+                    if (Net.I.IsHost) Net.I.HostStartMission();
                 },
             };
             AddChild(_results);
@@ -321,15 +301,16 @@ public static class AutoTest
             }
             Shot(3f, null, "menu_main");
             Shot(6f, app.StartSolo, "menu_lobby");
-            Shot(9f, () => app.ShowOptions(), "menu_options");
-            Shot(12f, () => app.ShowArsenal(app.ShowMain), "menu_arsenal");
-            Shot(15f, app.ShowJoin, "menu_join");
-            Shot(18f, app.ShowGuide, "menu_guide");
+            Shot(9f, () => (app.CurrentScreen as LobbyMenu)?.OpenDifficulty(Net.I.LobbyMission), "menu_difficulty");
+            Shot(12f, () => app.ShowOptions(), "menu_options");
+            Shot(15f, () => app.ShowArsenal(app.ShowMain), "menu_arsenal");
+            Shot(18f, app.ShowJoin, "menu_join");
+            Shot(21f, app.ShowGuide, "menu_guide");
         }
 
         // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
         if (Screenshot.CmdArg("end-after") is { } ea && float.TryParse(ea, NumberStyles.Float, CultureInfo.InvariantCulture, out var endAfter))
-            app.GetTree().CreateTimer(endAfter).Timeout += () =>
+            app.GetTree().CreateTimer(endAfter, true, false, true).Timeout += () =>
             {
                 var w = app.CurrentWorld;
                 if (w == null) return;
@@ -337,6 +318,12 @@ public static class AutoTest
                 w.CratesCollected[(int)CrateType.Armor] += 14;
                 w.CratesCollected[(int)CrateType.Credits] += 3;
                 w.EndMission(true);
+            };
+        // --pause-at=N : ouvre le menu pause après N s (captures du menu pause).
+        if (Screenshot.CmdArg("pause-at") is { } pa && float.TryParse(pa, NumberStyles.Float, CultureInfo.InvariantCulture, out var pauseAt))
+            app.GetTree().CreateTimer(pauseAt, true, false, true).Timeout += () =>
+            {
+                app.CurrentWorld?.TogglePause();
             };
         // --tank / --heli : le joueur monte dans le char ou l'hélicoptère peu après le chargement de la mission
         // (le bot fait voler l'hélicoptère).
@@ -380,6 +367,21 @@ public static class AutoTest
         var auto = Screenshot.CmdArg("autostart");
         if (auto == null) return;
         Hud.ForceHidden = Screenshot.CmdArg("nohud") != null; // --nohud : captures sans interface (fonds de maquettes)
+        // --nohud : masque aussi les noms flottants (Label3D) pour des vignettes de mission sans texte.
+        if (Hud.ForceHidden)
+        {
+            void HideLabels()
+            {
+                if (app.CurrentWorld is { } w)
+                    foreach (var n in w.FindChildren("*", "Label3D", true, false))
+                    {
+                        ((Label3D)n).Visible = false;
+                        ((Label3D)n).Transparency = 1f;
+                    }
+                app.GetTree().CreateTimer(0.5f).Timeout += HideLabels;
+            }
+            HideLabels();
+        }
         if (Screenshot.CmdArg("class") is { } c && int.TryParse(c, out var cls)) Profile.I.Data.SelectedClass = (SoldierClass)cls;
         var diff = Screenshot.CmdArg("difficulty") is { } ds && int.TryParse(ds, out var di) ? (Difficulty)di : Difficulty.Normal;
         int.TryParse(auto, out var mission);

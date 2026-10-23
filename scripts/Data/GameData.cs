@@ -359,7 +359,7 @@ public enum Difficulty { Easy = 0, Normal = 1, Hard = 2, Hardest = 3, Inferno = 
 
 public static class Difficulties
 {
-    public static readonly string[] Names = { "Facile", "Normal", "Difficile", "Très difficile", "Inferno" };
+    public static readonly string[] Names = { "Facile", "Normal", "Difficile", "Chaos", "Inferno" };
     public static readonly float[] EnemyHealth = { 0.6f, 1f, 2f, 4f, 8f };
     public static readonly float[] EnemyDamage = { 0.5f, 1f, 2.5f, 5f, 10f };
     public static readonly int[] LevelMin = { 0, 5, 20, 40, 60 };

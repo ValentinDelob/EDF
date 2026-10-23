@@ -53,7 +53,8 @@ Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni 
 
 ## Interface
 
-- `UiKit` regroupe les jetons de design (couleurs, polices, marges) et les fabriques de contrôles ; `MenuScreen` est le gabarit commun (titre, onglets Q/E, barre d'aide, action principale en bas à droite).
+- Direction artistique « E » (ADN EDF, `docs/maquettes/`) : `UiE` (palette verte, polices Share Tech Mono / Saira Condensed, panneaux, thème vert, `EStage` = scène 1280×720 aux coordonnées des maquettes mise à l'échelle de la fenêtre, `EFrame` = fond + bandeau de titre + bande basse avec aides clavier), `EPlate` (plaque commune à coins coupés : survol, sélection animée, variante danger, plaque d'affichage), `MenuBackdrop` (fond animé dessiné en 2D : grille, radar, circuits, particules ; figé avec l'option « Réduire les animations »), `ECard` (carte inclinée, focalisable), `SoldierPortrait` (soldat 3D de la classe choisie, fond transparent), `MissionProgress` (déblocage séquentiel des missions, vignettes `assets/missions/mission_N.jpg`), `DeployOverlay` (écran « DÉPLOIEMENT »). La ville 3D `MenuBackground` n'est plus affichée derrière les menus.
+- `UiKit` regroupe les jetons historiques et les fabriques de contrôles ; `MenuScreen` est le gabarit commun (cadre E : titre dans le bandeau, onglets Q/E à droite du titre, aides clavier dans la bande basse, action principale en bas à droite).
 - `Stepper` : sélecteur « ‹ valeur › » focalisable (gauche/droite changent la valeur, Entrée fait défiler).
 - Focus : chaque écran donne le focus à son premier élément actionnable ; après reconstruction d'une liste, `SetFocusKey` / `RestoreFocus` (dans `MenuScreen`) rendent le focus au même élément.
 
@@ -89,8 +90,9 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--roof[=N]` | Le soldat (bot immobile) est posé sur le toit plat le plus proche du départ, N insectes (30) apparaissent autour et l'escaladent. Avec `--autohost`, test de l'escalade vue du client. |
 | `--showcase[=big]` | Vitrine des ennemis, IA figée. |
 | `--end-after=N` | Termine la mission avec du butin fictif (test du bilan). |
-| `--menu-shots` | Captures de tous les menus. |
+| `--menu-shots` | Captures de tous les menus (dont la fenêtre « Difficulté »). |
 | `--menu-shots=arsenal` | Profil de test garni d'armes de toutes les classes, puis captures de l'arsenal (navigation, équipement, changement de classe). |
+| `--pause-at=N` | Ouvre le menu pause après N s (captures). |
 
 Les lancements de test utilisent un profil séparé (`profile_test.json`). Le script `tools/shots.sh` enchaîne compilation et captures dans `build/shots`.
 
