@@ -22,7 +22,10 @@ public record MissionDef(
     float Fog,
     int NestCount,
     PhaseDef[] Phases,
-    Weather Weather = Weather.Clear);
+    Weather Weather = Weather.Clear,
+    MapId Map = MapId.City);
+
+public enum MapId { City, Port }
 
 public enum Weather { Clear, Rain, Storm }
 
@@ -83,7 +86,7 @@ public static class Missions
                     new WaveDef("west", 6, null, (EnemyType.Spider, 8))),
                 new PhaseDef(6, 0,
                     new WaveDef("south", 0, "Dernière vague : tout le nid se réveille !", (EnemyType.Spider, 16), (EnemyType.RedAnt, 8), (EnemyType.Scavenger, 4))),
-            }),
+            }, Weather.Clear, MapId.Port),
         new(4, "Ciel noir",
             "Une flotte de drones extraterrestres escorte des essaims de guêpes au-dessus du quartier d'affaires. Abattez tout ce qui vole.",
             MissionGoal.Exterminate, TimeOfDay.Day, 0.003f, 0,
@@ -97,5 +100,17 @@ public static class Missions
                 new PhaseDef(6, 0,
                     new WaveDef("west", 0, "Escadrille lourde à l'ouest, tenez bon !", (EnemyType.Drone, 18), (EnemyType.Wasp, 14), (EnemyType.RedAnt, 10))),
             }),
+        new(5, "Les docks",
+            "La colonie s'est installée dans le port de commerce. Détruisez les nids entre les conteneurs, sous la pluie, avant l'arrivée des renforts.",
+            MissionGoal.DestroyNests, TimeOfDay.Night, 0.008f, 4,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("center", 3, "Nids repérés dans le parc à conteneurs. Visez-les aux explosifs !", (EnemyType.RedAnt, 10), (EnemyType.AcidAnt, 6))),
+                new PhaseDef(0, 60,
+                    new WaveDef("east", 0, "Araignées sur les cuves à l'est !", (EnemyType.Spider, 12))),
+                new PhaseDef(0, 120,
+                    new WaveDef("west", 0, "Charognards et guêpes à l'ouest !", (EnemyType.Scavenger, 8), (EnemyType.Wasp, 12))),
+            }, Weather.Rain, MapId.Port),
     };
 }

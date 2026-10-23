@@ -1,5 +1,10 @@
 # Journal des versions
 
+## En cours
+- **Nouvelle carte « Zone portuaire »** : entrepôts en tôle, parc à conteneurs destructibles, grues portiques, cuves, mâts d'éclairage, quai. Accueille « La toile ».
+- **Mission 6 « Les docks »** : destruction de nids de nuit, sous la pluie, sur la zone portuaire.
+- **Marquage de position** (clic molette) partagé avec l'escouade et affiché sur le radar.
+
 ## v0.2.0 — Contenu et sensations
 
 ### Nouveautés

@@ -80,7 +80,7 @@ public partial class World : Node3D
         FxRoot = new Node3D { Name = "Fx" };
         AddChild(FxRoot);
         BuildEnvironment();
-        City = CityBuilder.Build(this, Mission.Time);
+        City = Mission.Map == MapId.Port ? PortBuilder.Build(this, Mission.Time) : CityBuilder.Build(this, Mission.Time);
         Buildings.AddRange(City.Buildings);
         foreach (var b in Buildings) Flow.SetBlockedRect(b.GlobalPosition, b.Size, true);
         Flow.BlockOutside(CityBuilder.Half, CityBuilder.SeaStart);

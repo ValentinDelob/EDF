@@ -3,7 +3,7 @@ using Godot;
 namespace Rempart;
 
 /// <summary>Typologie d'immeuble (choisit les détails : balcons, couronnement, équipements de toit).</summary>
-public enum BuildingKind { Office, Residential, Tower }
+public enum BuildingKind { Office, Residential, Tower, Industrial }
 
 /// <summary>Paramètres visuels d'un immeuble (n'affectent ni l'empreinte ni la collision).</summary>
 public struct BuildingStyle
@@ -67,10 +67,32 @@ public partial class Building : StaticBody3D
         // Tous les détails (vitrines, corniches, balcons, équipements de toit) sont fusionnés dans
         // le maillage unique de l'immeuble : ils s'enfoncent avec lui lors de l'effondrement.
         var rng = new RandomNumberGenerator { Seed = (ulong)(id * 7919 + 3) };
-        b.Visual = new MeshInstance3D { Mesh = BuildMesh(size, facade, roof, style, rng) };
+        b.Visual = new MeshInstance3D { Mesh = style.Kind == BuildingKind.Industrial ? BuildPlainMesh(size, facade, roof) : BuildMesh(size, facade, roof, style, rng) };
         b.AddChild(b.Visual);
         b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });
         return b;
+    }
+
+    /// <summary>Volume simple (entrepôt, conteneurs) : quatre façades à UV en mètres (1 U = 3 m) et un toit.</summary>
+    private static ArrayMesh BuildPlainMesh(Vector3 s, Material facade, Material roof)
+    {
+        var kit = new MeshKit();
+        var hx = s.X / 2;
+        var hz = s.Z / 2;
+        var h = s.Y;
+        foreach (var sd in Sides(hx, hz))
+        {
+            var a = sd.Start;
+            var bb = sd.Start + sd.Along * sd.Length;
+            var c = bb with { Y = h };
+            var d = a with { Y = h };
+            var u = sd.Length / 3f;
+            var v = h / 3f;
+            kit.Quad(facade, a, bb, c, d, new Vector2(0, v), new Vector2(u, v), new Vector2(u, 0), new Vector2(0, 0));
+        }
+        kit.Quad(roof, new Vector3(-hx, h, hz), new Vector3(hx, h, hz), new Vector3(hx, h, -hz), new Vector3(-hx, h, -hz),
+            new Vector2(0, s.Z / 3f), new Vector2(s.X / 3f, s.Z / 3f), new Vector2(s.X / 3f, 0), new Vector2(0, 0));
+        return kit.Commit();
     }
 
     /// <summary>Côté de façade : coin gauche (vu de l'extérieur), direction le long, normale sortante, longueur.</summary>

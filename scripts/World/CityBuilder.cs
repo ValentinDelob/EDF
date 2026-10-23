@@ -274,16 +274,16 @@ public static class CityBuilder
         return false;
     }
 
-    private static void AddSlab(Node3D root, StaticBody3D body, Vector3 center, Vector3 size, Material mat, bool collide = true)
+    public static void AddSlab(Node3D root, StaticBody3D body, Vector3 center, Vector3 size, Material mat, bool collide = true)
     {
         root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size, Material = mat }, Position = center });
         if (collide) body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = center });
     }
 
-    private static void AddWall(StaticBody3D body, Vector3 center, Vector3 size) =>
+    public static void AddWall(StaticBody3D body, Vector3 center, Vector3 size) =>
         body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = center });
 
-    private static void BuildHills(Node3D root)
+    public static void BuildHills(Node3D root)
     {
         var noise = new FastNoiseLite { Seed = 7, Frequency = 0.004f, FractalOctaves = 4 };
         var st = new SurfaceTool();
