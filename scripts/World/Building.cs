@@ -46,19 +46,19 @@ public partial class Building : StaticBody3D
 
     private static readonly Color[] SignColors =
     {
-        new(0.55f, 0.08f, 0.07f), new(0.08f, 0.14f, 0.32f), new(0.1f, 0.3f, 0.18f), new(0.92f, 0.9f, 0.86f),
-        new(0.08f, 0.08f, 0.09f), new(0.85f, 0.42f, 0.08f), new(0.05f, 0.4f, 0.42f), new(0.62f, 0.5f, 0.1f),
+        new(0.36f, 0.14f, 0.12f), new(0.13f, 0.16f, 0.24f), new(0.15f, 0.24f, 0.18f), new(0.62f, 0.61f, 0.58f),
+        new(0.09f, 0.09f, 0.095f), new(0.5f, 0.32f, 0.14f), new(0.13f, 0.27f, 0.28f), new(0.44f, 0.38f, 0.17f),
     };
 
     private static readonly Color[] LetterColors =
     {
-        new(0.97f, 0.96f, 0.92f), new(1f, 0.85f, 0.3f), new(0.95f, 0.95f, 0.95f), new(0.1f, 0.1f, 0.1f),
+        new(0.76f, 0.75f, 0.71f), new(0.72f, 0.62f, 0.3f), new(0.72f, 0.72f, 0.7f), new(0.1f, 0.1f, 0.1f),
     };
 
     private static readonly Color[] AwningColors =
     {
-        new(0.12f, 0.28f, 0.16f), new(0.45f, 0.08f, 0.09f), new(0.1f, 0.14f, 0.3f), new(0.72f, 0.66f, 0.54f),
-        new(0.12f, 0.12f, 0.12f), new(0.75f, 0.38f, 0.1f), new(0.32f, 0.3f, 0.28f),
+        new(0.17f, 0.24f, 0.18f), new(0.32f, 0.13f, 0.12f), new(0.14f, 0.17f, 0.25f), new(0.5f, 0.47f, 0.41f),
+        new(0.13f, 0.13f, 0.13f), new(0.45f, 0.3f, 0.15f), new(0.28f, 0.27f, 0.25f),
     };
 
     public static Building Create(int id, Vector3 center, Vector3 size, Material facade, Material roof) =>
@@ -92,7 +92,7 @@ public partial class Building : StaticBody3D
             b.AddDetailCollision();
             return b;
         }
-        b.Visual = new MeshInstance3D { Mesh = style.Kind == BuildingKind.Industrial ? BuildPlainMesh(size, facade, roof) : BuildMesh(size, facade, roof, style, rng) };
+        b.Visual = new MeshInstance3D { Mesh = style.Kind == BuildingKind.Industrial ? BuildPlainMesh(size, facade, roof, Tint(id)) : BuildMesh(size, facade, roof, style, rng, Tint(id)) };
         b.AddChild(b.Visual);
         b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });
         b.AddDetailCollision();
@@ -109,25 +109,75 @@ public partial class Building : StaticBody3D
         if (MeshKit.ShapeOf(Visual.Mesh) is { } detail) AddChild(new CollisionShape3D { Name = "Detail", Shape = detail });
     }
 
-    /// <summary>Volume simple (entrepôt, conteneurs) : quatre façades à UV en mètres (1 U = 3 m) et un toit.</summary>
-    private static ArrayMesh BuildPlainMesh(Vector3 s, Material facade, Material roof)
+    /// <summary>Chanfrein des arêtes verticales du volume principal (m) : la lumière accroche les angles.</summary>
+    private const float Bevel = 0.22f;
+
+    /// <summary>
+    /// Teinte propre à l'immeuble (multipliée à la façade) : légère variation de valeur et de température,
+    /// sans tirage aléatoire (identifiants et ordre de génération inchangés).
+    /// </summary>
+    private static Color Tint(int id)
     {
-        var kit = new MeshKit();
+        var a = Mathf.PosMod(Mathf.Sin(id * 12.9898f + 4.1f) * 43758.547f, 1f);
+        var b = Mathf.PosMod(Mathf.Sin(id * 78.233f + 1.7f) * 24634.635f, 1f);
+        var k = 0.8f + 0.22f * a;
+        var t = (b - 0.5f) * 0.07f;
+        return new Color(k * (1 + t), k, k * (1 - t * 1.3f));
+    }
+
+    /// <summary>
+    /// Murs du volume principal aux angles chanfreinés : UV en mètres (1 U = <paramref name="uLen"/> m, V compté
+    /// depuis le haut, 1 V = <paramref name="vLen"/> m), teinte de l'immeuble, bande assombrie sous l'acrotère
+    /// (ruissellement du toit) par couleur de sommet.
+    /// </summary>
+    private static void BeveledWalls(MeshKit kit, Material m, Vector3 s, float y0, float bevel, float uLen, float vLen, Color tint)
+    {
         var hx = s.X / 2;
         var hz = s.Z / 2;
         var h = s.Y;
-        foreach (var sd in Sides(hx, hz))
+        var dark = new Color(tint.R * 0.7f, tint.G * 0.69f, tint.B * 0.68f);
+        var yb = h - Mathf.Min(2.6f, (h - y0) * 0.3f);
+        float V(float y) => (h - y) / vLen;
+        void Wall(Vector3 a, Vector3 b, float u0, float u1, Vector3 n)
         {
-            var a = sd.Start;
-            var bb = sd.Start + sd.Along * sd.Length;
-            var c = bb with { Y = h };
-            var d = a with { Y = h };
-            var u = sd.Length / 3f;
-            var v = h / 3f;
-            kit.Quad(facade, a, bb, c, d, new Vector2(0, v), new Vector2(u, v), new Vector2(u, 0), new Vector2(0, 0));
+            kit.QuadC(m, a with { Y = y0 }, b with { Y = y0 }, b with { Y = yb }, a with { Y = yb },
+                new Vector2(u0, V(y0)), new Vector2(u1, V(y0)), new Vector2(u1, V(yb)), new Vector2(u0, V(yb)), tint, tint, tint, tint, n);
+            kit.QuadC(m, a with { Y = yb }, b with { Y = yb }, b with { Y = h }, a with { Y = h },
+                new Vector2(u0, V(yb)), new Vector2(u1, V(yb)), new Vector2(u1, 0), new Vector2(u0, 0), tint, tint, dark, dark, n);
         }
-        kit.Quad(roof, new Vector3(-hx, h, hz), new Vector3(hx, h, hz), new Vector3(hx, h, -hz), new Vector3(-hx, h, -hz),
-            new Vector2(0, s.Z / 3f), new Vector2(s.X / 3f, s.Z / 3f), new Vector2(s.X / 3f, 0), new Vector2(0, 0));
+        foreach (var sd in Sides(hx, hz))
+            Wall(sd.Start + sd.Along * bevel, sd.Start + sd.Along * (sd.Length - bevel), bevel / uLen, (sd.Length - bevel) / uLen, sd.Normal);
+        // Pans coupés des quatre angles (arêtes impaires de l'octogone).
+        var o = MeshKit.Octagon(hx, hz, bevel);
+        for (var k = 1; k < 8; k += 2)
+        {
+            var p = o[k];
+            var q = o[(k + 1) % 8];
+            Wall(new Vector3(p.X, 0, p.Y), new Vector3(q.X, 0, q.Y), 0, bevel * 1.414f / uLen, new Vector3(p.X + q.X, 0, p.Y + q.Y));
+        }
+    }
+
+    /// <summary>Toit plat octogonal (suit les angles chanfreinés), en éventail depuis le centre.</summary>
+    private static void BeveledRoof(MeshKit kit, Material m, Vector3 s, float bevel)
+    {
+        var o = MeshKit.Octagon(s.X / 2, s.Z / 2, bevel);
+        var c = new Vector3(0, s.Y, 0);
+        for (var k = 0; k < 8; k++)
+        {
+            var p = o[k];
+            var q = o[(k + 1) % 8];
+            kit.Tri(m, c, new Vector3(p.X, s.Y, p.Y), new Vector3(q.X, s.Y, q.Y), c + Vector3.Down);
+        }
+    }
+
+    /// <summary>Volume simple (entrepôt, conteneurs) : quatre façades à UV en mètres (1 U = 3 m), angles chanfreinés, et un toit.</summary>
+    private static ArrayMesh BuildPlainMesh(Vector3 s, Material facade, Material roof, Color tint)
+    {
+        var kit = new MeshKit();
+        var bevel = Mathf.Min(0.2f, Mathf.Min(s.X, s.Z) * 0.025f);
+        BeveledWalls(kit, facade, s, 0, bevel, 3f, 3f, tint);
+        kit.Col = tint;
+        BeveledRoof(kit, roof, s, bevel);
         return kit.Commit();
     }
 
@@ -146,7 +196,7 @@ public partial class Building : StaticBody3D
     /// Maillage de l'immeuble. Façades : UV en mètres (1 U = 7 m, 1 V = 3,2 m), comptés depuis le haut
     /// pour que la trame d'étages tombe juste sous l'acrotère.
     /// </summary>
-    private static ArrayMesh BuildMesh(Vector3 s, Material facade, Material roof, BuildingStyle style, RandomNumberGenerator rng)
+    private static ArrayMesh BuildMesh(Vector3 s, Material facade, Material roof, BuildingStyle style, RandomNumberGenerator rng, Color tint)
     {
         var kit = new MeshKit { Record = true };
         var hx = s.X / 2;
@@ -158,57 +208,48 @@ public partial class Building : StaticBody3D
         var baseY = shops ? ShopH : 0f;
         var sides = Sides(hx, hz);
 
-        // Façades courantes.
-        foreach (var sd in sides)
-        {
-            var a = sd.Start + Vector3.Up * baseY;
-            var bb = sd.Start + sd.Along * sd.Length + Vector3.Up * baseY;
-            var c = bb with { Y = h };
-            var d = a with { Y = h };
-            var u = sd.Length / 7f;
-            var v0 = (h - baseY) / 3.2f;
-            kit.Quad(facade, a, bb, c, d, new Vector2(0, v0), new Vector2(u, v0), new Vector2(u, 0), new Vector2(0, 0));
-        }
-        // Toit : gravillons, étanchéité sombre ou claire, parfois végétalisé.
+        // Façades courantes, angles chanfreinés.
+        BeveledWalls(kit, facade, s, baseY, Bevel, 7f, 3.2f, tint);
+        // Toit : gravillons, étanchéité sombre ou claire, parfois une ancienne toiture végétalisée desséchée.
         var rr = rng.Randf();
         var roofMat = roof;
         if (rr < 0.7f)
         {
             roofMat = Mats.Detail();
-            kit.Col = rr < 0.25f ? new Color(0.56f, 0.55f, 0.51f)
-                : rr < 0.45f ? new Color(0.3f, 0.3f, 0.32f)
-                : rr < 0.62f ? new Color(0.74f, 0.74f, 0.72f)
-                : new Color(0.33f, 0.42f, 0.22f);
+            kit.Col = rr < 0.25f ? new Color(0.46f, 0.45f, 0.42f)
+                : rr < 0.45f ? new Color(0.24f, 0.24f, 0.25f)
+                : rr < 0.62f ? new Color(0.56f, 0.56f, 0.54f)
+                : new Color(0.3f, 0.31f, 0.22f);
         }
-        kit.Quad(roofMat,new Vector3(-hx, h, hz), new Vector3(hx, h, hz), new Vector3(hx, h, -hz), new Vector3(-hx, h, -hz));
+        BeveledRoof(kit, roofMat, s, Bevel);
 
         var tower = style.Kind == BuildingKind.Tower;
-        var trim = style.Variant is 4 or 8 ? new Color(0.78f, 0.76f, 0.7f)
-            : style.Variant == 9 ? new Color(0.9f, 0.89f, 0.86f)
-            : new Color(0.7f, 0.69f, 0.65f);
+        var trim = style.Variant is 4 or 8 ? new Color(0.56f, 0.55f, 0.52f)
+            : style.Variant == 9 ? new Color(0.62f, 0.61f, 0.59f)
+            : new Color(0.52f, 0.51f, 0.49f);
         var trimMat = tower ? metal : detail;
-        if (tower) trim = new Color(0.55f, 0.57f, 0.6f);
+        if (tower) trim = new Color(0.42f, 0.43f, 0.45f);
 
         // Rez-de-chaussée : vitrines, piliers, bandeau, enseignes et stores ; sinon un socle en pierre.
         if (shops) BuildShops(kit, sides, style, rng, trim, trimMat);
         else
         {
-            kit.Col = new Color(0.38f, 0.37f, 0.35f);
-            kit.Ring(detail, hx, hz, -0.1f, 0.6f, 0.3f, 0.06f);
+            kit.Col = new Color(0.3f, 0.295f, 0.28f);
+            kit.Ring(detail, hx, hz, -0.1f, 0.6f, 0.3f, 0.06f, Bevel);
         }
 
         // Couronnement : corniche + acrotère (tours : bandeau métallique haut qui masque les équipements).
         kit.Col = trim;
         if (tower)
         {
-            kit.Ring(trimMat, hx, hz, h - 0.25f, h + 1.8f, 0.25f, 0.06f);
+            kit.Ring(trimMat, hx, hz, h - 0.25f, h + 1.8f, 0.25f, 0.06f, Bevel);
         }
         else
         {
-            kit.Ring(trimMat, hx, hz, h - 0.5f, h - 0.2f, 0.5f, 0.24f);
-            kit.Ring(trimMat, hx, hz, h - 0.2f, h + 0.75f, 0.28f, 0.06f);
-            kit.Col = trim.Darkened(0.15f);
-            kit.Ring(trimMat, hx, hz, h + 0.75f, h + 0.85f, 0.36f, 0.1f); // couvertine
+            kit.Ring(trimMat, hx, hz, h - 0.5f, h - 0.2f, 0.5f, 0.24f, Bevel);
+            kit.Ring(trimMat, hx, hz, h - 0.2f, h + 0.75f, 0.28f, 0.06f, Bevel);
+            kit.Col = trim.Darkened(0.2f);
+            kit.Ring(trimMat, hx, hz, h + 0.75f, h + 0.85f, 0.36f, 0.1f, Bevel); // couvertine
         }
 
         if (style.Kind == BuildingKind.Residential) BuildBalconies(kit, sides, h, baseY, style, rng);
@@ -253,7 +294,7 @@ public partial class Building : StaticBody3D
                     if (lc.Luminance > 0.5f == col.Luminance > 0.5f) lc = col.Luminance > 0.5f ? new Color(0.08f, 0.08f, 0.1f) : new Color(0.97f, 0.96f, 0.92f);
                     // Lettrage : quelques blocs de largeur variable (mots), lumineux la nuit.
                     kit.Col = lc;
-                    var lm = style.Night && lc.Luminance > 0.5f ? Mats.Lamps() : detail;
+                    Material lm = style.Night && lc.Luminance > 0.5f ? Mats.Lamps() : detail;
                     var textW = sw * rng.RandfRange(0.5f, 0.75f);
                     var words = rng.RandiRange(1, 3);
                     var x0 = -textW / 2;
@@ -300,7 +341,7 @@ public partial class Building : StaticBody3D
         kit.Col = trim;
         var hx = sides[0].Length / 2;
         var hz = sides[2].Length / 2;
-        kit.Ring(trimMat, hx, hz, ShopH - 0.04f, ShopH + 0.26f, 0.45f, 0.22f);
+        kit.Ring(trimMat, hx, hz, ShopH - 0.04f, ShopH + 0.26f, 0.45f, 0.22f, Bevel);
     }
 
     private static Vector3 Abs(Vector3 v) => new(Mathf.Abs(v.X), Mathf.Abs(v.Y), Mathf.Abs(v.Z));
@@ -320,7 +361,7 @@ public partial class Building : StaticBody3D
         var phase = rng.RandiRange(0, 1);
         var bw = Mathf.Min(colW * 0.85f, 2.8f);
         var rail = modern ? new Color(0.15f, 0.15f, 0.16f) : new Color(0.12f, 0.12f, 0.12f);
-        var slab = style.Variant == 9 ? new Color(0.9f, 0.89f, 0.86f) : new Color(0.72f, 0.7f, 0.66f);
+        var slab = style.Variant == 9 ? new Color(0.62f, 0.61f, 0.59f) : new Color(0.52f, 0.51f, 0.48f);
 
         foreach (var sd in sides)
         {
@@ -387,9 +428,9 @@ public partial class Building : StaticBody3D
         var sz = Mathf.Min(rng.RandfRange(2.6f, 4.5f), s.Z - 2.5f);
         var sh = rng.RandfRange(2.4f, 3.2f);
         var sp = new Vector3(Rx(sx / 2 + 1f), h, Rz(sz / 2 + 1f));
-        kit.Col = new Color(0.62f, 0.61f, 0.58f);
+        kit.Col = new Color(0.47f, 0.46f, 0.44f);
         kit.Box(detail, sp + Vector3.Up * (sh / 2), new Vector3(sx, sh, sz));
-        kit.Col = new Color(0.5f, 0.49f, 0.47f);
+        kit.Col = new Color(0.38f, 0.375f, 0.36f);
         kit.Box(detail, sp + Vector3.Up * (sh + 0.06f), new Vector3(sx + 0.2f, 0.12f, sz + 0.2f));
         kit.Col = new Color(0.25f, 0.26f, 0.27f);
         kit.Box(metal, sp + new Vector3(0, 1.05f, sz / 2 + 0.01f), new Vector3(0.95f, 2.05f, 0.04f)); // porte
@@ -400,7 +441,7 @@ public partial class Building : StaticBody3D
         {
             var size = new Vector3(rng.RandfRange(1.1f, 2.4f), rng.RandfRange(0.8f, 1.3f), rng.RandfRange(1f, 1.6f));
             var p = new Vector3(Rx(size.X / 2 + 0.8f), h, Rz(size.Z / 2 + 0.8f));
-            kit.Col = new Color(0.72f, 0.73f, 0.72f);
+            kit.Col = new Color(0.5f, 0.51f, 0.5f);
             kit.Box(metal, p + Vector3.Up * (size.Y / 2), size);
             kit.Col = new Color(0.1f, 0.1f, 0.11f);
             kit.Cylinder(detail, p + Vector3.Up * size.Y, size.Z * 0.35f, size.Z * 0.35f, 0.03f, 10);
@@ -466,7 +507,7 @@ public partial class Building : StaticBody3D
             else
             {
                 kit.Tube(metal, p, p + Vector3.Up * 1f, 0.04f, 5);
-                kit.Col = new Color(0.85f, 0.85f, 0.83f);
+                kit.Col = new Color(0.58f, 0.58f, 0.56f);
                 var yaw = rng.RandfRange(0, Mathf.Tau);
                 var basis = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Right, Mathf.DegToRad(60));
                 kit.Cylinder(detail, p + Vector3.Up * 1f, 0.45f, 0.5f, 0.08f, 10, true, basis);

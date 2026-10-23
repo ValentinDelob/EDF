@@ -67,7 +67,7 @@ public class MeshKit
 
     private Surf S(Material m)
     {
-        _curSolid = Record && Solid && m != Mats.Foliage();
+        _curSolid = Record && Solid && !Mats.IsFoliage(m);
         if (_st.TryGetValue(m, out var st)) return st;
         st = new Surf();
         _st[m] = st;
@@ -154,6 +154,29 @@ public class MeshKit
         var pa = P(a); var pb = P(b); var pc = P(c); var pd = P(d);
         TriRaw(st, pa, pb, pc, n, n, n, ua, ub, uc);
         TriRaw(st, pa, pc, pd, n, n, n, ua, uc, ud);
+    }
+
+    /// <summary>
+    /// Quad plan à couleur par sommet (dégradés d'encrassement sur les façades), tourné vers <paramref name="outward"/>.
+    /// </summary>
+    public void QuadC(Material m, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector2 ua, Vector2 ub, Vector2 uc, Vector2 ud,
+        Color ca, Color cb, Color cc, Color cd, Vector3 outward)
+    {
+        var st = S(m);
+        var n = (b - a).Cross(c - a).Normalized();
+        if (n.Dot(outward) < 0) n = -n;
+        var wn = N(n);
+        var pa = P(a); var pb = P(b); var pc = P(c); var pd = P(d);
+        var keep = Col;
+        void T(Vector3 p0, Vector3 p1, Vector3 p2, Vector2 u0, Vector2 u1, Vector2 u2, Color c0, Color c1, Color c2)
+        {
+            Col = c0; V(st, p0, wn, u0);
+            if ((p1 - p0).Cross(p2 - p0).Dot(wn) > 0) { Col = c2; V(st, p2, wn, u2); Col = c1; V(st, p1, wn, u1); }
+            else { Col = c1; V(st, p1, wn, u1); Col = c2; V(st, p2, wn, u2); }
+        }
+        T(pa, pb, pc, ua, ub, uc, ca, cb, cc);
+        T(pa, pc, pd, ua, uc, ud, ca, cc, cd);
+        Col = keep;
     }
 
     /// <summary>Boîte centrée en <paramref name="c"/>, éventuellement tournée (base locale).</summary>
@@ -248,8 +271,13 @@ public class MeshKit
     }
 
     /// <summary>Anneau de 4 boîtes autour d'un rectangle (acrotère, corniche, socle, bordure).</summary>
-    public void Ring(Material m, float hx, float hz, float y0, float y1, float thick, float outset)
+    public void Ring(Material m, float hx, float hz, float y0, float y1, float thick, float outset, float bevel = 0f)
     {
+        if (bevel > 0.001f)
+        {
+            RingBevel(m, hx + outset, hz + outset, y0, y1, thick, bevel + outset * 0.586f);
+            return;
+        }
         var ox = hx + outset;
         var oz = hz + outset;
         var ix = ox - thick;
@@ -258,6 +286,41 @@ public class MeshKit
         BoxMinMax(m, new Vector3(-ox, y0, -oz), new Vector3(ox, y1, -iz));
         BoxMinMax(m, new Vector3(ix, y0, -iz), new Vector3(ox, y1, iz));
         BoxMinMax(m, new Vector3(-ox, y0, -iz), new Vector3(-ix, y1, iz));
+    }
+
+    /// <summary>Contour octogonal (rectangle ox × oz aux coins chanfreinés de <paramref name="b"/>), sens antihoraire vu du dessus.</summary>
+    public static Vector2[] Octagon(float ox, float oz, float b) => new[]
+    {
+        new Vector2(-ox + b, oz), new Vector2(ox - b, oz), new Vector2(ox, oz - b), new Vector2(ox, -oz + b),
+        new Vector2(ox - b, -oz), new Vector2(-ox + b, -oz), new Vector2(-ox, -oz + b), new Vector2(-ox, oz - b),
+    };
+
+    /// <summary>Anneau aux angles chanfreinés (acrotère, corniche, socle) : faces extérieures, intérieures, dessus et dessous.</summary>
+    private void RingBevel(Material m, float ox, float oz, float y0, float y1, float thick, float b)
+    {
+        var o = Octagon(ox, oz, b);
+        var i = Octagon(ox - thick, oz - thick, Mathf.Max(0.01f, b - thick * 0.586f));
+        Vector3 At(Vector2 p, float y) => new(p.X, y, p.Y);
+        for (var k = 0; k < 8; k++)
+        {
+            var k1 = (k + 1) % 8;
+            var oa = o[k]; var ob = o[k1]; var ia = i[k]; var ib = i[k1];
+            // Extérieur (normale opposée au centre), intérieur (vers le centre).
+            var on = new Vector3((oa + ob).X, 0, (oa + ob).Y);
+            OrientedQuad(m, At(oa, y0), At(ob, y0), At(ob, y1), At(oa, y1), on);
+            OrientedQuad(m, At(ia, y0), At(ib, y0), At(ib, y1), At(ia, y1), -new Vector3((ia + ib).X, 0, (ia + ib).Y));
+            OrientedQuad(m, At(oa, y1), At(ob, y1), At(ib, y1), At(ia, y1), Vector3.Up);
+            OrientedQuad(m, At(oa, y0), At(ob, y0), At(ib, y0), At(ia, y0), Vector3.Down);
+        }
+    }
+
+    /// <summary>Quad plan dont la face avant regarde vers <paramref name="outward"/>.</summary>
+    public void OrientedQuad(Material m, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 outward)
+    {
+        var n = (b - a).Cross(c - a);
+        if (n.LengthSquared() < 1e-12f) n = (c - a).Cross(d - a);
+        if (n.Dot(outward) >= 0) Quad(m, a, b, c, d);
+        else Quad(m, d, c, b, a);
     }
 
     /// <summary>Produit le maillage (ajoute les surfaces à <paramref name="into"/> si fourni).</summary>

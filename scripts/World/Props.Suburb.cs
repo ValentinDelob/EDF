@@ -22,9 +22,9 @@ public static partial class Props
     public static readonly Vector3[] PoleWires = { new(-0.95f, 9.12f, 0), new(0, 9.12f, 0), new(0.95f, 9.12f, 0) };
 
     /// <summary>Houppier bosselé sur un icosaèdre donné, rayons distincts par axe.</summary>
-    private static void CanopyLow(MeshKit k, Vector3[] ico, Vector3 c, Vector3 r, float seed, Color leaf)
+    private static void CanopyLow(MeshKit k, Vector3[] ico, Vector3 c, Vector3 r, float seed, Color leaf, Material m = null)
     {
-        var m = Mats.Foliage();
+        m ??= Mats.Foliage();
         Vector3 D(Vector3 d)
         {
             var bump = 1f + 0.22f * Mathf.Sin(d.X * 4.1f + seed) * Mathf.Cos(d.Z * 3.7f + seed * 1.3f) + 0.12f * Mathf.Sin(d.Y * 6f + seed * 0.7f);
@@ -45,15 +45,19 @@ public static partial class Props
         }
     }
 
+    // Résineux sombres et ternes ; la variante 3 est un résineux mort (aiguilles rousses grisées).
     private static readonly Color[] NeedleColors =
     {
-        new(0.09f, 0.17f, 0.1f), new(0.11f, 0.2f, 0.11f), new(0.08f, 0.15f, 0.11f), new(0.13f, 0.21f, 0.1f),
+        new(0.075f, 0.1f, 0.08f), new(0.085f, 0.11f, 0.085f), new(0.07f, 0.09f, 0.078f), new(0.15f, 0.13f, 0.1f),
     };
 
     private static readonly Color[] LeafColors =
     {
-        new(0.2f, 0.32f, 0.11f), new(0.24f, 0.34f, 0.12f), new(0.17f, 0.28f, 0.1f), new(0.27f, 0.33f, 0.13f), new(0.21f, 0.3f, 0.14f),
+        new(0.12f, 0.145f, 0.085f), new(0.15f, 0.155f, 0.09f), new(0.11f, 0.13f, 0.08f), new(0.17f, 0.155f, 0.1f), new(0.13f, 0.14f, 0.09f),
     };
+
+    /// <summary>Feuillus morts : variantes impaires de la forêt et des jardins.</summary>
+    private static bool DeadVariant(int v) => v % 2 == 1;
 
     /// <summary>Résineux (épicéa, sapin) : étages de jupes coniques dentelées autour d'un tronc fin. Variantes 0 à 3.</summary>
     public static ArrayMesh Conifer(int v) => Cached($"conifer{v}", k =>
@@ -110,29 +114,35 @@ public static partial class Props
         var r = new RandomNumberGenerator { Seed = (ulong)(v * 1543 + 11) };
         var bark = Mats.Detail();
         const float h = BroadleafHeight;
-        var barkCol = v % 2 == 0 ? new Color(0.33f, 0.3f, 0.27f) : new Color(0.3f, 0.24f, 0.18f);
+        var barkCol = v % 2 == 0 ? new Color(0.24f, 0.225f, 0.2f) : new Color(0.2f, 0.185f, 0.17f);
         k.Col = barkCol;
         k.Cylinder(bark, Vector3.Zero, 0.42f, 0.24f, h * 0.62f, 8, false);
         var leaf = LeafColors[v % LeafColors.Length];
+        var dead = DeadVariant(v);
         var n = 4;
+        var tips = new System.Collections.Generic.List<Vector3>();
         for (var i = 0; i < n; i++)
         {
             var a = i * Mathf.Tau / n + r.RandfRange(-0.4f, 0.4f);
             var d = r.RandfRange(1.4f, 2.4f);
             var c = new Vector3(Mathf.Cos(a) * d, h * r.RandfRange(0.66f, 0.8f), Mathf.Sin(a) * d);
             k.Col = barkCol;
-            k.Tube(bark, new Vector3(0, h * 0.5f, 0), c * 0.8f + Vector3.Up * (h * 0.06f), 0.16f, 5);
-            CanopyLow(k, fine ? Ico : Ico1, c, new Vector3(1, 0.82f, 1) * r.RandfRange(2.5f, 3.3f), v * 3.1f + i, leaf);
+            // Charpentières ramifiées (plus fines et plus nombreuses sur un arbre mort ou un arbre de place).
+            Branch(k, bark, r, new Vector3(0, h * 0.5f, 0), (c - new Vector3(0, h * 0.45f, 0)).Normalized(), h * 0.38f, 0.17f, dead || fine ? 2 : 1, tips);
         }
-        CanopyLow(k, fine ? Ico : Ico1, new Vector3(0, h * 0.9f, 0), new Vector3(2.8f, 2.2f, 2.8f), v * 1.7f, leaf.Lightened(0.05f));
+        if (dead) TwigClumps(k, r, tips, 1.6f, v * 2.1f);
+        else LeafClumps(k, r, tips, Ico1, fine ? 1.7f : 2.3f, v * 3.1f, leaf, 0.8f);
     });
 
-    /// <summary>Feuillu lointain : tronc et masse unique à 20 faces.</summary>
+    /// <summary>Feuillu lointain : tronc et masse unique à 20 faces (ramilles grises ajourées pour un arbre mort).</summary>
     public static ArrayMesh BroadleafFar(int v) => Cached($"broadleaffar{v}", k =>
     {
-        k.Col = new Color(0.3f, 0.26f, 0.2f);
+        k.Col = new Color(0.22f, 0.2f, 0.18f);
         k.Cylinder(Mats.Detail(), Vector3.Zero, 0.4f, 0.25f, BroadleafHeight * 0.6f, 5, false);
-        CanopyLow(k, Ico0, new Vector3(0, BroadleafHeight * 0.78f, 0), new Vector3(4.6f, 3.6f, 4.6f), v * 2.3f, LeafColors[v % LeafColors.Length]);
+        if (DeadVariant(v))
+            CanopyLow(k, Ico0, new Vector3(0, BroadleafHeight * 0.75f, 0), new Vector3(4.2f, 3.6f, 4.2f), v * 2.3f, TwigCol, Mats.Twigs());
+        else
+            CanopyLow(k, Ico0, new Vector3(0, BroadleafHeight * 0.78f, 0), new Vector3(4.6f, 3.6f, 4.6f), v * 2.3f, LeafColors[v % LeafColors.Length]);
     });
 
     /// <summary>Arbre de jardin (fruitier, érable) : petit tronc et couronne basse. Variantes 0 à 4.</summary>
@@ -141,17 +151,20 @@ public static partial class Props
         var r = new RandomNumberGenerator { Seed = (ulong)(v * 331 + 7) };
         var bark = Mats.Detail();
         var h = 4.2f + v * 0.5f;
-        k.Col = new Color(0.32f, 0.26f, 0.2f);
+        k.Col = BarkGray;
         k.Cylinder(bark, Vector3.Zero, 0.2f, 0.12f, h * 0.7f, 7, false);
-        var leaf = v == 3 ? new Color(0.36f, 0.2f, 0.12f) : LeafColors[(v + 2) % LeafColors.Length].Lightened(0.08f);
+        var leaf = v == 4 ? new Color(0.24f, 0.15f, 0.1f) : LeafColors[(v + 2) % LeafColors.Length].Lightened(0.04f);
+        var dead = DeadVariant(v);
+        var tips = new System.Collections.Generic.List<Vector3>();
         for (var i = 0; i < 3; i++)
         {
             var a = i * Mathf.Tau / 3 + r.RandfRange(-0.4f, 0.4f);
             var c = new Vector3(Mathf.Cos(a) * 0.8f, h * r.RandfRange(0.78f, 0.95f), Mathf.Sin(a) * 0.8f);
-            k.Col = new Color(0.32f, 0.26f, 0.2f);
-            k.Tube(bark, new Vector3(0, h * 0.45f, 0), c * 0.8f, 0.08f, 4);
-            CanopyLow(k, Ico, c, new Vector3(1, 0.85f, 1) * r.RandfRange(1.4f, 1.9f), v * 2.7f + i, leaf);
+            k.Col = BarkGray;
+            Branch(k, bark, r, new Vector3(0, h * 0.45f, 0), (c - new Vector3(0, h * 0.4f, 0)).Normalized(), h * 0.5f, 0.08f, dead ? 2 : 1, tips);
         }
+        if (dead) TwigClumps(k, r, tips, 0.9f, v * 2.1f);
+        else LeafClumps(k, r, tips, Ico1, 1.15f, v * 2.7f, leaf, 0.85f);
     });
 
     /// <summary>Arbuste ou massif (forme écrasée). Variantes 0 à 3.</summary>
@@ -159,15 +172,15 @@ public static partial class Props
     {
         var leaf = v switch
         {
-            1 => new Color(0.16f, 0.26f, 0.12f),
-            2 => new Color(0.3f, 0.36f, 0.14f),
-            3 => new Color(0.45f, 0.2f, 0.25f),   // massif fleuri
-            _ => new Color(0.2f, 0.3f, 0.12f),
+            1 => new Color(0.11f, 0.14f, 0.09f),
+            2 => new Color(0.18f, 0.18f, 0.11f),
+            3 => new Color(0.22f, 0.17f, 0.13f),   // ancien massif, desséché
+            _ => new Color(0.13f, 0.16f, 0.09f),
         };
         // Trois touffes qui se chevauchent : silhouette irrégulière.
-        CanopyLow(k, Ico1, new Vector3(0, 0.6f, 0), new Vector3(0.85f, 0.75f, 0.8f), v * 5.3f, leaf.Lightened(0.08f));
-        CanopyLow(k, Ico1, new Vector3(0.55f, 0.45f, 0.2f), new Vector3(0.6f, 0.5f, 0.6f), v * 5.3f + 1f, leaf);
-        CanopyLow(k, Ico1, new Vector3(-0.45f, 0.42f, -0.3f), new Vector3(0.6f, 0.48f, 0.55f), v * 5.3f + 2f, leaf.Darkened(0.05f));
+        CanopyLow(k, Ico1, new Vector3(0, 0.6f, 0), new Vector3(0.85f, 0.75f, 0.8f), v * 5.3f, leaf.Lightened(0.05f), Mats.Leaves());
+        CanopyLow(k, Ico1, new Vector3(0.55f, 0.45f, 0.2f), new Vector3(0.6f, 0.5f, 0.6f), v * 5.3f + 1f, leaf, Mats.Leaves());
+        CanopyLow(k, Ico1, new Vector3(-0.45f, 0.42f, -0.3f), new Vector3(0.6f, 0.48f, 0.55f), v * 5.3f + 2f, leaf.Darkened(0.05f), Mats.Leaves());
     });
 
     /// <summary>Rocher (berges) : icosaèdre déformé, gris.</summary>

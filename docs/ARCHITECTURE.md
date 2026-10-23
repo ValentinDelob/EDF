@@ -32,6 +32,13 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 - **Assemblages** (garde-corps et muret de la promenade, ponton, poste de secours, places, chantiers, secteurs « Solid » de la banlieue : murets, ponts, tombes, monument) : `CityBuilder.AddSolid`. Véhicules garés : forme exacte partagée par modèle (`CityBuilder.VehicleShape`).
 - Identifiants et ordre des immeubles inchangés : les formes ajoutées ne consomment aucun tirage aléatoire.
 
+## Matières du décor
+
+- `Mats.Weather.cs` : shader « Weathered » partagé (façades, vitrines, béton, asphalte, dallage, sol, matériaux de détail, tôles, peintures industrielles). Il reprend l'essentiel d'un `StandardMaterial3D` (albédo × couleur de sommet, relief, rugosité, émission, UV ou triplanaire) et ajoute des salissures en coordonnées monde qui ne se répètent pas d'un immeuble à l'autre : coulures verticales, taches à deux échelles, pied des murs encrassé, poussière et flaques au sol, rouille, désaturation. Réglages par paramètres (`grime`, `streaks`, `foot`, `puddles`, `rust`, `desat`...).
+- Textures générées en C# (en parallèle, sans appel moteur par pixel) : façades (vitres brisées, fenêtres incendiées et panaches de suie, impacts, joints de panneaux), vitrines (rideaux de fer, contreplaqué), asphalte (fissures, réparations, huile), dallage (dalles fendues, basculées ou manquantes), herbe morte et boue, dalles de quai.
+- Volumes d'immeubles aux arêtes verticales chanfreinées (acrotère, corniche et toit suivent l'octogone) ; teinte propre à chaque immeuble et bande assombrie sous l'acrotère par couleur de sommet. Aucun tirage aléatoire supplémentaire (identifiants inchangés).
+- Arbres : majorité d'arbres morts (charpente ramifiée, ramilles ajourées), feuillage restant en touffes découpées (`Mats.Leaves`, alpha scissor) ; seules les charpentières sont solides.
+
 ## Insectes grimpeurs
 
 Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni nid, ni boss) marchent sur toute surface solide (voir `Enemy.Climb.cs`) :

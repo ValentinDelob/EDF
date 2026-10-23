@@ -24,8 +24,8 @@ public static partial class PortBuilder
         const float half = CityBuilder.Half;
 
         // Sol en béton, quai et mer.
-        CityBuilder.AddSlab(root, statics, new Vector3(0, -0.5f, (-half + CityBuilder.SeaStart) / 2), new Vector3(half * 2 + 40, 1f, CityBuilder.SeaStart + half), Mats.Concrete(new Color(0.5f, 0.49f, 0.47f), 77));
-        CityBuilder.AddSlab(root, statics, new Vector3(0, 0.02f, CityBuilder.SeaStart - 3), new Vector3(half * 2, 0.1f, 6), Mats.Painted(new Color(0.75f, 0.62f, 0.12f), 0.7f), collide: false); // bande jaune du quai
+        CityBuilder.AddSlab(root, statics, new Vector3(0, -0.5f, (-half + CityBuilder.SeaStart) / 2), new Vector3(half * 2 + 40, 1f, CityBuilder.SeaStart + half), Mats.Apron());
+        CityBuilder.AddSlab(root, statics, new Vector3(0, 0.02f, CityBuilder.SeaStart - 3), new Vector3(half * 2, 0.1f, 6), Mats.Worn(new Color(0.5f, 0.43f, 0.18f), 0.85f, 0f), collide: false); // bande jaune du quai
         root.AddChild(new MeshInstance3D
         {
             Mesh = new PlaneMesh { Size = new Vector2(2400, 1400), SubdivideWidth = 120, SubdivideDepth = 60, Material = Mats.Water(time) },
@@ -99,55 +99,31 @@ public static partial class PortBuilder
         res.PlayerSpawns.Add(new Vector3(4, 1, 6));
         res.PlayerSpawns.Add(new Vector3(-4, 1, 12));
         res.PlayerSpawns.Add(new Vector3(4, 1, 12));
+<<<<<<< HEAD
         DressPort(root, statics, res, night);
+=======
+        CityCam.Attach(root); // caméra de contrôle visuel (inactive sans « --citycam »)
+>>>>>>> worktree-agent-a1c5c7740ed2fdacc
         return res;
     }
 
-    /// <summary>Tôle ondulée : bandes verticales (albédo + relief), UV en mètres.</summary>
-    private static StandardMaterial3D Corrugated(Color c, int seed)
-    {
-        const int w = 64, h = 64;
-        var img = Image.CreateEmpty(w, h, true, Image.Format.Rgba8);
-        var bump = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
-        var noise = new FastNoiseLite { Seed = seed, Frequency = 0.08f };
-        for (var y = 0; y < h; y++)
-        for (var x = 0; x < w; x++)
-        {
-            var wave = 0.5f + 0.5f * Mathf.Sin(x / (float)w * Mathf.Tau * 8f);
-            var n = noise.GetNoise2D(x, y) * 0.06f;
-            var rust = Mathf.Max(0, noise.GetNoise2D(x * 0.5f, y * 2f)) * 0.25f * (y / (float)h);
-            img.SetPixel(x, y, (c * (0.88f + wave * 0.12f) + new Color(n, n, n)).Lerp(new Color(0.42f, 0.25f, 0.14f), rust));
-            bump.SetPixel(x, y, new Color(wave, wave, wave));
-        }
-        img.GenerateMipmaps();
-        bump.BumpMapToNormalMap(4f);
-        bump.GenerateMipmaps();
-        return new StandardMaterial3D
-        {
-            AlbedoTexture = ImageTexture.CreateFromImage(img),
-            NormalEnabled = true,
-            NormalTexture = ImageTexture.CreateFromImage(bump),
-            Roughness = 0.55f,
-            Metallic = 0.45f,
-            Uv1Scale = new Vector3(2.4f, 1f, 1f),
-            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmapsAnisotropic,
-        };
-    }
+    /// <summary>Tôle ondulée : bandes verticales (albédo + relief), UV en mètres ; peinture ternie, rouille et salissures (shader d'usure).</summary>
+    private static ShaderMaterial Corrugated(Color c, int seed, float uScale = 2.4f) =>
+        Mats.Corrugated(c.Lerp(new Color(c.Luminance, c.Luminance, c.Luminance), 0.45f) * 0.8f, seed, uScale);
 
-    private static readonly System.Collections.Generic.Dictionary<Color, StandardMaterial3D> ContainerCache = new();
+    private static readonly System.Collections.Generic.Dictionary<Color, ShaderMaterial> ContainerCache = new();
 
-    private static StandardMaterial3D ContainerMat(Color c)
+    private static ShaderMaterial ContainerMat(Color c)
     {
         if (ContainerCache.TryGetValue(c, out var m)) return m;
-        m = Corrugated(c, (int)(c.R * 100 + c.G * 10 + c.B * 1000));
-        m.Uv1Scale = new Vector3(4f, 1f, 1f);
+        m = Corrugated(c, (int)(c.R * 100 + c.G * 10 + c.B * 1000), 4f);
         ContainerCache[c] = m;
         return m;
     }
 
     private static void BuildCrane(Node3D root, StaticBody3D body, Vector3 p)
     {
-        var paint = Mats.Painted(new Color(0.85f, 0.55f, 0.1f), 0.5f, 0.4f);
+        var paint = Mats.Worn(new Color(0.55f, 0.38f, 0.14f), 0.6f, 0.3f);
         var dark = Mats.Metal(new Color(0.2f, 0.2f, 0.2f), 0.5f);
         foreach (var dx in new[] { -9f, 9f })
         foreach (var dz in new[] { -7f, 7f })
@@ -165,17 +141,17 @@ public static partial class PortBuilder
         Solid(new Vector3(2.5f, 3f, 70f), new Vector3(9f, 35f, 10f), paint);
         Solid(new Vector3(20f, 2.5f, 3f), new Vector3(0, 33f, -7f), paint);
         Solid(new Vector3(20f, 2.5f, 3f), new Vector3(0, 33f, 7f), paint);
-        Solid(new Vector3(6f, 5f, 6f), new Vector3(0, 31f, 22f), Mats.Painted(new Color(0.9f, 0.9f, 0.88f), 0.5f)); // chariot
+        Solid(new Vector3(6f, 5f, 6f), new Vector3(0, 31f, 22f), Mats.Worn(new Color(0.58f, 0.58f, 0.56f), 0.6f, 0.2f)); // chariot
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.06f, Height = 20f, Material = dark }, Position = p + new Vector3(0, 18.5f, 22f) });
         Solid(new Vector3(12.2f, 2.6f, 2.6f), new Vector3(0, 7.5f, 22f), ContainerMat(ContainerColors[1])); // conteneur suspendu
     }
 
     private static void BuildTank(Node3D root, StaticBody3D body, Vector3 p, float r)
     {
-        var white = Mats.Painted(new Color(0.86f, 0.86f, 0.84f), 0.45f, 0.3f);
+        var white = Mats.Worn(new Color(0.58f, 0.58f, 0.56f), 0.6f, 0.25f);
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r, BottomRadius = r, Height = 16f, RadialSegments = 32, Material = white }, Position = p + new Vector3(0, 8f, 0) });
         root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r * 0.2f, BottomRadius = r, Height = 2.5f, RadialSegments = 32, Material = white }, Position = p + new Vector3(0, 17.2f, 0) });
-        root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r + 0.05f, BottomRadius = r + 0.05f, Height = 0.6f, RadialSegments = 32, Material = Mats.Painted(new Color(0.7f, 0.15f, 0.1f), 0.6f) }, Position = p + new Vector3(0, 12f, 0) });
+        root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r + 0.05f, BottomRadius = r + 0.05f, Height = 0.6f, RadialSegments = 32, Material = Mats.Worn(new Color(0.4f, 0.16f, 0.12f), 0.7f, 0.2f) }, Position = p + new Vector3(0, 12f, 0) });
         // Fût, ceinture rouge et toit conique : mêmes volumes que le visuel (le toit n'est pas un cylindre plein).
         body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = r, Height = 16f }, Position = p + new Vector3(0, 8f, 0) });
         body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = r + 0.05f, Height = 0.6f }, Position = p + new Vector3(0, 12f, 0) });
