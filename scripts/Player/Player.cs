@@ -710,6 +710,12 @@ public partial class Player : CharacterBody3D
         _pitch = Mathf.Lerp(_pitch, pitch, Mathf.Clamp(dt * 5f, 0, 1));
         _botFire = Mathf.Abs(Mathf.AngleDifference(_yaw, yaw)) < 0.15f;
         if (Weapon.Ammo == 0 && !Weapon.Reloading) Reload();
+        // Le bot du Commando aéroporté vole par intermittence (teste vol, énergie et surchauffe).
+        if (Def.Id == SoldierClass.Airborne)
+        {
+            if (!Overheated && Energy > 60) Input.ActionPress("jump");
+            else if (Energy < 25 || Overheated) Input.ActionRelease("jump");
+        }
     }
 
     public void AddShake(float amount) => _shake = Mathf.Min(1.2f, _shake + amount);
