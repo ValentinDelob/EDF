@@ -1,0 +1,19 @@
+# Godot
+.godot/
+.import/
+*.translation
+export_credentials.cfg
+# .NET
+bin/
+obj/
+*.user
+.vs/
+.idea/
+# Builds
+build/
+*.zip
+
+# Captures UI tierces (droits d auteur) - ne pas committer
+docs/ui-refs/*.jpg
+docs/ui-refs/*.png
+docs/ui-refs/*.webp

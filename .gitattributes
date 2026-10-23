@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.cs text eol=lf
+*.png binary
+*.wav binary
+*.ogg binary
+*.glb binary

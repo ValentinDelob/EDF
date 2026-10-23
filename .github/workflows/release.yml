@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version a publier (ex. v0.1.2). Le tag est cree s'il n'existe pas."
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows release
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Resolve tag
+        id: tag
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { $env:INPUT_VERSION } else { "${{ github.ref_name }}" }
+          $tag = $tag.Trim()
+          if (-not $tag.StartsWith("v")) { $tag = "v$tag" }
+          if ($tag -notmatch '^v\d+\.\d+\.\d+([-.+][0-9A-Za-z.-]+)?$') { throw "Tag invalide: $tag" }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Godot build
+        uses: ./.github/actions/godot-build
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $zip = "Rempart-${{ steps.tag.outputs.tag }}-windows.zip"
+          Compress-Archive -Path build/windows/* -DestinationPath $zip -Force
+          Get-Item $zip | Select-Object Name, Length
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Rempart ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
+          files: Rempart-${{ steps.tag.outputs.tag }}-windows.zip
+          fail_on_unmatched_files: true

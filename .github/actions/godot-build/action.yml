@@ -1,0 +1,108 @@
+name: Godot .NET build (Windows)
+description: Installe Godot .NET + templates d'export (avec cache), puis exporte le preset "Windows Desktop" via tools/build.ps1.
+
+inputs:
+  godot-version:
+    description: Version de Godot (sans suffixe), ex. 4.7.2
+    required: false
+    default: "4.7.2"
+  godot-status:
+    description: Statut de la release Godot (stable, rc1, ...)
+    required: false
+    default: "stable"
+  dotnet-version:
+    description: Version du SDK .NET
+    required: false
+    default: "8.0.x"
+  debug:
+    description: "true pour --export-debug au lieu de --export-release"
+    required: false
+    default: "false"
+
+outputs:
+  exe-path:
+    description: Chemin de l'executable exporte
+    value: ${{ steps.export.outputs.exe-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          nuget-${{ runner.os }}-
+
+    - name: Compute Godot paths
+      id: paths
+      shell: pwsh
+      run: |
+        $tag  = "${{ inputs.godot-version }}-${{ inputs.godot-status }}"
+        $name = "Godot_v${tag}_mono_win64"
+        $root = Join-Path "${{ runner.temp }}" "godot-$tag-mono"
+        "tag=$tag"   >> $env:GITHUB_OUTPUT
+        "name=$name" >> $env:GITHUB_OUTPUT
+        "root=$root" >> $env:GITHUB_OUTPUT
+        "exe=$(Join-Path $root "$name/${name}_console.exe")" >> $env:GITHUB_OUTPUT
+        "templates=$(Join-Path $root 'templates')" >> $env:GITHUB_OUTPUT
+
+    - name: Cache Godot + export templates
+      id: cache-godot
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.paths.outputs.root }}
+        key: godot-${{ steps.paths.outputs.tag }}-mono-win64-v1
+
+    - name: Download Godot + export templates
+      if: steps.cache-godot.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop"
+        $ProgressPreference = "SilentlyContinue"
+        $tag  = "${{ steps.paths.outputs.tag }}"
+        $root = "${{ steps.paths.outputs.root }}"
+        $base = "https://github.com/godotengine/godot/releases/download/$tag"
+        New-Item -ItemType Directory -Force -Path $root | Out-Null
+
+        $zip = Join-Path $env:RUNNER_TEMP "godot.zip"
+        Invoke-WebRequest "$base/Godot_v${tag}_mono_win64.zip" -OutFile $zip
+        Expand-Archive $zip -DestinationPath $root -Force
+
+        # Le .tpz est un zip contenant un dossier "templates/"
+        $tpz = Join-Path $env:RUNNER_TEMP "templates.zip"
+        Invoke-WebRequest "$base/Godot_v${tag}_mono_export_templates.tpz" -OutFile $tpz
+        Expand-Archive $tpz -DestinationPath $root -Force
+
+        Get-ChildItem $root
+
+    - name: Install export templates
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = "Stop"
+        $version = "${{ inputs.godot-version }}.${{ inputs.godot-status }}.mono"
+        $dest = Join-Path $env:APPDATA "Godot/export_templates/$version"
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        Copy-Item -Path (Join-Path "${{ steps.paths.outputs.templates }}" "*") -Destination $dest -Recurse -Force
+        Get-ChildItem $dest | Select-Object -First 20 Name
+
+    - name: Import, build C# and export
+      id: export
+      shell: pwsh
+      env:
+        GODOT_MONO: ${{ steps.paths.outputs.exe }}
+      run: |
+        $ErrorActionPreference = "Stop"
+        if ("${{ inputs.debug }}" -eq "true") {
+          ./tools/build.ps1 -Debug
+        } else {
+          ./tools/build.ps1
+        }
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        "exe-path=build/windows/Rempart.exe" >> $env:GITHUB_OUTPUT
