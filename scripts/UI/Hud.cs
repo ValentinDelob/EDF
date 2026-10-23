@@ -429,9 +429,9 @@ void fragment() {
         else if (ws != null)
         {
             _wName.Text = ws.W.T.Name;
-            _wSub.Text = $"{Rarities.Names[(int)ws.W.Rarity]} · Nv.{ws.W.Level}";
-            _wSub.AddThemeColorOverride("font_color", Rarities.Colors[(int)ws.W.Rarity]);
-            _wRarity.Color = Rarities.Colors[(int)ws.W.Rarity];
+            _wSub.Text = $"Nv.{ws.W.Level} · ☆{ws.W.TotalStars}";
+            _wSub.AddThemeColorOverride("font_color", UiKit.Muted);
+            _wRarity.Color = UiKit.Good;
             if (ws.W.T.Kind == WeaponKind.Beam) { _wAmmo.Text = $"{Mathf.RoundToInt(ws.BeamCharge * 100)}"; _wMag.Text = "%"; }
             else if (ws.W.Magazine <= 1) { _wAmmo.Text = ws.Reloading ? "—" : "1"; _wMag.Text = ws.Reloading ? "RECHARGE" : "PRÊT"; }
             else { _wAmmo.Text = $"{ws.Ammo}"; _wMag.Text = $"/ {ws.W.Magazine}"; }

@@ -8,7 +8,9 @@ namespace Rempart;
 
 public class ProfileData
 {
-    public int Version { get; set; } = 1;
+    /// <summary>1 : rareté + 5 étoiles (1..5) ; 2 : étoiles par caractéristique (0..MaxStars), sans rareté.</summary>
+    public const int CurrentVersion = 2;
+    public int Version { get; set; } = CurrentVersion;
     public SoldierClass SelectedClass { get; set; } = SoldierClass.Rifleman;
     public Dictionary<string, float> ArmorBonus { get; set; } = new();
     public List<WeaponInstance> Arsenal { get; set; } = new();
@@ -112,25 +114,22 @@ public partial class Profile : Node
         Save();
     }
 
-    /// <summary>Ajoute une arme ; si le modèle est déjà possédé à un niveau égal ou supérieur, améliore une étoile.</summary>
-    public (WeaponInstance weapon, bool upgraded, int statIndex) Grant(WeaponInstance w, RandomNumberGenerator rng)
+    /// <summary>
+    /// Ajoute une arme trouvée à l'arsenal. Seul cas écarté : un doublon strict (même modèle, niveau et étoiles
+    /// inférieurs ou égaux à un exemplaire déjà possédé) ; il est converti en quelques crédits et signalé comme doublon.
+    /// </summary>
+    public (WeaponInstance weapon, bool duplicate) Grant(WeaponInstance w)
     {
-        var dup = Data.Arsenal.FirstOrDefault(x => x.TemplateId == w.TemplateId && x.Level >= w.Level && x.Rarity >= w.Rarity);
+        var dup = Data.Arsenal.FirstOrDefault(x => x.TemplateId == w.TemplateId && x.Level >= w.Level
+            && Enum.GetValues<WeaponStat>().All(s => x.StarsOf(s) >= w.StarsOf(s)));
         if (dup != null)
         {
-            var candidates = Enumerable.Range(0, 5).Where(i => dup.Stars[i] < 5).ToList();
-            if (candidates.Count > 0)
-            {
-                var stat = candidates[rng.RandiRange(0, candidates.Count - 1)];
-                dup.Stars[stat]++;
-                return (dup, true, stat);
-            }
-            Data.Credits += 200 + w.Level * 10;
-            return (dup, true, -1);
+            Data.Credits += 100 + w.Level * 5;
+            return (w, true);
         }
         w.IsNew = true;
         Data.Arsenal.Add(w);
-        return (w, false, -1);
+        return (w, false);
     }
 
     public bool IsCleared(int mission, Difficulty d) => Data.Cleared.TryGetValue($"{mission}:{(int)d}", out var n) && n > 0;
@@ -176,7 +175,28 @@ public partial class Profile : Node
                 Data = new ProfileData();
             }
         }
+        Migrate();
         EnsureStarterWeapons();
+    }
+
+    /// <summary>Mise à niveau d'un profil ancien : la rareté et les étoiles 1..5 deviennent des étoiles 0..MaxStars par caractéristique.</summary>
+    private void Migrate()
+    {
+        Data.Arsenal.RemoveAll(w => w == null);
+        if (Data.Version < 2)
+            foreach (var w in Data.Arsenal) w.MigrateLegacy();
+        foreach (var w in Data.Arsenal)
+        {
+            w.LegacyRarity = null;
+            if (w.Stars == null || w.Stars.Length != WeaponInstance.StatCount)
+            {
+                var s = new int[WeaponInstance.StatCount];
+                if (w.Stars != null) Array.Copy(w.Stars, s, Math.Min(s.Length, w.Stars.Length));
+                w.Stars = s;
+            }
+            for (var i = 0; i < w.Stars.Length; i++) w.Stars[i] = Math.Clamp(w.Stars[i], 0, WeaponInstance.MaxStars);
+        }
+        Data.Version = ProfileData.CurrentVersion;
     }
 
     private void EnsureStarterWeapons()
@@ -185,7 +205,7 @@ public partial class Profile : Node
         {
             foreach (var id in ids)
                 if (!Data.Arsenal.Any(w => w.TemplateId == id))
-                    Data.Arsenal.Add(new WeaponInstance { TemplateId = id, Level = 0, Rarity = Rarity.Standard });
+                    Data.Arsenal.Add(new WeaponInstance { TemplateId = id, Level = 0 });
             if (!Data.Equipped.ContainsKey(cls.ToString()))
                 Data.Equipped[cls.ToString()] = ids.Select(id => Data.Arsenal.First(w => w.TemplateId == id).Uid).ToList();
         }
@@ -211,20 +231,37 @@ public static class Loot
         var pool = Weapons.ForClass(c).Where(t => t.MinLevel <= level).ToList();
         var t = pool[rng.RandiRange(0, pool.Count - 1)];
 
-        var total = Rarities.DropWeight.Sum();
-        var r = rng.Randf() * total;
-        var rarity = Rarity.Standard;
-        for (var i = 0; i < Rarities.DropWeight.Length; i++)
-        {
-            r -= Rarities.DropWeight[i];
-            if (r <= 0) { rarity = (Rarity)i; break; }
-        }
-        pity++;
-        if (pity >= 40 && rarity < Rarity.Elite) rarity = Rarity.Elite;
-        if (rarity >= Rarity.Elite) pity = 0;
+        var w = new WeaponInstance { TemplateId = t.Id, Level = level, Stars = RollStars(t, d, level, rng) };
 
-        var stars = new int[5];
-        for (var i = 0; i < 5; i++) stars[i] = Mathf.Clamp(rng.RandiRange(1, 3) + (rarity >= Rarity.Prototype ? 1 : 0), 1, 5);
-        return new WeaponInstance { TemplateId = t.Id, Level = level, Rarity = rarity, Stars = stars };
+        // Garantie : sans caractéristique au maximum depuis 30 armes, la suivante en reçoit une.
+        pity++;
+        var stats = Enum.GetValues<WeaponStat>().Where(s => WeaponInstance.HasStat(t, s)).ToList();
+        if (pity >= 30 && !stats.Any(s => w.StarsOf(s) >= WeaponInstance.MaxStars))
+            w.Stars[(int)stats[rng.RandiRange(0, stats.Count - 1)]] = WeaponInstance.MaxStars;
+        if (stats.Any(s => w.StarsOf(s) >= WeaponInstance.MaxStars)) pity = 0;
+        return w;
+    }
+
+    /// <summary>
+    /// Chance qu'une étoile donnée soit obtenue : grandit avec la difficulté et le niveau de l'arme
+    /// (≈ 0,15 en Facile au niveau 0, ≈ 0,7 en Inferno au niveau 100).
+    /// </summary>
+    public static float StarChance(Difficulty d, int level) =>
+        Mathf.Clamp(0.15f + 0.09f * (int)d + 0.0019f * level, 0.05f, 0.9f);
+
+    /// <summary>Tire les étoiles de chaque caractéristique utile : MaxStars essais indépendants (loi binomiale).</summary>
+    public static int[] RollStars(WeaponTemplate t, Difficulty d, int level, RandomNumberGenerator rng)
+    {
+        var p = StarChance(d, level);
+        var stars = new int[WeaponInstance.StatCount];
+        foreach (var s in Enum.GetValues<WeaponStat>())
+        {
+            if (!WeaponInstance.HasStat(t, s)) continue;
+            var n = 0;
+            for (var k = 0; k < WeaponInstance.MaxStars; k++)
+                if (rng.Randf() < p) n++;
+            stars[(int)s] = n;
+        }
+        return stars;
     }
 }

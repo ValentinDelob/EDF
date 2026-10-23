@@ -14,7 +14,8 @@ public class MissionReport
     public int CreditsGained;
     public int[] Crates = new int[4];
     public int AutoCollected;
-    public readonly List<(WeaponInstance weapon, bool upgraded, int stat)> Weapons = new();
+    /// <summary>Armes trouvées ; duplicate = doublon strict converti en crédits.</summary>
+    public readonly List<(WeaponInstance weapon, bool duplicate)> Weapons = new();
     public string MissionName;
     public int XpGained;
     public List<(string name, string cls, int kills, bool downed, bool me)> Squad = new();
@@ -64,7 +65,7 @@ public class MissionReport
         for (var i = 0; i < r.Crates[(int)CrateType.Weapon]; i++)
         {
             var wpn = Loot.RollWeapon(cls, w.Difficulty, progress, rng2, ref pity);
-            r.Weapons.Add(profile.Grant(wpn, rng2));
+            r.Weapons.Add(profile.Grant(wpn));
         }
         profile.Data.PityCounter = pity;
         // Expérience de classe : éliminations de l'équipe + bonus de victoire, selon la difficulté.
@@ -77,8 +78,8 @@ public class MissionReport
         profile.Data.MissionsPlayed++;
         if (success) profile.MarkCleared(w.Mission.Index, w.Difficulty);
         profile.Save();
-        // Les plus rares en dernier pour la révélation.
-        r.Weapons.Sort((a, b) => a.weapon.Rarity.CompareTo(b.weapon.Rarity));
+        // Les plus étoilées en dernier pour la révélation.
+        r.Weapons.Sort((a, b) => (a.weapon.TotalStars * 1000 + a.weapon.Level).CompareTo(b.weapon.TotalStars * 1000 + b.weapon.Level));
         return r;
     }
 }

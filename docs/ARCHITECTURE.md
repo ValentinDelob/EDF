@@ -7,7 +7,7 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 | Dossier | Rôle |
 | --- | --- |
 | `scripts/App.cs` | Racine : navigation entre écrans, lancement des missions, options de test (`AutoTest`). |
-| `scripts/Core/` | Autoloads `Settings` (touches, souris, vidéo, audio) et `Profile` (armure, armes, niveaux, sauvegarde JSON). |
+| `scripts/Core/` | Autoloads `Settings` (touches, souris, vidéo, audio) et `Profile` (armure, armes, niveaux, sauvegarde JSON versionnée). |
 | `scripts/Data/` | Données de jeu : classes, armes, ennemis, difficultés, missions et vagues. |
 | `scripts/Net/Net.cs` | Autoload réseau : salon LAN (ENet), découverte UDP, toutes les RPC de jeu. |
 | `scripts/World/` | Mission en cours : `World`, génération de la ville, champ de flux, directeur de mission, caisses, alliés, bilan. |
@@ -57,6 +57,16 @@ Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni 
 - `Stepper` : sélecteur « ‹ valeur › » focalisable (gauche/droite changent la valeur, Entrée fait défiler).
 - Focus : chaque écran donne le focus à son premier élément actionnable ; après reconstruction d'une liste, `SetFocusKey` / `RestoreFocus` (dans `MenuScreen`) rendent le focus au même élément.
 
+## Armes et progression
+
+- **Modèle** (`WeaponTemplate`, `Weapons.All`) : valeurs de base au niveau 0, sans étoile. La **catégorie** (`Category`) est le *type d'arme* : l'arsenal affiche une colonne par type de la classe (`Weapons.CategoriesFor`, intitulés pluriels `Weapons.CategoryTitle`).
+- **Exemplaire possédé** (`WeaponInstance`) : modèle + **niveau** (0 à 100) + **étoiles par caractéristique** `Stars[WeaponStat]` (dégâts, cadence, chargeur, rechargement, précision, portée). Chaque caractéristique va de 0 (minimum : valeur du modèle au niveau de l'arme) à `WeaponInstance.MaxStars` (constante unique, 5). Chaque étoile ajoute un bonus chiffré, toujours favorable (`DamagePerStar`… : +6 % de dégâts, +4 % de cadence, +8 % de chargeur (au moins +1), −7 % de rechargement, −10 % de dispersion, +5 % de portée). `HasStat` dit quelles caractéristiques ont un sens pour un modèle (pas de cadence pour une balise, etc.) ; `Describe(stat)` renvoie la valeur et le bonus affichés (« 46 » et « +10 »).
+- **Aucune rareté, aucun recyclage, aucune amélioration** : la progression vient du niveau et des étoiles tirés au butin. Les crédits restent un simple compteur (caisses jaunes, doublons).
+- **Butin** (`Loot.RollWeapon`, fin de mission dans `MissionReport.Build`) : niveau selon la difficulté et l'avancement, puis pour chaque caractéristique utile `MaxStars` tirages indépendants de probabilité `Loot.StarChance(difficulté, niveau)` (≈ 0,15 en Facile au niveau 0 → ≈ 0,7 en Inferno au niveau 100). Garantie : au bout de 30 armes sans caractéristique au maximum, la suivante en reçoit une. `Profile.Grant` ajoute l'arme ; seul un doublon strict (même modèle, niveau et étoiles inférieurs ou égaux) est converti en crédits.
+- **Sauvegarde** (`user://profile.json`, `ProfileData.Version` = 2) : migration automatique des profils version 1 (rareté + 5 étoiles de 1 à 5) dans `Profile.Migrate` → `WeaponInstance.MigrateLegacy` : étoile − 2 + bonus de rareté (Standard/Renforcée 0, Élite/Prototype +1, Légendaire +2), bornée à 0..5 puis ramenée à l'échelle de `MaxStars` ; la portée prend la moyenne des anciennes étoiles. Les tableaux d'étoiles de mauvaise longueur sont complétés et bornés (changer `MaxStars` ne casse pas un profil).
+- **Réseau** : aucun exemplaire d'arme ne circule ; chaque joueur tire avec ses propres armes et n'envoie que l'indice de l'arme tenue (`PlayerState`) et les dégâts infligés. Le format LAN est inchangé.
+- **Arsenal** (`ArsenalMenu`, maquette `docs/maquettes/project/E-Arsenal.dc.html`) : tableau du haut (une colonne par type, colonnes Lv et ☆ = somme des étoiles), armes équipées assombries avec l'étiquette « ÉQUIPÉE n » (non équipables une seconde fois), noms trop longs en bandeau défilant ; panneau du bas (description, lignes « (☆n) Nom : valeur (+bonus) ») ; soldat et carte d'équipement à droite ; aides de touches (Entrée équiper, Échap retour, Q/E emplacement visé, Tab classe). Navigation clavier/manette par le focus Godot (voisins explicites entre colonnes). Dessin autonome provisoire : `ArsenalEStyle.cs` (palette, polices Share Tech Mono / Saira Condensed, `Pen` qui dessine dans l'espace 1280 × 720 de la maquette à l'échelle de l'écran, fond animé `ArsenalEBackground`) et `ArsenalESoldier.cs` (silhouette SVG) — à remplacer par le kit commun.
+
 ## Ajouter du contenu
 
 - **Une arme** : une ligne dans `Weapons.All` (`scripts/Data/GameData.cs`). Le comportement dépend de `WeaponKind` et de la catégorie (modèle tenu, projectile, son).
@@ -80,6 +90,7 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--showcase[=big]` | Vitrine des ennemis, IA figée. |
 | `--end-after=N` | Termine la mission avec du butin fictif (test du bilan). |
 | `--menu-shots` | Captures de tous les menus. |
+| `--menu-shots=arsenal` | Profil de test garni d'armes de toutes les classes, puis captures de l'arsenal (navigation, équipement, changement de classe). |
 
 Les lancements de test utilisent un profil séparé (`profile_test.json`). Le script `tools/shots.sh` enchaîne compilation et captures dans `build/shots`.
 

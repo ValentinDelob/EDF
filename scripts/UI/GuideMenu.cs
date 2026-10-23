@@ -121,9 +121,9 @@ public partial class GuideMenu : MenuScreen
         Section("Caisses");
         Para("Rouge : arme · vert : armure (points de vie maximum permanents) · rose : soin immédiat · jaune : crédits. Les caisses proches sont attirées vers vous. Attention aux charognards : ils avalent les caisses au sol, tuez-les pour les récupérer.");
         Section("Armes");
-        Para("Chaque arme a un niveau (0 à 100), une rareté (Standard, Renforcée, Élite, Prototype, Légendaire) et des étoiles par statistique. Un doublon ajoute une étoile à l'arme déjà possédée. Plus la difficulté est élevée, plus les armes trouvées sont puissantes.");
+        Para($"Chaque arme a un niveau (0 à 100) et, pour chaque caractéristique (dégâts, cadence, chargeur, rechargement, précision, portée), de 0 à {WeaponInstance.MaxStars} étoiles : chaque étoile ajoute un bonus. Plus la difficulté et le niveau sont élevés, plus les armes trouvées ont d'étoiles.");
         Section("Progression");
-        Para("L'armure ramassée s'ajoute définitivement à la classe jouée. L'expérience fait monter la classe de niveau : +1 % de dégâts et +3 PV par niveau. Les crédits servent à améliorer les armes dans l'arsenal.");
+        Para("L'armure ramassée s'ajoute définitivement à la classe jouée. L'expérience fait monter la classe de niveau : +1 % de dégâts et +3 PV par niveau.");
         Section("Échec");
         Para("En cas d'échec, les armes ramassées sont conservées et l'armure est réduite de moitié ; les crédits sont perdus.");
     }

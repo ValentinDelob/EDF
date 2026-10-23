@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Godot;
 
 namespace Rempart;
@@ -43,20 +44,10 @@ public static class Classes
 
 public enum WeaponKind { Hitscan, Projectile, Beam, Melee, Airstrike, Turret, HealField }
 
-public enum Rarity { Standard = 0, Reinforced = 1, Elite = 2, Prototype = 3, Legendary = 4 }
+/// <summary>Caractéristiques d'une arme qui portent des étoiles (0 = minimum, <see cref="WeaponInstance.MaxStars"/> = maximum).</summary>
+public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5 }
 
-public static class Rarities
-{
-    public static readonly string[] Names = { "Standard", "Renforcée", "Élite", "Prototype", "Légendaire" };
-    public static readonly float[] Multiplier = { 1.0f, 1.08f, 1.16f, 1.25f, 1.35f };
-    public static readonly float[] DropWeight = { 55f, 28f, 12f, 4.5f, 0.5f };
-    public static readonly Color[] Colors =
-    {
-        new("c9ced3"), new("5bd16e"), new("3fa2ff"), new("b067ff"), new("ffc233"),
-    };
-}
-
-/// <summary>Modèle d'arme : valeurs de base au niveau 0, qualité 3 étoiles, rareté Standard.</summary>
+/// <summary>Modèle d'arme : valeurs de base au niveau 0, sans étoile.</summary>
 public record WeaponTemplate(
     string Id,
     string Name,
@@ -122,6 +113,49 @@ public static class Weapons
 
     public static WeaponTemplate Get(string id) => All.FirstOrDefault(w => w.Id == id) ?? All[0];
 
+    /// <summary>Types d'arme (catégories) d'une classe, dans l'ordre des données : une colonne par type dans l'arsenal.</summary>
+    public static List<string> CategoriesFor(SoldierClass c) => ForClass(c).Select(t => t.Category).Distinct().ToList();
+
+    /// <summary>Intitulé de colonne (pluriel) d'un type d'arme.</summary>
+    public static string CategoryTitle(string category) => category switch
+    {
+        "Fusil d'assaut" => "Fusils d'assaut",
+        "Fusil à pompe" => "Fusils à pompe",
+        "Fusil de précision" => "Précision",
+        "Lance-roquettes" => "Lance-roquettes",
+        "Lance-grenades" => "Lance-grenades",
+        "Laser à rayon" => "Lasers",
+        "Lance électrique" => "Électriques",
+        "Canon à plasma" => "Plasma",
+        "Fusil à particules" => "Particules",
+        "Arme de défense" => "Défense",
+        "Frappe d'artillerie" => "Artillerie",
+        "Tourelle automatique" => "Tourelles",
+        "Champ de soin" => "Soins",
+        "Bombardement en ligne" => "Bombardements",
+        "Mitrailleuse rotative" => "Mitrailleuses",
+        "Canon de siège" => "Canons de siège",
+        "Marteau à énergie" => "Marteaux",
+        "Lance-missiles" => "Lance-missiles",
+        _ => category,
+    };
+
+    /// <summary>Courte description d'usage selon la nature de l'arme (panneau de l'arsenal).</summary>
+    public static string Usage(WeaponTemplate t) => t.Kind switch
+    {
+        WeaponKind.Hitscan when t.Pellets > 1 => $"Tire une gerbe de {t.Pellets} projectiles, redoutable à courte portée.",
+        WeaponKind.Hitscan when t.Zoom > 1 => "Tir de précision à longue portée, visée zoomée.",
+        WeaponKind.Hitscan => t.Automatic ? "Tir automatique à impact immédiat." : "Tir coup par coup à impact immédiat.",
+        WeaponKind.Projectile when t.BlastRadius > 0 => $"Projectiles explosifs (rayon {t.BlastRadius:0} m).",
+        WeaponKind.Projectile => "Projectiles à trajectoire.",
+        WeaponKind.Beam => "Rayon continu alimenté par le réacteur.",
+        WeaponKind.Melee => "Arme de corps à corps à onde de choc.",
+        WeaponKind.Airstrike => "Balise : appelle une frappe sur la zone visée.",
+        WeaponKind.Turret => "Déploie une tourelle qui tire seule sur les ennemis.",
+        WeaponKind.HealField => "Déploie un champ qui soigne les alliés.",
+        _ => "",
+    };
+
     public static IEnumerable<WeaponTemplate> ForClass(SoldierClass c) => All.Where(w => w.Class == c);
 
     public static readonly Dictionary<SoldierClass, string[]> StarterLoadout = new()
@@ -133,34 +167,85 @@ public static class Weapons
     };
 }
 
-/// <summary>Arme possédée par le joueur : modèle + niveau + rareté + étoiles par statistique.</summary>
+/// <summary>
+/// Arme possédée par le joueur : modèle + niveau + étoiles par caractéristique (aucune rareté).
+/// Chaque caractéristique a de 0 (minimum : valeur du modèle au niveau de l'arme) à <see cref="MaxStars"/> étoiles ;
+/// chaque étoile ajoute un bonus chiffré, toujours favorable.
+/// </summary>
 public class WeaponInstance
 {
+    /// <summary>Nombre maximal d'étoiles par caractéristique (réglage unique).</summary>
+    public const int MaxStars = 5;
+    public static readonly int StatCount = Enum.GetValues<WeaponStat>().Length;
+
     public string Uid { get; set; } = Guid.NewGuid().ToString("N")[..10];
     public string TemplateId { get; set; } = "fa21";
     public int Level { get; set; }
-    public Rarity Rarity { get; set; }
-    /// <summary>Étoiles (1..5) : dégâts, cadence, chargeur, rechargement, précision.</summary>
-    public int[] Stars { get; set; } = { 3, 3, 3, 3, 3 };
+    /// <summary>Étoiles par caractéristique, indexées par <see cref="WeaponStat"/> (0..MaxStars).</summary>
+    public int[] Stars { get; set; } = new int[StatCount];
     public bool IsNew { get; set; }
 
-    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision" };
+    /// <summary>Anciennes sauvegardes (version 1) : rareté 0..4, lue uniquement pour la migration.</summary>
+    [JsonPropertyName("Rarity")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LegacyRarity { get; set; }
 
-    public WeaponTemplate T => Weapons.Get(TemplateId);
+    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée" };
 
-    private float Q(int i) => 0.8f + 0.1f * Mathf.Clamp(Stars[i], 1, 5);
+    // Bonus par étoile (relatifs à la valeur sans étoile au niveau de l'arme).
+    public const float DamagePerStar = 0.06f;
+    public const float FireRatePerStar = 0.04f;
+    public const float MagazinePerStar = 0.08f;
+    public const float ReloadPerStar = 0.07f;
+    public const float AccuracyPerStar = 0.10f;
+    public const float RangePerStar = 0.05f;
+
+    [JsonIgnore] public WeaponTemplate T => Weapons.Get(TemplateId);
+
+    /// <summary>Étoiles d'une caractéristique, bornées (une sauvegarde ou un MaxStars modifié restent valides).</summary>
+    public int StarsOf(WeaponStat s)
+    {
+        var i = (int)s;
+        return Stars != null && i < Stars.Length ? Math.Clamp(Stars[i], 0, MaxStars) : 0;
+    }
+
+    /// <summary>La caractéristique a-t-elle un sens pour ce modèle (sinon ni étoile ni ligne affichée) ?</summary>
+    public static bool HasStat(WeaponTemplate t, WeaponStat s) => s switch
+    {
+        WeaponStat.Damage => true,
+        WeaponStat.FireRate => t.Kind is WeaponKind.Hitscan or WeaponKind.Projectile,
+        WeaponStat.Magazine => t.Kind is WeaponKind.Hitscan or WeaponKind.Projectile && t.Magazine > 1,
+        WeaponStat.Reload => true,
+        WeaponStat.Accuracy => t.Kind is WeaponKind.Hitscan or WeaponKind.Projectile && t.Spread > 0,
+        WeaponStat.Range => t.Kind is WeaponKind.Hitscan or WeaponKind.Projectile or WeaponKind.Beam or WeaponKind.Turret,
+        _ => false,
+    };
+
+    public bool HasStat(WeaponStat s) => HasStat(T, s);
+
     private float LevelMul => 1f + 0.05f * Level;
-    private float RarityMul => Rarities.Multiplier[(int)Rarity];
 
-    public float Damage => T.Damage * LevelMul * RarityMul * Q(0);
-    public float FireRate => T.FireRate * (1f + 0.25f * (Q(1) - 1.1f)) * (1f + 0.004f * Level);
-    public int Magazine => Math.Max(1, (int)MathF.Round(T.Magazine * (T.Magazine > 1 ? Q(2) / 1.1f : 1f)));
-    public float Reload => T.Reload / (Q(3) / 1.1f) / (1f + 0.003f * Level);
-    public float Spread => T.Spread / (Q(4) / 1.1f);
-    public float Range => T.Range * (1f + 0.002f * Level);
-    public float BlastRadius => T.BlastRadius * (1f + 0.003f * Level);
+    // Valeurs avec un nombre d'étoiles donné (stars = null : étoiles de l'arme).
+    private float DamageAt(int s) => T.Damage * LevelMul * (1f + DamagePerStar * s);
+    private float FireRateAt(int s) => T.FireRate * (1f + 0.004f * Level) * (1f + FireRatePerStar * s);
+    private int MagazineAt(int s) => T.Magazine <= 1 ? Math.Max(1, T.Magazine)
+        : T.Magazine + Math.Max(s, (int)MathF.Round(T.Magazine * MagazinePerStar * s));
+    private float ReloadAt(int s) => T.Reload / (1f + 0.003f * Level) / (1f + ReloadPerStar * s);
+    private float SpreadAt(int s) => T.Spread / (1f + AccuracyPerStar * s);
+    private float RangeAt(int s) => T.Range * (1f + 0.002f * Level) * (1f + RangePerStar * s);
 
-    public float Dps
+    [JsonIgnore] public float Damage => DamageAt(StarsOf(WeaponStat.Damage));
+    [JsonIgnore] public float FireRate => FireRateAt(StarsOf(WeaponStat.FireRate));
+    [JsonIgnore] public int Magazine => MagazineAt(StarsOf(WeaponStat.Magazine));
+    [JsonIgnore] public float Reload => ReloadAt(StarsOf(WeaponStat.Reload));
+    [JsonIgnore] public float Spread => SpreadAt(StarsOf(WeaponStat.Accuracy));
+    [JsonIgnore] public float Range => RangeAt(StarsOf(WeaponStat.Range));
+    [JsonIgnore] public float BlastRadius => T.BlastRadius * (1f + 0.003f * Level);
+
+    /// <summary>Indice de précision affiché (100 = tir parfaitement droit).</summary>
+    public static float AccuracyScore(float spread) => 100f / (1f + spread * 0.5f);
+
+    [JsonIgnore] public float Dps
     {
         get
         {
@@ -171,9 +256,64 @@ public class WeaponInstance
         }
     }
 
-    public string DisplayName => $"{T.Name}  Nv.{Level}";
+    [JsonIgnore] public string DisplayName => $"{T.Name}  Nv.{Level}";
 
-    public int TotalStars => Stars.Sum();
+    /// <summary>Somme des étoiles des caractéristiques utiles (colonne ☆ de l'arsenal).</summary>
+    [JsonIgnore] public int TotalStars => Enum.GetValues<WeaponStat>().Where(HasStat).Sum(StarsOf);
+
+    /// <summary>Somme maximale possible pour ce modèle.</summary>
+    [JsonIgnore] public int MaxTotalStars => Enum.GetValues<WeaponStat>().Count(HasStat) * MaxStars;
+
+    private static string Fr(float v, string fmt) => v.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
+
+    /// <summary>Texte affiché d'une caractéristique : valeur actuelle et bonus apporté par ses étoiles (« (+10) »), toujours favorable.</summary>
+    public (string value, string bonus) Describe(WeaponStat s)
+    {
+        var n = StarsOf(s);
+        switch (s)
+        {
+            case WeaponStat.Damage:
+            {
+                var pel = T.Pellets > 1 && T.Kind is WeaponKind.Hitscan or WeaponKind.Projectile ? $" ×{T.Pellets}" : "";
+                return ($"{Fr(Damage, "0")}{pel}", $"+{Fr(Damage - DamageAt(0), "0")}");
+            }
+            case WeaponStat.FireRate:
+                return ($"{Fr(FireRate * 60f, "0")}/min", $"+{Fr((FireRate - FireRateAt(0)) * 60f, "0")}/min");
+            case WeaponStat.Magazine:
+                return ($"{Magazine}", $"+{Magazine - MagazineAt(0)}");
+            case WeaponStat.Reload:
+            {
+                var fmt = Reload >= 10 ? "0" : "0.0";
+                return ($"{Fr(Reload, fmt)} s", $"−{Fr(ReloadAt(0) - Reload, fmt)} s");
+            }
+            case WeaponStat.Accuracy:
+                return ($"{Fr(AccuracyScore(Spread), "0")}", $"+{Fr(AccuracyScore(Spread) - AccuracyScore(SpreadAt(0)), "0")}");
+            case WeaponStat.Range:
+                return ($"{Fr(Range, "0")} m", $"+{Fr(Range - RangeAt(0), "0")} m");
+        }
+        return ("", "");
+    }
+
+    /// <summary>
+    /// Migration d'une arme d'ancienne sauvegarde (rareté + 5 étoiles de 1 à 5, 3 = moyenne) vers les étoiles 0..MaxStars
+    /// par caractéristique. La rareté devient des étoiles supplémentaires (0, 0, +1, +1, +2) ; la portée, absente,
+    /// reprend la moyenne des anciennes étoiles.
+    /// </summary>
+    public void MigrateLegacy()
+    {
+        var old = Stars ?? Array.Empty<int>();
+        var rarity = Math.Clamp(LegacyRarity ?? 0, 0, 4);
+        var bonus = rarity switch { 0 or 1 => 0, 2 or 3 => 1, _ => 2 };
+        int Conv(int s) => (int)MathF.Round(Math.Clamp(s - 2 + bonus, 0, 5) * MaxStars / 5f);
+        var avg = old.Length > 0 ? (int)MathF.Round((float)old.Average()) : 3;
+        var stars = new int[StatCount];
+        for (var i = 0; i < StatCount; i++)
+            stars[i] = i < 5 ? Conv(i < old.Length ? old[i] : 3) : Conv(avg);
+        for (var i = 0; i < StatCount; i++)
+            if (!HasStat(T, (WeaponStat)i)) stars[i] = 0;
+        Stars = stars;
+        LegacyRarity = null;
+    }
 }
 
 public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede }

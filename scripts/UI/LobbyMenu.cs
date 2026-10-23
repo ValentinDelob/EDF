@@ -221,7 +221,7 @@ public partial class LobbyMenu : MenuScreen
             h.MouseFilter = MouseFilterEnum.Ignore;
             UiKit.FillRect(h);
             h.OffsetLeft = 18; h.OffsetRight = -18;
-            h.AddChild(new ColorRect { Color = Rarities.Colors[(int)w.Rarity], CustomMinimumSize = new Vector2(3, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            h.AddChild(new ColorRect { Color = UiKit.Good, CustomMinimumSize = new Vector2(3, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
             var info = UiKit.VBox(0);
             info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
