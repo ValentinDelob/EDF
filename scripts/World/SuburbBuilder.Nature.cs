@@ -341,7 +341,7 @@ public static partial class SuburbBuilder
             var cz = Mathf.FloorToInt(p.Z / Cell);
             var item = (new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), p), tint);
             Put(_near, (kind, cx, cz), item);
-            Put(_far, (kind < 4 ? 0 : 4, cx, cz), item);
+            Put(_far, (kind < 4 ? 0 : 4 + kind % 2, cx, cz), item); // feuillus lointains : vivants (4) ou morts (5)
         }
 
         private static void Put(Dictionary<(int, int, int), List<(Transform3D, Color)>> d, (int, int, int) key, (Transform3D, Color) item)
@@ -358,7 +358,7 @@ public static partial class SuburbBuilder
                 var origin = new Vector3((key.cx + 0.5f) * Cell, 0, (key.cz + 0.5f) * Cell);
                 var conifer = key.kind < 4;
                 var v = key.kind % 4;
-                var mesh = conifer ? far ? Props.ConiferFar(0) : Props.Conifer(v) : far ? Props.BroadleafFar(0) : Props.Broadleaf(v);
+                var mesh = conifer ? far ? Props.ConiferFar(0) : Props.Conifer(v) : far ? Props.BroadleafFar(v) : Props.Broadleaf(v);
                 var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh, InstanceCount = list.Count };
                 for (var i = 0; i < list.Count; i++)
                 {

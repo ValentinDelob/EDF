@@ -417,14 +417,15 @@ public static class CityBuilder
 
     private static readonly Color[] CarColors =
     {
-        new(0.7f, 0.7f, 0.72f), new(0.08f, 0.08f, 0.09f), new(0.55f, 0.08f, 0.06f), new(0.12f, 0.2f, 0.4f),
-        new(0.85f, 0.85f, 0.83f), new(0.25f, 0.27f, 0.28f), new(0.4f, 0.35f, 0.2f),
+        new(0.5f, 0.5f, 0.51f), new(0.08f, 0.08f, 0.085f), new(0.33f, 0.13f, 0.11f), new(0.15f, 0.18f, 0.24f),
+        new(0.6f, 0.6f, 0.58f), new(0.22f, 0.23f, 0.24f), new(0.3f, 0.28f, 0.2f),
     };
 
     private static void BuildVehicle(Node3D root, StaticBody3D body, Vector3 p, float yaw, Props.VehicleType type, Color paint, float len, RandomNumberGenerator vrng)
     {
         // Les fourgons sont surtout blancs ; les camions portent une bande de couleur sur leur caisse.
-        if (type == Props.VehicleType.Van && vrng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
+        if (type == Props.VehicleType.Van && vrng.Randf() < 0.6f) paint = new Color(0.6f, 0.6f, 0.58f);
+        if (Props.Burnt(p)) paint = Mats.BurntPaint; // épave calcinée (sans tirage aléatoire)
         var mesh = Props.Vehicle(type, paint, len);
         root.AddChild(new MeshInstance3D
         {

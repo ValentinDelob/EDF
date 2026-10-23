@@ -137,7 +137,7 @@ public static partial class SuburbBuilder
                 QuadUp(k, walk, e + d0 * (r.Bulb + 0.2f) + Vector3.Up * top, e + d1 * (r.Bulb + 0.2f) + Vector3.Up * top, e + d1 * (r.Bulb + 2f) + Vector3.Up * top, e + d0 * (r.Bulb + 2f) + Vector3.Up * top);
             }
             // Îlot central engazonné avec un arbre.
-            k.Col = new Color(0.4f, 0.52f, 0.26f);
+            k.Col = new Color(0.34f, 0.37f, 0.25f);
             k.Cylinder(Mats.GroundTint(), e, 2.6f, 2.6f, 0.15f, 18);
             k.Col = Colors.White;
             k.Cylinder(curb, e, 2.75f, 2.75f, 0.14f, 18, false);

@@ -81,7 +81,9 @@ public partial class World : Node3D
         FxRoot = new Node3D { Name = "Fx" };
         AddChild(FxRoot);
         BuildEnvironment();
+        var buildClock = System.Diagnostics.Stopwatch.StartNew();
         City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
         foreach (var b in Buildings) Flow.SetBlockedRect(b.GlobalPosition, b.Size, true);
         Flow.BlockOutside(CityBuilder.Half, CityBuilder.SeaStart);

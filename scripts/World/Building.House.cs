@@ -254,7 +254,7 @@ public partial class Building
         f.Box(d, L / 2, top - 0.35f, 0.08f, L * 0.7f, 0.6f, 0.12f);
         var lc = sc.Luminance > 0.5f ? new Color(0.08f, 0.08f, 0.1f) : new Color(0.97f, 0.96f, 0.92f);
         kit.Col = lc;
-        var lm = st.Night && lc.Luminance > 0.5f ? Mats.Lamps() : d;
+        Material lm = st.Night && lc.Luminance > 0.5f ? Mats.Lamps() : d;
         var tw = L * 0.45f;
         var letters = Mathf.RoundToInt(tw / 0.32f);
         for (var i = 0; i < letters; i++)

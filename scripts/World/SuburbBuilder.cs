@@ -456,26 +456,27 @@ public static partial class SuburbBuilder
 
     private static readonly Color[] WallColors =
     {
-        new(0.87f, 0.81f, 0.7f), new(0.91f, 0.88f, 0.8f), new(0.8f, 0.79f, 0.76f), new(0.83f, 0.68f, 0.48f),
-        new(0.86f, 0.74f, 0.68f), new(0.93f, 0.92f, 0.89f), new(0.78f, 0.71f, 0.58f), new(0.88f, 0.83f, 0.63f),
+        // Enduits ternis et grisés (plus de pastels propres).
+        new(0.62f, 0.59f, 0.54f), new(0.66f, 0.64f, 0.6f), new(0.58f, 0.57f, 0.55f), new(0.6f, 0.53f, 0.44f),
+        new(0.62f, 0.56f, 0.53f), new(0.66f, 0.65f, 0.63f), new(0.57f, 0.53f, 0.47f), new(0.62f, 0.59f, 0.5f),
     };
 
     private static readonly Color[] RoofColors =
     {
-        new(0.6f, 0.3f, 0.2f), new(0.5f, 0.26f, 0.19f), new(0.38f, 0.25f, 0.2f), new(0.3f, 0.31f, 0.34f),
-        new(0.22f, 0.23f, 0.25f), new(0.68f, 0.38f, 0.24f), new(0.56f, 0.34f, 0.24f),
+        new(0.4f, 0.25f, 0.2f), new(0.35f, 0.23f, 0.19f), new(0.3f, 0.23f, 0.2f), new(0.26f, 0.27f, 0.29f),
+        new(0.22f, 0.23f, 0.25f), new(0.44f, 0.3f, 0.23f), new(0.4f, 0.28f, 0.22f),
     };
 
     private static readonly Color[] TrimColors =
     {
-        new(0.92f, 0.92f, 0.9f), new(0.45f, 0.55f, 0.62f), new(0.48f, 0.57f, 0.45f), new(0.45f, 0.16f, 0.15f),
-        new(0.24f, 0.25f, 0.27f), new(0.46f, 0.31f, 0.19f), new(0.7f, 0.7f, 0.68f), new(0.26f, 0.38f, 0.55f),
+        new(0.64f, 0.64f, 0.62f), new(0.36f, 0.4f, 0.43f), new(0.38f, 0.41f, 0.36f), new(0.33f, 0.17f, 0.15f),
+        new(0.24f, 0.25f, 0.27f), new(0.36f, 0.27f, 0.2f), new(0.52f, 0.52f, 0.5f), new(0.24f, 0.29f, 0.36f),
     };
 
     private static readonly Color[] CarColors =
     {
-        new(0.7f, 0.7f, 0.72f), new(0.08f, 0.08f, 0.09f), new(0.55f, 0.08f, 0.06f), new(0.12f, 0.2f, 0.4f),
-        new(0.85f, 0.85f, 0.83f), new(0.25f, 0.27f, 0.28f), new(0.4f, 0.35f, 0.2f), new(0.6f, 0.62f, 0.64f),
+        new(0.5f, 0.5f, 0.51f), new(0.08f, 0.08f, 0.085f), new(0.33f, 0.13f, 0.11f), new(0.15f, 0.18f, 0.24f),
+        new(0.6f, 0.6f, 0.58f), new(0.22f, 0.23f, 0.24f), new(0.3f, 0.28f, 0.2f), new(0.42f, 0.43f, 0.44f),
     };
 
     private static Color Pick(Color[] a, RandomNumberGenerator r) => a[r.RandiRange(0, a.Length - 1)];
@@ -501,7 +502,7 @@ public static partial class SuburbBuilder
     private static void BuildLandmarks(Ctx c)
     {
         var r = new RandomNumberGenerator { Seed = 777 };
-        var stone = new Color(0.8f, 0.76f, 0.66f);
+        var stone = new Color(0.6f, 0.58f, 0.53f);
         // Clocher-porche (face à la place) puis nef de l'église.
         AddBuilding(c, new Vector3(0, 0, -26.5f), new Vector3(7.5f, 21f, 7.5f),
             new BuildingStyle { Use = HouseUse.Belfry, Facing = 0, WallColor = stone, RoofColor = new Color(0.27f, 0.29f, 0.32f) }, 1700f, Mats.Masonry());
@@ -509,7 +510,7 @@ public static partial class SuburbBuilder
             new BuildingStyle { Use = HouseUse.Church, Facing = 0, WallColor = stone, RoofColor = new Color(0.28f, 0.3f, 0.33f), RoofPitch = 1.05f }, 2400f, Mats.Masonry());
         // Mairie face à la place, de l'autre côté de la rue.
         AddBuilding(c, new Vector3(-51f, 0, -4f), new Vector3(11f, 7.2f, 19f),
-            new BuildingStyle { Use = HouseUse.Hall, Facing = 2, Roof = RoofShape.Hip, RoofPitch = 0.75f, WallColor = new Color(0.9f, 0.87f, 0.79f), RoofColor = new Color(0.27f, 0.29f, 0.32f), TrimColor = new Color(0.36f, 0.45f, 0.55f) }, 1200f);
+            new BuildingStyle { Use = HouseUse.Hall, Facing = 2, Roof = RoofShape.Hip, RoofPitch = 0.75f, WallColor = new Color(0.64f, 0.62f, 0.57f), RoofColor = new Color(0.27f, 0.29f, 0.32f), TrimColor = new Color(0.3f, 0.35f, 0.4f) }, 1200f);
         // Maisons de bourg mitoyennes avec commerces, au sud de la grande rue.
         var x = -31f;
         while (x < 30f)
@@ -531,9 +532,9 @@ public static partial class SuburbBuilder
         }
         // Gymnase et supérette.
         AddBuilding(c, new Vector3(-110f, 0, 61f), new Vector3(40f, 9f, 22f),
-            new BuildingStyle { Use = HouseUse.Gym, Facing = 1, WallColor = new Color(0.62f, 0.36f, 0.28f), TrimColor = new Color(0.78f, 0.8f, 0.8f) }, 1800f);
+            new BuildingStyle { Use = HouseUse.Gym, Facing = 1, WallColor = new Color(0.45f, 0.32f, 0.27f), TrimColor = new Color(0.55f, 0.56f, 0.56f) }, 1800f);
         AddBuilding(c, new Vector3(152f, 0, 64f), new Vector3(34f, 6.5f, 20f),
-            new BuildingStyle { Use = HouseUse.Market, Facing = 3, WallColor = new Color(0.82f, 0.82f, 0.8f), TrimColor = new Color(0.75f, 0.2f, 0.12f) }, 1500f);
+            new BuildingStyle { Use = HouseUse.Market, Facing = 3, WallColor = new Color(0.6f, 0.6f, 0.58f), TrimColor = new Color(0.42f, 0.18f, 0.13f) }, 1500f);
     }
 
     /// <summary>
@@ -715,7 +716,7 @@ public static partial class SuburbBuilder
             g.Col = new Color(0.86f, 0.85f, 0.8f);
             FlatRect(g, Mats.Sidewalk(), pc - new Vector3(pw.X / 2 + 0.6f, 0, pw.Z / 2 + 0.6f), pc + new Vector3(pw.X / 2 + 0.6f, 0, pw.Z / 2 + 0.6f), 0.06f);
             g.Col = Colors.White;
-            FlatRect(g, Mats.Painted(new Color(0.18f, 0.55f, 0.65f), 0.05f, 0.1f), pc - new Vector3(pw.X / 2, 0, pw.Z / 2), pc + new Vector3(pw.X / 2, 0, pw.Z / 2), 0.07f);
+            FlatRect(g, Mats.Painted(new Color(0.11f, 0.15f, 0.13f), 0.05f, 0.1f), pc - new Vector3(pw.X / 2, 0, pw.Z / 2), pc + new Vector3(pw.X / 2, 0, pw.Z / 2), 0.07f);
             used.Add(pc);
         }
         var nTrees = rng.RandiRange(1, 2);
@@ -779,7 +780,7 @@ public static partial class SuburbBuilder
                 {
                     var p = a + dir * ((i + 0.5f) * len / n);
                     var hh = h + rng.RandfRange(-0.08f, 0.12f) + (front ? 0f : 0.2f);
-                    k.Col = new Color(0.16f, 0.27f, 0.1f) * rng.RandfRange(0.85f, 1.1f);
+                    k.Col = new Color(0.12f, 0.15f, 0.09f) * rng.RandfRange(0.85f, 1.1f);
                     var seg = len / n + 0.05f;
                     k.Box(Mats.Foliage(), p + Vector3.Up * (hh / 2), alongX ? new Vector3(seg, hh, thick) : new Vector3(thick, hh, seg), null, false);
                 }
@@ -853,7 +854,8 @@ public static partial class SuburbBuilder
     /// <summary>Véhicule garé (maillage partagé, boîte de collision).</summary>
     private static void AddCar(Ctx c, Vector3 p, float yaw, Props.VehicleType type, Color paint, float len, RandomNumberGenerator rng)
     {
-        if (type == Props.VehicleType.Van && rng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
+        if (type == Props.VehicleType.Van && rng.Randf() < 0.6f) paint = new Color(0.6f, 0.6f, 0.58f);
+        if (Props.Burnt(p)) paint = Mats.BurntPaint; // épave calcinée (sans tirage aléatoire)
         var mesh = Props.Vehicle(type, paint, len);
         c.Root.AddChild(new MeshInstance3D { Mesh = mesh, Position = p, Rotation = new Vector3(0, yaw, 0), VisibilityRangeEnd = 260f });
         c.Body.AddChild(CityBuilder.VehicleShape(mesh, type, len, p, yaw));

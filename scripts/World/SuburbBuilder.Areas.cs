@@ -172,7 +172,7 @@ public static partial class SuburbBuilder
         for (var i = 0; i < 16; i++)
         {
             var x0 = cx - hl + i * (hl * 2 / 16);
-            k.Col = i % 2 == 0 ? new Color(0.38f, 0.56f, 0.24f) : new Color(0.33f, 0.5f, 0.21f);
+            k.Col = i % 2 == 0 ? new Color(0.36f, 0.4f, 0.26f) : new Color(0.31f, 0.35f, 0.23f);
             FlatRect(k, Mats.GroundTint(), new Vector3(x0, 0, cz - hw - 2), new Vector3(x0 + hl * 2 / 16, 0, cz + hw + 2), 0.012f);
         }
         var paint = Mats.RoadPaint();

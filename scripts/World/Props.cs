@@ -47,7 +47,7 @@ public static partial class Props
     public static ArrayMesh Bin() => Cached("bin", k =>
     {
         var m = Mats.DetailMetal();
-        k.Col = new Color(0.12f, 0.24f, 0.18f);
+        k.Col = new Color(0.13f, 0.17f, 0.14f);
         k.Cylinder(m, new Vector3(0, 0.25f, 0), 0.24f, 0.26f, 0.65f, 10);
         k.Col = new Color(0.08f, 0.08f, 0.08f);
         k.Cylinder(m, new Vector3(0, 0.9f, 0), 0.27f, 0.22f, 0.06f, 10);
@@ -61,7 +61,7 @@ public static partial class Props
         var m = Mats.DetailMetal();
         k.Col = new Color(0.14f, 0.14f, 0.15f);
         k.Cylinder(m, Vector3.Zero, 0.075f, 0.07f, 0.8f, 8);
-        k.Col = new Color(0.85f, 0.85f, 0.82f);
+        k.Col = new Color(0.55f, 0.55f, 0.53f);
         k.Cylinder(Mats.Detail(), new Vector3(0, 0.66f, 0), 0.078f, 0.078f, 0.06f, 8, false);
         k.Col = new Color(0.14f, 0.14f, 0.15f);
         k.Cylinder(m, new Vector3(0, 0.8f, 0), 0.085f, 0.03f, 0.08f, 8);
@@ -71,11 +71,11 @@ public static partial class Props
     public static ArrayMesh Hydrant() => Cached("hydrant", k =>
     {
         var m = Mats.DetailMetal();
-        k.Col = new Color(0.62f, 0.07f, 0.05f);
+        k.Col = new Color(0.38f, 0.12f, 0.09f);
         k.Cylinder(m, Vector3.Zero, 0.13f, 0.12f, 0.7f, 10);
         k.Cylinder(m, new Vector3(0, 0.7f, 0), 0.14f, 0.05f, 0.12f, 10);
         k.Tube(m, new Vector3(-0.2f, 0.45f, 0), new Vector3(0.2f, 0.45f, 0), 0.05f, 6, true);
-        k.Col = new Color(0.8f, 0.7f, 0.1f);
+        k.Col = new Color(0.5f, 0.44f, 0.16f);
         k.Cylinder(m, new Vector3(0, 0.6f, 0), 0.135f, 0.135f, 0.05f, 10, false);
     });
 
@@ -90,7 +90,7 @@ public static partial class Props
         k.Col = new Color(0.06f, 0.06f, 0.06f);
         k.Box(m, new Vector3(0, 3.0f, 0.12f), new Vector3(0.34f, 1.0f, 0.26f));
         k.Box(d, new Vector3(0, 3.0f, -0.02f), new Vector3(0.52f, 1.18f, 0.03f)); // plaque de contraste
-        k.Col = new Color(0.9f, 0.9f, 0.88f);
+        k.Col = new Color(0.55f, 0.55f, 0.53f);
         k.Box(d, new Vector3(0, 3.0f, -0.04f), new Vector3(0.56f, 1.22f, 0.01f)); // liseré blanc
         var colors = new[] { new Color(1f, 0.12f, 0.08f), new Color(1f, 0.62f, 0.05f), new Color(0.15f, 1f, 0.45f) };
         for (var i = 0; i < 3; i++)
@@ -107,7 +107,7 @@ public static partial class Props
         k.Box(m, new Vector3(0.0f, 2.25f, 0.1f), new Vector3(0.26f, 0.42f, 0.16f));
         k.Col = green ? new Color(0.9f, 0.15f, 0.1f) : new Color(0.2f, 0.9f, 0.4f);
         k.Box(lamps, new Vector3(0.0f, 2.25f, 0.185f), new Vector3(0.14f, 0.16f, 0.01f));
-        k.Col = new Color(0.85f, 0.75f, 0.1f);
+        k.Col = new Color(0.5f, 0.45f, 0.15f);
         k.Box(m, new Vector3(0, 1.15f, 0.1f), new Vector3(0.12f, 0.2f, 0.1f));
     });
 
@@ -143,9 +143,9 @@ public static partial class Props
         // Panneau publicitaire.
         k.Col = new Color(0.2f, 0.21f, 0.22f);
         k.Box(m, new Vector3(2.05f, 1.35f, -0.08f), new Vector3(0.16f, 2.0f, 1.3f));
-        k.Col = night ? new Color(0.92f, 0.95f, 1f) : new Color(0.22f, 0.45f, 0.62f);
+        k.Col = night ? new Color(0.92f, 0.95f, 1f) : new Color(0.2f, 0.28f, 0.34f);
         k.Box(night ? Mats.Lamps() : d, new Vector3(2.05f, 1.45f, -0.08f), new Vector3(0.18f, 1.6f, 1.05f));
-        k.Col = new Color(0.95f, 0.8f, 0.2f);
+        k.Col = new Color(0.55f, 0.48f, 0.2f);
         if (!night) k.Box(d, new Vector3(2.05f, 1.0f, -0.08f), new Vector3(0.185f, 0.35f, 0.9f));
         // Banc intérieur.
         k.Col = new Color(0.55f, 0.56f, 0.57f);
@@ -155,9 +155,9 @@ public static partial class Props
         // Poteau d'arrêt avec plaque.
         k.Col = PoleGray;
         k.Cylinder(m, new Vector3(2.8f, 0, 0.5f), 0.05f, 0.05f, 3f, 6);
-        k.Col = new Color(0.1f, 0.3f, 0.6f);
+        k.Col = new Color(0.14f, 0.2f, 0.3f);
         k.Box(d, new Vector3(2.8f, 2.7f, 0.5f), new Vector3(0.05f, 0.5f, 0.5f));
-        k.Col = new Color(0.95f, 0.95f, 0.95f);
+        k.Col = new Color(0.65f, 0.65f, 0.64f);
         k.Box(d, new Vector3(2.8f, 2.7f, 0.5f), new Vector3(0.06f, 0.18f, 0.4f));
     });
 
@@ -165,7 +165,7 @@ public static partial class Props
     public static ArrayMesh JerseyBarrier() => Cached("jersey", k =>
     {
         var d = Mats.Detail();
-        k.Col = new Color(0.72f, 0.71f, 0.68f);
+        k.Col = new Color(0.52f, 0.51f, 0.49f);
         k.Frustum(d, Vector3.Zero, new Vector2(0.6f, 2f), new Vector2(0.36f, 2f), 0.3f);
         k.Frustum(d, new Vector3(0, 0.3f, 0), new Vector2(0.36f, 2f), new Vector2(0.2f, 2f), 0.5f);
     });
@@ -183,7 +183,7 @@ public static partial class Props
         }
         for (var i = 0; i < 6; i++)
         {
-            k.Col = i % 2 == 0 ? new Color(0.75f, 0.06f, 0.05f) : new Color(0.95f, 0.95f, 0.93f);
+            k.Col = i % 2 == 0 ? new Color(0.45f, 0.12f, 0.1f) : new Color(0.62f, 0.62f, 0.6f);
             k.Box(d, new Vector3(-0.95f + 0.3166f * (i + 0.5f), 0.85f, 0.03f), new Vector3(0.3166f, 0.22f, 0.03f));
         }
     });
@@ -194,16 +194,16 @@ public static partial class Props
         var d = Mats.Detail();
         k.Col = new Color(0.1f, 0.1f, 0.1f);
         k.Box(d, new Vector3(0, 0.015f, 0), new Vector3(0.4f, 0.03f, 0.4f));
-        k.Col = new Color(0.95f, 0.35f, 0.05f);
+        k.Col = new Color(0.6f, 0.3f, 0.1f);
         k.Cylinder(d, new Vector3(0, 0.03f, 0), 0.16f, 0.03f, 0.7f, 10);
-        k.Col = new Color(0.95f, 0.95f, 0.95f);
+        k.Col = new Color(0.65f, 0.65f, 0.64f);
         k.Cylinder(d, new Vector3(0, 0.38f, 0), 0.095f, 0.075f, 0.12f, 10, false);
     });
 
     /// <summary>Mât de parasol de plage (la toile est un modèle séparé, teinté par instance).</summary>
     public static ArrayMesh UmbrellaPole() => Cached("upole", k =>
     {
-        k.Col = new Color(0.85f, 0.85f, 0.82f);
+        k.Col = new Color(0.55f, 0.55f, 0.53f);
         k.Cylinder(Mats.DetailMetal(), new Vector3(0, -0.3f, 0), 0.025f, 0.025f, 2.6f, 6);
     });
 
@@ -228,7 +228,7 @@ public static partial class Props
     public static ArrayMesh Lounger() => Cached("lounger", k =>
     {
         var d = Mats.Detail();
-        k.Col = new Color(0.92f, 0.92f, 0.9f);
+        k.Col = new Color(0.6f, 0.6f, 0.58f);
         k.Box(d, new Vector3(0, 0.3f, -0.15f), new Vector3(0.65f, 0.06f, 1.3f));
         k.Box(d, new Vector3(0, 0.55f, 0.75f), new Vector3(0.65f, 0.06f, 0.7f), new Basis(Vector3.Right, Mathf.DegToRad(-40)));
         foreach (var x in new[] { -0.28f, 0.28f })
@@ -313,28 +313,28 @@ public static partial class Props
             var t1 = (i + 1) / (float)segs;
             var r0 = Mathf.Lerp(0.3f, 0.17f, t0);
             var r1 = Mathf.Lerp(0.3f, 0.17f, t1);
-            k.Col = new Color(0.46f, 0.39f, 0.3f) * (0.9f + 0.1f * (i % 2));
+            k.Col = new Color(0.3f, 0.27f, 0.23f) * (0.9f + 0.1f * (i % 2));
             k.Tube(bark, Axis(t0), Axis(t1), (r0 + r1) / 2, 8, false);
-            k.Col = new Color(0.36f, 0.3f, 0.23f);
+            k.Col = new Color(0.22f, 0.2f, 0.17f);
             k.Tube(bark, Axis(t1) - Vector3.Up * 0.08f, Axis(t1) + Vector3.Up * 0.04f, r1 + 0.03f, 8, false);
         }
         var top = Axis(1f);
-        k.Col = new Color(0.3f, 0.33f, 0.17f);
-        Canopy(k, top + Vector3.Up * 0.15f, 0.42f, seed, new Color(0.3f, 0.33f, 0.17f));
+        k.Col = new Color(0.2f, 0.2f, 0.13f);
+        Canopy(k, top + Vector3.Up * 0.15f, 0.42f, seed, new Color(0.2f, 0.2f, 0.13f));
 
         var fronds = 11;
         for (var f = 0; f < fronds; f++)
         {
             var h1 = Mathf.Sin(seed * 3.1f + f * 2.3f) * 0.5f + 0.5f;
-            var dead = f >= fronds - 2;
+            var dead = f >= fronds - 5 || Mathf.Sin(seed * 7.3f + f) > 0.6f; // palmes sèches pendantes
             var yaw = f * Mathf.Tau / fronds + h1 * 0.4f;
             var dir = new Vector3(Mathf.Cos(yaw), 0, Mathf.Sin(yaw));
             var side = Vector3.Up.Cross(dir).Normalized();
             var len = dead ? 2.4f : 3.6f + h1 * 1.2f;
             var lift = dead ? -1.2f : 0.45f + h1 * 0.35f;
             var droop = dead ? 0.6f : 0.95f + h1 * 0.4f;
-            var baseCol = dead ? new Color(0.45f, 0.36f, 0.2f) : new Color(0.2f, 0.36f, 0.12f);
-            var tipCol = dead ? new Color(0.4f, 0.32f, 0.2f) : new Color(0.36f, 0.46f, 0.16f);
+            var baseCol = dead ? new Color(0.3f, 0.26f, 0.18f) : new Color(0.15f, 0.18f, 0.1f);
+            var tipCol = dead ? new Color(0.26f, 0.23f, 0.17f) : new Color(0.22f, 0.23f, 0.12f);
             const int n = 12;
             Vector3 Pt(float t) => top + dir * (len * t) + Vector3.Up * (len * (lift * t - droop * t * t));
             for (var s = 0; s < n; s++)
@@ -359,27 +359,96 @@ public static partial class Props
         return k.Commit();
     }
 
-    /// <summary>Arbre feuillu : tronc conique, branches maîtresses et houppiers bosselés.</summary>
+    private static readonly Color BarkGray = new(0.2f, 0.185f, 0.17f);
+    private static readonly Color TwigCol = new(0.16f, 0.145f, 0.13f);
+
+    /// <summary>
+    /// Branche d'arbre : tube coudé en deux segments, puis 2 ou 3 sous-branches plus fines et plus courtes ;
+    /// les extrémités sont ajoutées à <paramref name="tips"/> (touffes de feuillage ou de ramilles).
+    /// </summary>
+    private static void Branch(MeshKit k, Material bark, RandomNumberGenerator r, Vector3 from, Vector3 dir, float len, float rad, int depth, List<Vector3> tips)
+    {
+        var bend = new Vector3(r.RandfRange(-0.3f, 0.3f), r.RandfRange(-0.08f, 0.18f), r.RandfRange(-0.3f, 0.3f));
+        var d1 = (dir + bend).Normalized();
+        var mid = from + d1 * (len * 0.5f);
+        var d2 = (dir - bend * 0.4f + new Vector3(r.RandfRange(-0.25f, 0.25f), 0.05f, r.RandfRange(-0.25f, 0.25f))).Normalized();
+        var end = mid + d2 * (len * 0.5f);
+        var seg = depth >= 2 ? 6 : 4;
+        k.Tube(bark, from, mid, rad, seg);
+        k.Tube(bark, mid, end, rad * 0.8f, seg);
+        if (depth == 0 || rad < 0.025f)
+        {
+            tips.Add(end);
+            return;
+        }
+        var n = r.Randf() < 0.55f ? 2 : 3;
+        var side0 = d2.Cross(Mathf.Abs(d2.Y) > 0.9f ? Vector3.Right : Vector3.Up).Normalized();
+        var az0 = r.RandfRange(0, Mathf.Tau);
+        // Seules les charpentières sont solides (comme avant) : les ramifications restent traversables.
+        var solid = k.Solid;
+        k.Solid = false;
+        for (var i = 0; i < n; i++)
+        {
+            var az = az0 + i * Mathf.Tau / n + r.RandfRange(-0.4f, 0.4f);
+            var side = side0.Rotated(d2, az);
+            var spread = r.RandfRange(0.45f, 0.85f);
+            var d = (d2 * Mathf.Cos(spread) + side * Mathf.Sin(spread) + Vector3.Up * 0.12f).Normalized();
+            var at = mid.Lerp(end, r.RandfRange(0.55f, 1f));
+            Branch(k, bark, r, at, d, len * r.RandfRange(0.55f, 0.75f), rad * 0.6f, depth - 1, tips);
+        }
+        k.Solid = solid;
+    }
+
+    /// <summary>
+    /// Arbre d'alignement ou de square : la plupart sont morts ou mourants (charpente nue et ramilles grises) ;
+    /// les autres gardent un feuillage clairsemé, sombre et terne, en touffes ajourées au bout des branches.
+    /// </summary>
     public static ArrayMesh Tree(float hgt, (float r, Vector3 off)[] blobs, float seed)
     {
         var k = new MeshKit();
         var bark = Mats.Detail();
-        k.Col = new Color(0.3f, 0.24f, 0.18f);
-        k.Cylinder(bark, Vector3.Zero, 0.32f, 0.16f, hgt * 0.85f, 8, false);
-        var leaf = new Color(0.17f, 0.3f, 0.11f);
-        foreach (var (r, off) in blobs)
+        var r = new RandomNumberGenerator { Seed = (ulong)(Mathf.Abs(seed) * 1000f) + 17 };
+        var dead = r.Randf() < 0.6f;
+        k.Col = BarkGray;
+        var top = new Vector3(r.RandfRange(-0.35f, 0.35f), hgt * 0.5f, r.RandfRange(-0.35f, 0.35f));
+        k.Cylinder(bark, Vector3.Zero, 0.42f, 0.3f, 0.6f, 9, false);
+        k.Tube(bark, Vector3.Up * 0.5f, top, 0.28f, 8);
+        var tips = new List<Vector3>();
+        foreach (var (rad, off) in blobs)
         {
-            var c = new Vector3(off.X, hgt + off.Y, off.Z);
-            k.Col = new Color(0.3f, 0.24f, 0.18f);
-            k.Tube(bark, new Vector3(0, hgt * 0.55f, 0), c * 0.85f + Vector3.Up * (hgt * 0.1f), 0.1f, 5);
-            Canopy(k, c, r * 0.95f, seed + off.X * 3f, leaf);
+            var dir = (new Vector3(off.X, hgt * 0.45f + off.Y, off.Z) - top + Vector3.Up * 2f).Normalized();
+            k.Col = BarkGray;
+            Branch(k, bark, r, top, dir, hgt * 0.42f + rad * 0.3f, 0.15f, dead ? 3 : 2, tips);
         }
+        if (dead) TwigClumps(k, r, tips, 1.1f, seed);
+        else LeafClumps(k, r, tips, Ico1, 1.05f, seed, new Color(0.11f, 0.135f, 0.08f));
         return k.Commit();
+    }
+
+    /// <summary>Feuillage clairsemé : touffes ajourées, sombres et ternes (parfois roussies) au bout des branches.</summary>
+    private static void LeafClumps(MeshKit k, RandomNumberGenerator r, List<Vector3> tips, Vector3[] ico, float size, float seed, Color leaf, float keep = 0.72f)
+    {
+        for (var i = 0; i < tips.Count; i++)
+        {
+            if (r.Randf() > keep) continue;
+            var c = r.Randf() < 0.25f ? new Color(0.2f, 0.17f, 0.11f) : leaf * r.RandfRange(0.85f, 1.15f);
+            CanopyLow(k, ico, tips[i] + Vector3.Up * (size * 0.2f), new Vector3(1f, 0.85f, 1f) * (size * r.RandfRange(0.75f, 1.25f)), seed + i * 1.7f, c, Mats.Leaves());
+        }
+    }
+
+    /// <summary>Ramilles d'arbre mort : quelques masses grises très ajourées (silhouette d'hiver).</summary>
+    private static void TwigClumps(MeshKit k, RandomNumberGenerator r, List<Vector3> tips, float size, float seed)
+    {
+        for (var i = 0; i < tips.Count; i += 3)
+            CanopyLow(k, Ico1, tips[i], new Vector3(1f, 0.75f, 1f) * (size * r.RandfRange(0.8f, 1.2f)), seed + i, TwigCol, Mats.Twigs());
     }
 
     // ───────────────────────── Véhicules ─────────────────────────
 
     public enum VehicleType { Car, Van, Truck }
+
+    /// <summary>Épave calcinée : environ un véhicule garé sur cinq, choisi par sa position (aucun tirage aléatoire).</summary>
+    public static bool Burnt(Vector3 p) => Mathf.PosMod(Mathf.Sin(p.X * 0.731f + p.Z * 1.379f) * 43758.547f, 1f) < 0.2f;
 
     /// <summary>Longueur et gabarit (largeur, hauteur) de collision d'un véhicule.</summary>
     public static Vector3 VehicleSize(VehicleType t, float carLen) => t switch
@@ -407,9 +476,10 @@ public static partial class Props
         return Cached($"veh{type}{paint}{lenKey}", k =>
         {
             var p = Mats.CarPaint(paint);
-            var glass = Mats.Painted(new Color(0.04f, 0.05f, 0.06f), 0.05f, 0.3f);
+            var glass = paint == Mats.BurntPaint ? Mats.Painted(new Color(0.02f, 0.018f, 0.016f), 0.95f) : Mats.Painted(new Color(0.04f, 0.05f, 0.06f), 0.12f, 0.3f); // épave : vitres éclatées
             var d = Mats.Detail();
-            var lamps = Mats.Lamps();
+            var burnt = paint == Mats.BurntPaint;
+            Material lamps = burnt ? Mats.Painted(new Color(0.03f, 0.03f, 0.03f), 0.95f) : Mats.Lamps();
             var trimC = new Color(0.08f, 0.08f, 0.09f);
             switch (type)
             {
@@ -436,7 +506,7 @@ public static partial class Props
                     k.Box(p, new Vector3(-0.98f, 0.98f, l * 0.16f), new Vector3(0.18f, 0.12f, 0.1f));
                     k.Box(p, new Vector3(0.98f, 0.98f, l * 0.16f), new Vector3(0.18f, 0.12f, 0.1f));
                     // Plaques et feux.
-                    k.Col = new Color(0.92f, 0.92f, 0.9f);
+                    k.Col = new Color(0.6f, 0.6f, 0.58f);
                     k.Box(d, new Vector3(0, 0.45f, l / 2 + 0.085f), new Vector3(0.52f, 0.11f, 0.01f));
                     k.Box(d, new Vector3(0, 0.62f, -l / 2 - 0.01f), new Vector3(0.52f, 0.11f, 0.01f));
                     k.Col = new Color(0.95f, 0.95f, 0.88f);
@@ -485,7 +555,7 @@ public static partial class Props
                     k.Box(p, new Vector3(0, 1.85f, l / 2 - 1.05f), new Vector3(2.3f, 2.3f, 2.0f));
                     k.Box(glass, new Vector3(0, 2.35f, l / 2 - 0.04f), new Vector3(2.1f, 0.9f, 0.06f));
                     k.Box(glass, new Vector3(0, 2.35f, l / 2 - 0.9f), new Vector3(2.32f, 0.8f, 0.9f));
-                    k.Col = new Color(0.93f, 0.93f, 0.91f);
+                    k.Col = burnt ? new Color(0.13f, 0.1f, 0.08f) : new Color(0.6f, 0.6f, 0.58f);
                     k.Box(Mats.DetailMetal(), new Vector3(0, 2.3f, -1.15f), new Vector3(2.45f, 2.7f, 5.1f));
                     k.Col = paint;
                     k.Box(d, new Vector3(0, 1.4f, -1.15f), new Vector3(2.47f, 0.3f, 5.0f));
