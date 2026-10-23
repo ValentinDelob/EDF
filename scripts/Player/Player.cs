@@ -118,6 +118,13 @@ public partial class Player : CharacterBody3D
             var t = World.TankNear(GlobalPosition, 6f);
             if (t != null && World.DownedTeammateNear(GlobalPosition, 3.5f) == 0) { Net.I.RequestTankSeat(t.Id, true); return; }
         }
+        if (e.IsActionPressed("ping"))
+        {
+            var at = AimPoint(400f, out var col);
+            var kind = col is Enemy ? 1 : World.NearestCrate(at, 4f) >= 0 ? 2 : 0;
+            Net.I.SendPing(at, kind);
+            return;
+        }
         if (Vehicle != null) return;
         if (e.IsActionPressed("weapon_1")) Switch(0);
         else if (e.IsActionPressed("weapon_2")) Switch(1);

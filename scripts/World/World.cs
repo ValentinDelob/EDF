@@ -445,6 +445,39 @@ public partial class World : Node3D
         }
     }
 
+    /// <summary>Marqueurs actifs : position, type (0 lieu, 1 ennemi, 2 caisse), fin de vie.</summary>
+    public readonly List<(Vector3 pos, int kind, float until, long from)> Pings = new();
+
+    public void OnPing(long from, Vector3 pos, int kind)
+    {
+        Pings.RemoveAll(p => p.from == from);
+        Pings.Add((pos, kind, Elapsed + 6f, from));
+        var color = kind == 1 ? UiKit.Danger : kind == 2 ? UiKit.Gold : UiKit.Accent;
+        var who = from == Net.I.MyId ? Settings.I.PlayerName : Remotes.TryGetValue(from, out var r) ? r.PlayerName : "";
+        var marker = new Node3D();
+        FxRoot.AddChild(marker);
+        marker.GlobalPosition = pos;
+        marker.AddChild(new MeshInstance3D
+        {
+            Mesh = new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.06f, Height = 30f, Material = Mats.Glow(color, 2f) },
+            Position = new Vector3(0, 15f, 0),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Transparency = 0.4f,
+        });
+        var label = new Label3D
+        {
+            Text = (kind == 1 ? "◆ ENNEMI" : kind == 2 ? "◆ BUTIN" : "◆ ICI") + $"\n{who}",
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, NoDepthTest = true, FixedSize = true, PixelSize = 0.0012f,
+            FontSize = 40, OutlineSize = 10, Modulate = color, Font = UiKit.HeadFont, Position = new Vector3(0, 3f, 0),
+        };
+        marker.AddChild(label);
+        var tw = marker.CreateTween();
+        tw.TweenInterval(5.4f);
+        tw.TweenProperty(label, "modulate:a", 0f, 0.6f);
+        tw.TweenCallback(Callable.From(marker.QueueFree));
+        Sfx.Ui("ui_click", -2f, 0.7f);
+    }
+
     public void OnRally(long from, Vector3 pos)
     {
         Effects.Ring(this, pos, 30f, new Color(1f, 0.65f, 0.2f), 1f);

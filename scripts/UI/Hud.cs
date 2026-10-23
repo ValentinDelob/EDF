@@ -651,6 +651,13 @@ public partial class Radar : Control
                 if (!a.Dead) DrawCircle(Map(a.GlobalPosition), 2.5f, new Color(UiKit.Info, 0.7f));
         foreach (var rp in World.Remotes.Values)
             DrawCircle(Map(rp.GlobalPosition), 4, rp.Downed ? UiKit.Accent : UiKit.Info);
+        foreach (var ping in World.Pings)
+        {
+            if (ping.until < World.Elapsed) continue;
+            var q = Map(ping.pos);
+            var pc = ping.kind == 1 ? UiKit.Danger : ping.kind == 2 ? UiKit.Gold : UiKit.Accent;
+            DrawColoredPolygon(new[] { q + new Vector2(0, -6), q + new Vector2(6, 0), q + new Vector2(0, 6), q + new Vector2(-6, 0) }, pc);
+        }
         // Joueur : triangle pointant vers le haut
         DrawColoredPolygon(new[] { c + new Vector2(0, -7), c + new Vector2(5, 5), c + new Vector2(-5, 5) }, Colors.White);
     }

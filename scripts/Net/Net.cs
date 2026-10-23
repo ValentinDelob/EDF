@@ -382,6 +382,11 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void PlayerDowned(long id, bool downed) => W?.OnPlayerDowned(id, downed);
 
+    public void SendPing(Vector3 pos, int kind) => ToAll(MethodName.Ping, pos, kind);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void Ping(Vector3 pos, int kind) => W?.OnPing(Sender, pos, kind);
+
     public void SendRally(Vector3 pos) => ToAll(MethodName.Rally, pos);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

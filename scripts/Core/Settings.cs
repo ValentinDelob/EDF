@@ -36,6 +36,7 @@ public partial class Settings : Node
         new("grenade", "Équipement", "key:G"),
         new("interact", "Interagir / relever", "key:E"),
         new("scoreboard", "Tableau des scores", "key:Tab"),
+        new("ping", "Marquer une position", "mouse:3"),
     };
 
     // Souris
