@@ -22,6 +22,7 @@ config/icon="res://icon.svg"
 Settings="*res://scripts/Core/Settings.cs"
 Profile="*res://scripts/Core/Profile.cs"
 Sfx="*res://scripts/Fx/Sfx.cs"
+Music="*res://scripts/Fx/Music.cs"
 Net="*res://scripts/Net/Net.cs"
 
 [display]
