@@ -393,9 +393,22 @@ void fragment() {
         if (p.RallyTime > 0) _abilityText.Text += $"   ·   +30 % dégâts {Mathf.CeilToInt(p.RallyTime)} s";
         if (p.AnchorTime > 0) _abilityText.Text += $"   ·   Ancrage {Mathf.CeilToInt(p.AnchorTime)} s";
 
-        // Arme active
+        // Arme active (ou armement du char)
         var ws = p.Weapon;
-        if (ws != null)
+        if (p.Vehicle != null)
+        {
+            _wName.Text = "Char de combat";
+            _wSub.Text = $"Blindage {Mathf.CeilToInt(Mathf.Max(0, p.Vehicle.Health))}";
+            _wSub.AddThemeColorOverride("font_color", p.Vehicle.Health < p.Vehicle.MaxHealth * 0.3f ? UiKit.Danger : UiKit.Info);
+            _wAmmo.Text = p.Vehicle.CannonReady >= 1 ? "PRÊT" : $"{Mathf.RoundToInt(p.Vehicle.CannonReady * 100)}";
+            _wMag.Text = "CANON";
+            _wReload.Visible = p.Vehicle.CannonReady < 1;
+            _wReload.Value = p.Vehicle.CannonReady;
+            _wRarity.Visible = false;
+            _wOther.Text = "Clic droit : mitrailleuse";
+            _wAmmo.AddThemeColorOverride("font_color", UiKit.Text);
+        }
+        else if (ws != null)
         {
             _wName.Text = ws.W.T.Name;
             _wSub.Text = $"{Rarities.Names[(int)ws.W.Rarity]} · Nv.{ws.W.Level}";

@@ -43,6 +43,7 @@ public partial class World : Node3D
 
     private MissionDirector _director;
     public AllyManager Allies;
+    public readonly Dictionary<int, Tank> Tanks = new();
     private int _nextEnemyId = 1;
     private int _nextCrateId = 1;
     private float _snapshotTimer;
@@ -110,6 +111,10 @@ public partial class World : Node3D
         Input.MouseMode = Input.MouseModeEnum.Captured;
 
         Allies = new AllyManager(this);
+        // Char de combat garé près du point de départ (même identifiant chez tous les pairs).
+        var tank = Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi);
+        AddChild(tank);
+        Tanks[1] = tank;
         if (Net.I.IsHost)
         {
             _director = new MissionDirector(this);
@@ -325,6 +330,53 @@ public partial class World : Node3D
             if (d < best) { best = d; peer = id; at = r.GlobalPosition; }
         }
         return peer != 0;
+    }
+
+    // ------------------------------------------------------------------ Véhicules
+
+    public Tank TankNear(Vector3 pos, float radius)
+    {
+        foreach (var t in Tanks.Values)
+            if (!t.Wrecked && t.Driver == 0 && t.GlobalPosition.DistanceTo(pos) <= radius) return t;
+        return null;
+    }
+
+    public void OnTankState(int id, Vector3 pos, float yaw, float turret, float pitch, float hp, float speed)
+    {
+        if (Tanks.TryGetValue(id, out var t) && !t.IsLocalDriver) t.ApplyState(pos, yaw, turret, pitch, hp, speed);
+    }
+
+    public void OnTankDriver(int id, long driver)
+    {
+        if (!Tanks.TryGetValue(id, out var t)) return;
+        var previous = t.Driver;
+        t.Driver = driver;
+        if (driver == Net.I.MyId && LocalPlayer != null) LocalPlayer.EnterVehicle(t);
+        else if (previous == Net.I.MyId && LocalPlayer != null) LocalPlayer.ExitVehicle();
+        Sfx.At("dash", t.GlobalPosition, -4f, 0.5f);
+    }
+
+    public void OnTankWrecked(int id)
+    {
+        if (!Tanks.TryGetValue(id, out var t)) return;
+        var driver = t.Driver;
+        t.Wreck();
+        if (driver == Net.I.MyId && LocalPlayer != null)
+        {
+            LocalPlayer.ExitVehicle();
+            Hud?.Toast("Char détruit ! Évacuation.");
+        }
+    }
+
+    /// <summary>Le char écrase les insectes au sol devant lui (dégâts envoyés par le conducteur).</summary>
+    public void TankCrush(Tank t, Vector3 at, float radius, float dmg)
+    {
+        foreach (var e in EnemiesById.Values)
+        {
+            if (e.State == EnemyState.Dead || e.Def.Flying || e.IsStatic || e.IsBoss) continue;
+            if (e.GlobalPosition.DistanceTo(at) > radius + e.Def.Size) continue;
+            Net.I.SendDamageEnemy(e.Id, dmg, e.Center, false);
+        }
     }
 
     public bool PlayerPosition(long peer, out Vector3 pos)

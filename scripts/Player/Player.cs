@@ -33,6 +33,7 @@ public partial class Player : CharacterBody3D
     public long ReviveTarget;
     public bool SecondChanceUsed;
     public float DownedTime;
+    public Tank Vehicle;
     /// <summary>Mode automatique pour les tests : vise et tire seul sur l'ennemi le plus proche.</summary>
     public static bool Bot;
     private bool _botFire;
@@ -111,6 +112,13 @@ public partial class Player : CharacterBody3D
             _pitch = Mathf.Clamp(_pitch, -1.35f, 1.2f);
         }
         if (Downed) return;
+        if (e.IsActionPressed("interact"))
+        {
+            if (Vehicle != null) { Net.I.RequestTankSeat(Vehicle.Id, false); return; }
+            var t = World.TankNear(GlobalPosition, 6f);
+            if (t != null && World.DownedTeammateNear(GlobalPosition, 3.5f) == 0) { Net.I.RequestTankSeat(t.Id, true); return; }
+        }
+        if (Vehicle != null) return;
         if (e.IsActionPressed("weapon_1")) Switch(0);
         else if (e.IsActionPressed("weapon_2")) Switch(1);
         else if (e.IsActionPressed("weapon_3")) Switch(2);
@@ -148,6 +156,19 @@ public partial class Player : CharacterBody3D
     {
         var dt = (float)delta;
         if (World.Ended) { Velocity = Vector3.Zero; return; }
+        if (Vehicle != null)
+        {
+            Vehicle.DriveTick(this, dt, _yaw, _pitch);
+            GlobalPosition = Vehicle.SeatPosition;
+            Velocity = Vector3.Zero;
+            _netTimer -= dt;
+            if (_netTimer <= 0)
+            {
+                _netTimer = 0.05f;
+                Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, 128, Health, Current, Vector3.Zero);
+            }
+            return;
+        }
 
         var input = Vector2.Zero;
         if (!World.Paused && !Downed)
@@ -309,6 +330,18 @@ public partial class Player : CharacterBody3D
         Model.Rotation = new Vector3(0, _modelYaw, 0);
         Model.Animate(dt, horiz.Length(), _pitch, !IsOnFloor(), Flying, Downed, Aiming, _recoil);
 
+        Model.Visible = Vehicle == null;
+        if (Vehicle != null)
+        {
+            _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Aiming ? 7f : 11f, Mathf.Clamp(dt * 6f, 0, 1));
+            if (Bot && canAct)
+            {
+                BotAim(dt);
+                if (_botFire) Input.ActionPress("fire"); else Input.ActionRelease("fire");
+            }
+            HandleRevive(dt);
+            return;
+        }
         if (Bot && canAct) BotAim(dt);
         if (canAct && Weapon != null) HandleFire(dt);
         else _beamActive = false;
@@ -633,9 +666,33 @@ public partial class Player : CharacterBody3D
 
     // ------------------------------------------------------------------ Santé
 
+    public void EnterVehicle(Tank t)
+    {
+        Vehicle = t;
+        CollisionLayer = 0;
+        World.Hud?.Toast("Char de combat : clic gauche canon, clic droit mitrailleuse, E pour descendre.");
+    }
+
+    public void ExitVehicle()
+    {
+        if (Vehicle == null) return;
+        var t = Vehicle;
+        Vehicle = null;
+        CollisionLayer = 1 << 1;
+        GlobalPosition = t.GlobalPosition + t.GlobalBasis.X * 3.5f + Vector3.Up * 0.5f;
+    }
+
     public void TakeDamage(float dmg, Vector3 from)
     {
         if (Downed || World.Ended) return;
+        if (Vehicle != null)
+        {
+            // Le blindage encaisse à la place du soldat.
+            Vehicle.Health -= dmg * 0.6f;
+            AddShake(0.1f);
+            if (Vehicle.Health <= 0) Net.I.SendTankWrecked(Vehicle.Id);
+            return;
+        }
         if (_dodgeTime > 0) return; // invulnérable pendant la roulade
         if (AnchorTime > 0) dmg *= 0.5f;
         Health -= dmg;

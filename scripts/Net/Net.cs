@@ -462,6 +462,38 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 2)]
     private void EnemyHitFx(int id, Vector3 at) => W?.OnEnemyHitFx(id, at);
 
+    // ---------- Véhicules ----------
+
+    public void SendTankState(int id, Vector3 pos, float yaw, float turret, float pitch, float hp, float speed)
+    {
+        if (IsSolo) return;
+        foreach (var pid in Players.Keys)
+            if (pid != MyId) RpcId(pid, MethodName.TankState, id, pos, yaw, turret, pitch, hp, speed);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 6)]
+    private void TankState(int id, Vector3 pos, float yaw, float turret, float pitch, float hp, float speed) =>
+        W?.OnTankState(id, pos, yaw, turret, pitch, hp, speed);
+
+    public void RequestTankSeat(int id, bool enter) => ToHost(MethodName.TankSeatRequest, id, enter);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void TankSeatRequest(int id, bool enter)
+    {
+        if (!IsHost || W == null || !W.Tanks.TryGetValue(id, out var t) || t.Wrecked) return;
+        var who = Sender;
+        if (enter && t.Driver == 0) ToAll(MethodName.TankDriver, id, who);
+        else if (!enter && t.Driver == who) ToAll(MethodName.TankDriver, id, 0L);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void TankDriver(int id, long driver) => W?.OnTankDriver(id, driver);
+
+    public void SendTankWrecked(int id) => ToAll(MethodName.TankWrecked, id);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void TankWrecked(int id) => W?.OnTankWrecked(id);
+
     // ---------- Alliés PNJ ----------
 
     public void BroadcastAllySpawn(int id, Vector3 pos, Vector3 formation) => ToOthers(MethodName.AllySpawn, id, pos, formation);

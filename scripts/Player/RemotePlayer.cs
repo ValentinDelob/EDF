@@ -52,6 +52,7 @@ public partial class RemotePlayer : Node3D
         _netVel = vel;
         Health = hp;
         Downed = (flags & 32) != 0;
+        Model.Visible = (flags & 128) == 0;
         if ((flags & 16) != 0) _recoil = 0.6f;
     }
 

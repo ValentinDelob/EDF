@@ -261,6 +261,15 @@ public static class AutoTest
                     e.Rotation = new Vector3(0, 0.6f, 0);
                 }
             };
+        // --tank : le joueur monte dans le char au bout de 4 s.
+        if (Screenshot.CmdArg("tank") != null)
+            app.GetTree().CreateTimer(5f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w?.LocalPlayer == null) return;
+                w.LocalPlayer.GlobalPosition = new Vector3(14, 1, 17);
+                Net.I.RequestTankSeat(1, true);
+            };
         // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
         if (Screenshot.CmdArg("end-after") is { } ea && float.TryParse(ea, NumberStyles.Float, CultureInfo.InvariantCulture, out var endAfter))
             app.GetTree().CreateTimer(endAfter).Timeout += () =>
