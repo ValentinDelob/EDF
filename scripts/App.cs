@@ -257,6 +257,15 @@ public static class AutoTest
                 w.CratesCollected[(int)CrateType.Credits] += 3;
                 w.EndMission(true);
             };
+        // --tank : le joueur monte dans le char au bout de 4 s.
+        if (Screenshot.CmdArg("tank") != null)
+            app.GetTree().CreateTimer(5f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w?.LocalPlayer == null) return;
+                w.LocalPlayer.GlobalPosition = new Vector3(14, 1, 17);
+                Net.I.RequestTankSeat(1, true);
+            };
         // --board=N : affiche le tableau des scores (Tab) à partir de N secondes.
         if (Screenshot.CmdArg("board") is { } bd && float.TryParse(bd, NumberStyles.Float, CultureInfo.InvariantCulture, out var boardAt))
             app.GetTree().CreateTimer(boardAt).Timeout += () => Input.ActionPress("scoreboard");
@@ -331,15 +340,6 @@ public static class AutoTest
                     e.GlobalPosition = p;
                     e.Rotation = new Vector3(0, 0.6f, 0);
                 }
-            };
-        // --tank : le joueur monte dans le char au bout de 4 s.
-        if (Screenshot.CmdArg("tank") != null)
-            app.GetTree().CreateTimer(5f).Timeout += () =>
-            {
-                var w = app.CurrentWorld;
-                if (w?.LocalPlayer == null) return;
-                w.LocalPlayer.GlobalPosition = new Vector3(14, 1, 17);
-                Net.I.RequestTankSeat(1, true);
             };
         ScheduleShots(app, dir, $"mission{mission}");
     }
