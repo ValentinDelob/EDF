@@ -252,7 +252,12 @@ public partial class OptionsMenu : MenuScreen
 
     private void BuildGame()
     {
-        Clear("Jeu", "Identité du joueur et gestion du profil.");
+        Clear("Jeu", "Identité du joueur, interface en mission et gestion du profil.");
+        Section("Interface");
+        Row("Échelle du HUD", Slider(0.8f, 1.2f, 0.05f, Settings.I.HudScale, f => Settings.I.HudScale = f, f => $"{f * 100:0} %"),
+            "Taille des éléments affichés en mission (vie, armes, objectif, radar).");
+        Row("Chiffres de dégâts", Selector(OnOff, Settings.I.DamageNumbers ? 1 : 0, i => Settings.I.DamageNumbers = i == 1),
+            "Affiche les dégâts infligés au-dessus des ennemis touchés (en jaune sur un point faible).");
         Section("Joueur");
         var name = new LineEdit { Text = Settings.I.PlayerName, MaxLength = 20, CustomMinimumSize = new Vector2(320, 42) };
         name.TextChanged += t => Settings.I.PlayerName = string.IsNullOrWhiteSpace(t) ? "Soldat" : t.Trim();

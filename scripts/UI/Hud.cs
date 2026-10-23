@@ -333,6 +333,15 @@ void fragment() {
         var dt = (float)delta;
         var p = World.LocalPlayer;
         Visible = !World.Ended;
+        // Échelle du HUD : on agrandit la racine et on réduit sa taille logique d'autant.
+        var s = Mathf.Clamp(Settings.I.HudScale, 0.8f, 1.2f);
+        if (!Mathf.IsEqualApprox(_root.Scale.X, s) || _root.Size != GetViewport().GetVisibleRect().Size / s)
+        {
+            _root.AnchorRight = 0;
+            _root.AnchorBottom = 0;
+            _root.Scale = Vector2.One * s;
+            _root.Size = GetViewport().GetVisibleRect().Size / s;
+        }
         if (p == null) return;
 
         _objective.Text = World.ObjectiveText;

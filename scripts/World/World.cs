@@ -563,7 +563,7 @@ public partial class World : Node3D
     {
         Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
-        if (damage > 0) Effects.DamageNumber(this, at, damage, weak);
+        if (damage > 0 && Settings.I.DamageNumbers) Effects.DamageNumber(this, at, damage, weak);
         if (sound) Sfx.Ui("hitmarker", -8f, 1f, 40);
     }
 

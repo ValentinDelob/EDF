@@ -56,6 +56,10 @@ public partial class Settings : Node
     public float SfxVolume = 0.9f;
     public float MusicVolume = 0.5f;
 
+    // Interface
+    public float HudScale = 1f;
+    public bool DamageNumbers = true;
+
     // Joueur
     public string PlayerName = "Soldat";
     public string LastIp = "127.0.0.1";
@@ -251,6 +255,8 @@ public partial class Settings : Node
         cfg.SetValue("audio", "master", MasterVolume);
         cfg.SetValue("audio", "sfx", SfxVolume);
         cfg.SetValue("audio", "music", MusicVolume);
+        cfg.SetValue("ui", "hud_scale", HudScale);
+        cfg.SetValue("ui", "damage_numbers", DamageNumbers);
         cfg.SetValue("player", "name", PlayerName);
         cfg.SetValue("player", "last_ip", LastIp);
         cfg.Save(FilePath);
@@ -274,6 +280,8 @@ public partial class Settings : Node
         MasterVolume = (float)cfg.GetValue("audio", "master", MasterVolume);
         SfxVolume = (float)cfg.GetValue("audio", "sfx", SfxVolume);
         MusicVolume = (float)cfg.GetValue("audio", "music", MusicVolume);
+        HudScale = (float)cfg.GetValue("ui", "hud_scale", HudScale);
+        DamageNumbers = (bool)cfg.GetValue("ui", "damage_numbers", DamageNumbers);
         PlayerName = (string)cfg.GetValue("player", "name", PlayerName);
         LastIp = (string)cfg.GetValue("player", "last_ip", LastIp);
     }
