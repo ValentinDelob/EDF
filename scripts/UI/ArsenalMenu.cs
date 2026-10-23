@@ -38,6 +38,7 @@ public partial class ArsenalMenu : Control
         public int Index;
         public Control Node;
         public Control NameClip;
+        public Control NameInk; // enfant du cadre de découpe : seul le dessin des enfants est rogné
         public bool Overflow;
         /// <summary>Arme nouvelle à l'ouverture de l'écran (l'étiquette reste jusqu'à la prochaine reconstruction).</summary>
         public bool ShowNew;
@@ -100,7 +101,9 @@ public partial class ArsenalMenu : Control
                 row.NameClip = new Control { ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
                 var r = row;
                 row.Node.Draw += () => DrawRow(r);
-                row.NameClip.Draw += () => DrawRowName(r);
+                row.NameInk = new Control { MouseFilter = MouseFilterEnum.Ignore };
+                row.NameClip.AddChild(row.NameInk);
+                row.NameInk.Draw += () => DrawRowName(r);
                 row.Node.FocusEntered += () => OnRowFocused(r);
                 row.Node.FocusExited += () => r.Node.QueueRedraw();
                 row.Node.GuiInput += e => RowInput(r, e);
@@ -161,9 +164,10 @@ public partial class ArsenalMenu : Control
                 var nameW = NameWidth(r);
                 r.NameClip.Position = Vector2.Zero;
                 r.NameClip.Size = new Vector2(nameW, RowH) * _k;
+                r.NameInk.Size = r.NameClip.Size;
                 r.Overflow = new Pen(this, _k, Vector2.Zero).Measure(EStyle.Cond, r.W.T.Name, 14) > nameW - 10;
                 r.Node.QueueRedraw();
-                r.NameClip.QueueRedraw();
+                r.NameInk.QueueRedraw();
             }
         }
         _stage.QueueRedraw();
@@ -310,7 +314,7 @@ public partial class ArsenalMenu : Control
         Profile.I.Equip(_cls, _slot, w);
         Sfx.Ui("pickup", -6f, 1.2f);
         Layout();
-        foreach (var c in _cols) foreach (var x in c.Rows) { x.Node.QueueRedraw(); x.NameClip.QueueRedraw(); }
+        foreach (var c in _cols) foreach (var x in c.Rows) { x.Node.QueueRedraw(); x.NameInk.QueueRedraw(); }
     }
 
     public override void _Process(double delta)
@@ -319,7 +323,7 @@ public partial class ArsenalMenu : Control
         // Défilement en boucle des noms trop longs.
         foreach (var c in _cols)
             foreach (var r in c.Rows)
-                if (r.Overflow) r.NameClip.QueueRedraw();
+                if (r.Overflow) r.NameInk.QueueRedraw();
     }
 
     // ───────────────────────── Dessin ─────────────────────────
@@ -572,7 +576,7 @@ public partial class ArsenalMenu : Control
 
     private void DrawRowName(Row r)
     {
-        var p = new Pen(r.NameClip, _k, Vector2.Zero);
+        var p = new Pen(r.NameInk, _k, Vector2.Zero);
         var focused = r.Node.HasFocus();
         var equipped = EquippedSlot(r.W) >= 0;
         var color = equipped ? (focused ? new Color("A9C9B3") : EStyle.DimText) : EStyle.White;

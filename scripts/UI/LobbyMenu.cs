@@ -267,7 +267,7 @@ public partial class LobbyMenu : Control
         _diffLayer = new Control { Visible = false, MouseFilter = MouseFilterEnum.Stop };
         UiKit.FillRect(_diffLayer);
         AddChild(_diffLayer);
-        _diffLayer.AddChild(new ColorRect { Color = new Color(2 / 255f, 12 / 255f, 6 / 255f, 0.55f), AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore });
+        _diffLayer.AddChild(new ColorRect { Color = new Color(2 / 255f, 12 / 255f, 6 / 255f, 0.78f), AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore });
         var stage = new EStage();
         _diffLayer.AddChild(stage);
         var panel = new PanelContainer { Position = new Vector2(470, 150), Size = new Vector2(380, 0), MouseFilter = MouseFilterEnum.Stop };
