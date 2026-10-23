@@ -230,6 +230,17 @@ public static class AutoTest
             Net.I.SetLobbyMission(mission, diff);
             Net.I.HostStartMission();
         };
+        // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
+        if (Screenshot.CmdArg("end-after") is { } ea && float.TryParse(ea, NumberStyles.Float, CultureInfo.InvariantCulture, out var endAfter))
+            app.GetTree().CreateTimer(endAfter).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w == null) return;
+                w.CratesCollected[(int)CrateType.Weapon] += 6;
+                w.CratesCollected[(int)CrateType.Armor] += 14;
+                w.CratesCollected[(int)CrateType.Credits] += 3;
+                w.EndMission(true);
+            };
         ScheduleShots(app, dir, $"mission{mission}");
     }
 

@@ -147,7 +147,7 @@ public partial class ArsenalMenu : MenuScreen
             v.CustomMinimumSize = new Vector2(96, 0);
             v.HorizontalAlignment = HorizontalAlignment.Right;
             h.AddChild(v);
-            if (compare.HasValue && Mathf.Abs(value - compare.Value) > 0.01f)
+            if (compare.HasValue && string.Format(fmt, Mathf.Abs(value - compare.Value)) != string.Format(fmt, 0f))
             {
                 var better = lowerBetter ? value < compare.Value : value > compare.Value;
                 var d = UiKit.Label((value > compare.Value ? "▲ " : "▼ ") + string.Format(fmt, Mathf.Abs(value - compare.Value)), 14, better ? UiKit.Good : UiKit.Danger);

@@ -184,7 +184,7 @@ public partial class ResultsScreen : CanvasLayer
             var d = UiKit.Label("", 14, UiKit.Muted);
             d.CustomMinimumSize = new Vector2(90, 0);
             d.HorizontalAlignment = HorizontalAlignment.Right;
-            if (c.HasValue && Mathf.Abs(v - c.Value) > 0.01f)
+            if (c.HasValue && string.Format(fmt, Mathf.Abs(v - c.Value)) != string.Format(fmt, 0f))
             {
                 var better = lowerBetter ? v < c.Value : v > c.Value;
                 d.Text = (v > c.Value ? "▲ " : "▼ ") + string.Format(fmt, Mathf.Abs(v - c.Value));
