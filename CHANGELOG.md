@@ -3,6 +3,7 @@
 ## v0.2.0 — Contenu et sensations
 
 ### Nouveautés
+- **Ville réaliste** : voirie marquée (passages piétons, lignes, bordures), 10 styles de façades (verre, brique, enduit), commerces en rez-de-chaussée éclairés la nuit, balcons, toits équipés, feux tricolores, arrêts de bus, mobilier urbain, chantiers, parkings, place à fontaine, front de mer avec promenade, parasols, poste de secours et jetée.
 - **Char de combat** pilotable (E pour monter) : canon, mitrailleuse, écrasement des insectes, synchronisé en LAN.
 - **Escouades alliées** : soldats PNJ qui suivent le joueur et tirent sur les insectes.
 - **Nouveaux ennemis** : araignée géante (bonds, toiles) et drone d'attaque (lasers).
