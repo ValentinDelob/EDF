@@ -4,7 +4,7 @@ using Godot;
 namespace Rempart;
 
 /// <summary>Matériaux PBR générés procéduralement (textures de bruit), mis en cache.</summary>
-public static class Mats
+public static partial class Mats
 {
     private static readonly Dictionary<string, Material> Cache = new();
 
