@@ -23,6 +23,10 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 - La ville est générée avec une graine fixe : les identifiants d'immeubles sont identiques chez tous les pairs.
 - En solo, le jeu utilise `OfflineMultiplayerPeer` : le même code passe par les mêmes RPC.
 
+## Véhicules
+
+`Vehicle` (classe de base abstraite) porte l'état commun : identifiant, conducteur, blindage, épave, diffusion d'état à 20 Hz par le conducteur (`Net.SendVehicleState`), interpolation chez les autres pairs, textes du HUD et réglages de caméra. `Tank` et `Helicopter` en héritent. L'hôte attribue les places (`VehicleSeatRequest` → `VehicleDriver`). `World.Vehicles` : char 1, hélicoptère 2.
+
 ## Interface
 
 - `UiKit` regroupe les jetons de design (couleurs, polices, marges) et les fabriques de contrôles ; `MenuScreen` est le gabarit commun (titre, onglets Q/E, barre d'aide, action principale en bas à droite).
@@ -45,6 +49,7 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--bot` | Le soldat vise et tire seul (le Commando vole). |
 | `--shots=dossier --shot-times=4,10` | Captures d'écran aux instants donnés. |
 | `--autohost=2` / `--autojoin=IP` | Test LAN à deux instances. |
+| `--tank` / `--heli` | Monte dans le char ou l'hélicoptère au début de la mission. |
 | `--stress=N` `--novsync` `--fps` | Test de charge et journal d'images par seconde. |
 | `--showcase[=big]` | Vitrine des ennemis, IA figée. |
 | `--end-after=N` | Termine la mission avec du butin fictif (test du bilan). |

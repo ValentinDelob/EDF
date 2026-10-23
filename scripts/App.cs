@@ -54,8 +54,12 @@ public partial class App : Node
         if (_screen != null && IsInstanceValid(_screen))
         {
             var old = _screen;
+            // Plus d'entrées pour l'ancien écran, mais il doit continuer à traiter son fondu.
             old.MouseFilter = Control.MouseFilterEnum.Ignore;
-            old.ProcessMode = ProcessModeEnum.Disabled;
+            old.SetProcessInput(false);
+            old.SetProcessUnhandledInput(false);
+            foreach (var n in old.FindChildren("*", "Control", true, false))
+                if (n is Control ctl) { ctl.MouseFilter = Control.MouseFilterEnum.Ignore; ctl.FocusMode = Control.FocusModeEnum.None; }
             // Tween porté par App : celui de l'écran désactivé ne serait jamais traité (l'écran resterait affiché).
             var tw = old.CreateTween();
             tw.TweenProperty(old, "modulate:a", 0f, 0.12f);

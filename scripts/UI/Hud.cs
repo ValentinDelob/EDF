@@ -223,7 +223,7 @@ void fragment() {
 
         _toast = UiKit.HudLabel("", 17);
         _toast.HorizontalAlignment = HorizontalAlignment.Center;
-        Anchor(_toast, Control.LayoutPreset.CenterBottom, new Vector2(0, -150));
+        Anchor(_toast, Control.LayoutPreset.CenterBottom, new Vector2(0, -250));
         _toast.GrowHorizontal = Control.GrowDirection.Both;
 
         _reviveBox = UiKit.VBox(6);
