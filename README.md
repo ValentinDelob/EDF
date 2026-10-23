@@ -5,9 +5,9 @@
 Le projet est actuellement un **POC** jouable :
 
 - **8 missions** sur 3 cartes (ville côtière réaliste, zone portuaire, banlieue boisée), de jour, au crépuscule et de nuit, avec pluie et orage ;
-- **4 classes** (Fusilier, Commando aéroporté, Opérateur d'appui, Grenadier blindé), **32 armes** à statistiques (niveau, rareté, étoiles) ;
+- **4 classes** (Fusilier, Commando aéroporté, Opérateur d'appui, Grenadier blindé), **32 armes** à statistiques (niveau, étoiles par caractéristique) ;
 - **11 types d'ennemis** (fourmis noires, rouges et acides, guêpes, charognards, araignées, mille-pattes, drones, nids, reine, forteresse marcheuse) et variantes élites ;
-- **butin** : caisses d'armes, d'armure, de soin et de crédits ; arsenal, atelier, recyclage ; niveaux de classe ;
+- **butin** : caisses d'armes, d'armure, de soin et de crédits ; arsenal par type d'arme ; niveaux de classe ;
 - **char de combat** et **hélicoptère d'attaque** pilotables, **escouades alliées** ;
 - coop en **LAN de 1 à 4 joueurs** (hôte + clients, découverte automatique des parties) ;
 - musique et sons procéduraux, menus et HUD modernes, remappage complet clavier/souris, manette ;

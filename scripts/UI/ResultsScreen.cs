@@ -76,7 +76,7 @@ public partial class ResultsScreen : CanvasLayer
             root.AddChild(sq);
         }
 
-        // Flash plein écran de la couleur de rareté à chaque révélation (derrière la fiche).
+        // Flash plein écran (couleur selon les étoiles) à chaque révélation (derrière la fiche).
         _flash = new ColorRect { Color = new Color(1, 1, 1, 0), MouseFilter = Control.MouseFilterEnum.Ignore };
         UiKit.FillRect(_flash);
         root.AddChild(_flash);
@@ -205,7 +205,7 @@ public partial class ResultsScreen : CanvasLayer
     private void RevealAll()
     {
         while (_revealed < Report.Weapons.Count) RevealNext(false);
-        // Montre la plus rare.
+        // Montre la plus étoilée (tri du bilan).
         Show(Report.Weapons.Count - 1);
     }
 
@@ -214,32 +214,33 @@ public partial class ResultsScreen : CanvasLayer
         var i = _revealed++;
         var w = Report.Weapons[i].weapon;
         var b = (Button)_strip.GetChild(i);
-        var sb = UiKit.Box(Rarities.Colors[(int)w.Rarity], default, 0, 0, 0, 0);
+        var sb = UiKit.Box(Tier(w), default, 0, 0, 0, 0);
         b.AddThemeStyleboxOverride("normal", sb);
         b.AddThemeStyleboxOverride("hover", sb);
         b.AddThemeStyleboxOverride("pressed", sb);
         b.TooltipText = $"{w.T.Name} Nv.{w.Level}";
         if (sound) Show(i);
-        if (sound) Sfx.Ui(w.Rarity >= Rarity.Elite ? "pickup_weapon" : "pickup", w.Rarity >= Rarity.Prototype ? 2f : -4f, 0.8f + 0.1f * (int)w.Rarity);
+        if (sound) Sfx.Ui(StarFrac(w) >= 0.5f ? "pickup_weapon" : "pickup", StarFrac(w) >= 0.7f ? 2f : -4f, 0.8f + 0.4f * StarFrac(w));
     }
+
+    /// <summary>Part des étoiles obtenues (0..1) : remplace l'ancienne rareté pour l'éclat de la révélation.</summary>
+    private static float StarFrac(WeaponInstance w) => w.MaxTotalStars > 0 ? w.TotalStars / (float)w.MaxTotalStars : 0f;
+
+    private static Color Tier(WeaponInstance w) => UiKit.Muted.Lerp(UiKit.Gold, StarFrac(w));
 
     private void Show(int i)
     {
         _viewing = i;
         foreach (var c in _card.GetChildren()) c.QueueFree();
-        var (w, upgraded, stat) = Report.Weapons[i];
-        var rc = Rarities.Colors[(int)w.Rarity];
-        string tag;
-        if (!upgraded) tag = "Nouvelle arme";
-        else if (stat >= 0) tag = $"Doublon · {WeaponInstance.StatNames[stat]} +1 ★";
-        else tag = "Doublon au maximum · converti en crédits";
-        var e = UiKit.Eyebrow($"{Rarities.Names[(int)w.Rarity]} · {tag}", rc);
+        var (w, duplicate) = Report.Weapons[i];
+        var rc = Tier(w);
+        var e = UiKit.Eyebrow(duplicate ? $"{w.T.Category} · Doublon déjà possédé · converti en crédits" : $"{w.T.Category} · Nouvelle arme", rc);
         e.HorizontalAlignment = HorizontalAlignment.Center;
         _card.AddChild(e);
-        var n = UiKit.Heading($"{w.T.Name}  Nv.{w.Level}", 46);
+        var n = UiKit.Heading($"{w.T.Name}  Lv{w.Level}", 46);
         n.HorizontalAlignment = HorizontalAlignment.Center;
         _card.AddChild(n);
-        var cat = UiKit.Label($"{w.T.Category} · {UiKit.Stars(Mathf.RoundToInt(w.TotalStars / 5f))}", 16, UiKit.Muted);
+        var cat = UiKit.Label($"☆ {w.TotalStars} / {w.MaxTotalStars}", 16, UiKit.Muted);
         cat.HorizontalAlignment = HorizontalAlignment.Center;
         _card.AddChild(cat);
         var bar = new ColorRect { Color = rc, CustomMinimumSize = new Vector2(520, 3), SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter };
@@ -247,42 +248,28 @@ public partial class ResultsScreen : CanvasLayer
         _card.AddChild(bar);
         _card.AddChild(UiKit.Gap(10));
 
-        var cls = w.T.Class;
-        var eq = Profile.I.Equipped(cls).FirstOrDefault(x => x != w && x.T.Category == w.T.Category);
-        void Line(string name, float v, float? c, string fmt, bool lowerBetter = false)
+        // Une ligne par caractéristique : (☆n) Nom : valeur (+bonus des étoiles) — jamais de comparaison.
+        foreach (var s in System.Enum.GetValues<WeaponStat>())
         {
+            if (!w.HasStat(s)) continue;
+            var (value, bonus) = w.Describe(s);
             var h = UiKit.HBox(16);
             h.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
             h.CustomMinimumSize = new Vector2(520, 28);
-            var l = UiKit.Label(name, 16, UiKit.Muted);
+            h.AddChild(UiKit.Label($"(☆{w.StarsOf(s)})", 16, UiKit.Gold));
+            var l = UiKit.Label(WeaponInstance.StatNames[(int)s], 16, UiKit.Muted);
             l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             h.AddChild(l);
-            var val = UiKit.Label(string.Format(fmt, v), 17, UiKit.Text);
+            var val = UiKit.Label(value, 17, UiKit.Text);
             val.AddThemeFontOverride("font", UiKit.BodyMedium);
             h.AddChild(val);
-            var d = UiKit.Label("", 14, UiKit.Muted);
+            var d = UiKit.Label(w.StarsOf(s) > 0 ? $"({bonus})" : "", 14, UiKit.Good);
             d.CustomMinimumSize = new Vector2(90, 0);
             d.HorizontalAlignment = HorizontalAlignment.Right;
-            if (c.HasValue && string.Format(fmt, Mathf.Abs(v - c.Value)) != string.Format(fmt, 0f))
-            {
-                var better = lowerBetter ? v < c.Value : v > c.Value;
-                d.Text = (v > c.Value ? "▲ " : "▼ ") + string.Format(fmt, Mathf.Abs(v - c.Value));
-                d.AddThemeColorOverride("font_color", better ? UiKit.Good : UiKit.Danger);
-            }
             h.AddChild(d);
             _card.AddChild(h);
         }
-        Line("DPS", w.Dps, eq?.Dps, "{0:0}");
-        Line("Dégâts", w.Damage * w.T.Pellets, eq != null ? eq.Damage * eq.T.Pellets : null, "{0:0}");
-        Line("Rechargement", w.Reload, eq?.Reload, "{0:0.0} s", true);
-        Line("Portée", w.Range, eq?.Range, "{0:0} m");
-        if (eq != null)
-        {
-            var cmp = UiKit.Label($"comparé à {eq.T.Name} Nv.{eq.Level} (équipée)", 13, UiKit.Muted);
-            cmp.HorizontalAlignment = HorizontalAlignment.Center;
-            _card.AddChild(cmp);
-        }
-        // Segment affiché : plus haut et plein ; les autres révélés restent à la couleur de leur rareté.
+        // Segment affiché : plus haut et plein ; les autres révélés restent à la couleur de leurs étoiles.
         for (var k = 0; k < _strip.GetChildCount(); k++)
         {
             var pip = (Control)_strip.GetChild(k);
@@ -302,7 +289,7 @@ public partial class ResultsScreen : CanvasLayer
         if (i == _revealed - 1 && i != _flashed)
         {
             _flashed = i;
-            var strength = 0.10f + 0.04f * (int)w.Rarity;
+            var strength = 0.10f + 0.16f * StarFrac(w);
             _flash.Color = new Color(rc, strength);
             _flashTween?.Kill();
             _flashTween = _flash.CreateTween();

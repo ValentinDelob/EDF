@@ -250,6 +250,50 @@ public static class AutoTest
         };
     }
 
+    private static void ArsenalShots(App app)
+    {
+        var rng = new RandomNumberGenerator { Seed = 42 };
+        var pity = 0;
+        foreach (var cd in Classes.All)
+            for (var i = 0; i < 12; i++)
+            {
+                var w = Loot.RollWeapon(cd.Id, (Difficulty)(i % 5), i / 11f, rng, ref pity);
+                Profile.I.Grant(w);
+            }
+        // Migration d'armes d'un profil version 1 (rareté + 5 étoiles 1..5), lue comme depuis le fichier JSON.
+        foreach (var json in new[]
+                 {
+                     """{"Uid":"legacy0001","TemplateId":"fa30","Level":33,"Rarity":4,"Stars":[5,3,1,2,4],"IsNew":false}""",
+                     """{"Uid":"legacy0002","TemplateId":"art1","Level":20,"Rarity":2,"Stars":[4,2,5,3,1],"IsNew":false}""",
+                 })
+        {
+            var old = System.Text.Json.JsonSerializer.Deserialize<WeaponInstance>(json);
+            old.MigrateLegacy();
+            GD.Print($"Migration {old.TemplateId} Nv.{old.Level} : étoiles [{string.Join(", ", old.Stars)}] → {System.Text.Json.JsonSerializer.Serialize(old)}");
+            Profile.I.Data.Arsenal.Add(old);
+        }
+        var tree = app.GetTree();
+        void Key(Key k)
+        {
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = true });
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Pressed = false });
+        }
+        void At(float s, Action a) => tree.CreateTimer(s, true, false, true).Timeout += a;
+        At(3f, () => app.ShowArsenal(app.ShowMain));
+        At(5.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_open"));
+        At(6f, () => { Key(Godot.Key.Right); Key(Godot.Key.Down); });
+        At(7f, () => Screenshot.Take(app.GetViewport(), "arsenal_nav"));
+        At(7.5f, () => { Key(Godot.Key.E); Key(Godot.Key.Enter); });
+        At(8.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_equip"));
+        At(9f, () => Key(Godot.Key.Tab));
+        At(10.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_class2"));
+        At(11f, () => Key(Godot.Key.Tab));
+        At(11.5f, () => Key(Godot.Key.Right));
+        At(12.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_class3"));
+        At(13f, () => Key(Godot.Key.Tab));
+        At(14.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_class4"));
+    }
+
     public static void Run(App app)
     {
         var dir = Screenshot.CmdArg("shots");
@@ -257,6 +301,13 @@ public static class AutoTest
         if (quitAfter != null && float.TryParse(quitAfter, NumberStyles.Float, CultureInfo.InvariantCulture, out var q))
             app.GetTree().CreateTimer(q, true, false, true).Timeout += app.Quit;
 
+        // --menu-shots=arsenal : profil de test garni d'armes de tous types, puis captures de l'arsenal
+        // (navigation clavier simulée, changement d'emplacement et de classe).
+        if (Screenshot.CmdArg("menu-shots") == "arsenal")
+        {
+            ArsenalShots(app);
+            return;
+        }
         if (Screenshot.CmdArg("menu-shots") != null)
         {
             var tree = app.GetTree();
