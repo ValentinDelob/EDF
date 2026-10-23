@@ -34,7 +34,6 @@ public static class Grade
     // éclairées côté soleil, assombries en dessous, fondues dans la brume à l'horizon.
     private const string SkyCode = @"
 shader_type sky;
-render_mode use_quarter_res_pass;
 uniform vec3 zenith : source_color = vec3(0.3);
 uniform vec3 horizon : source_color = vec3(0.5);
 uniform vec3 ground : source_color = vec3(0.1);
@@ -43,7 +42,8 @@ uniform vec3 cloud_dark : source_color = vec3(0.2);
 uniform float coverage = 0.6;
 uniform float wind = 0.004;
 
-float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+// Hachage sur cellules repliées (mod 289) : reste précis même loin de l'origine (sinon facettes près de l'horizon).
+float hash(vec2 p) { p = mod(p, 289.0); p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
 float noise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
@@ -71,7 +71,7 @@ void sky() {
     if (d.y > 0.0) {
         int oct = AT_CUBEMAP_PASS ? 3 : 6;
         // Projection sur un plafond nuageux : les nuages s'aplatissent vers l'horizon.
-        vec2 uv = d.xz / (d.y + 0.08) * 1.6 + vec2(TIME * wind, TIME * wind * 0.6);
+        vec2 uv = d.xz / (d.y + 0.12) * 1.6 + vec2(TIME * wind, TIME * wind * 0.6);
         float c1 = density(uv, oct);
         float c2 = density(uv * 0.45 + 31.0 - vec2(TIME * wind * 0.5, 0.0), oct);
         float c = clamp(max(c1, c2 * 0.9), 0.0, 1.0);

@@ -695,17 +695,17 @@ public static partial class Mats
         {
             var haze = Fbm(x, y, 64, size / 64, 422) * 0.18f;
             var v = Mathf.Clamp(a[y * size + x] + haze, 0, 1);
-            alb.Set(x, y, new Color(0.7f, 0.71f, 0.66f, v * 0.75f));
+            alb.Set(x, y, new Color(0.3f, 0.29f, 0.26f, v * 0.75f)); // soie souillée de poussière et de cendre
         }
         var mat = new StandardMaterial3D
         {
             AlbedoTexture = ImageTexture.CreateFromImage(alb.ToImage()),
             Transparency = BaseMaterial3D.TransparencyEnum.AlphaScissor, // fils nets, rendu opaque (bien moins coûteux)
-            AlphaScissorThreshold = 0.3f,
+            AlphaScissorThreshold = 0.42f,
             CullMode = BaseMaterial3D.CullModeEnum.Disabled,
             Roughness = 0.45f,
             BacklightEnabled = true,
-            Backlight = new Color(0.4f, 0.4f, 0.38f),
+            Backlight = new Color(0.16f, 0.16f, 0.15f),
             Uv1Triplanar = true,
             Uv1WorldTriplanar = true,
             Uv1Scale = new Vector3(0.12f, 0.12f, 0.12f),
@@ -715,18 +715,18 @@ public static partial class Mats
         return mat;
     }
 
-    /// <summary>Fils de toile (tubes fins), blanc cassé légèrement nacré.</summary>
+    /// <summary>Fils de toile (tubes fins), gris sale légèrement luisant.</summary>
     public static StandardMaterial3D WebStrand()
     {
         if (Cache.TryGetValue("webstrand", out var m)) return (StandardMaterial3D)m;
         var mat = new StandardMaterial3D
         {
-            AlbedoColor = new Color(0.72f, 0.73f, 0.68f),
+            AlbedoColor = new Color(0.34f, 0.33f, 0.3f),
             Roughness = 0.35f,
             RimEnabled = true,
-            Rim = 0.5f,
+            Rim = 0.25f,
             BacklightEnabled = true,
-            Backlight = new Color(0.3f, 0.3f, 0.28f),
+            Backlight = new Color(0.12f, 0.12f, 0.11f),
         };
         Cache["webstrand"] = mat;
         return mat;
