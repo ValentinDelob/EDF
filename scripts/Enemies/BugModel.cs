@@ -42,6 +42,7 @@ public partial class BugModel : Node3D
             case EnemyType.Spider: m.BuildSpider(); break;
             case EnemyType.Drone: m.BuildDrone(); break;
             case EnemyType.Fortress: m.BuildFortress(); break;
+            case EnemyType.Centipede: m.BuildCentipede(); break;
         }
         return m;
     }
@@ -272,6 +273,7 @@ public partial class BugModel : Node3D
             if (was > 0 && _flashT <= 0 && _meshes != null) foreach (var m in _meshes) m.MaterialOverlay = null;
         }
         if (_dead) return;
+        if (Type == EnemyType.Centipede) { AnimateCentipede(dt, speed, attack); return; }
         if (Type == EnemyType.Nest)
         {
             Scale = Vector3.One * (1f + Mathf.Sin(_t * 1.5f) * 0.015f);
@@ -350,6 +352,7 @@ public partial class BugModel : Node3D
     public void DeathPose()
     {
         _dead = true;
+        if (Type == EnemyType.Centipede) { CentipedeDeathPose(); return; }
         foreach (var l in _legs)
         {
             l.Hip.Rotation = new Vector3(0, -Mathf.DegToRad(l.Fwd * 0.6f) * l.Side, 0);

@@ -365,6 +365,15 @@ public static class AutoTest
                     e.GlobalPosition = p;
                     e.Rotation = new Vector3(0, 0.6f, 0);
                 }
+                if (!big)
+                {
+                    // Mille-pattes au premier plan, de trois quarts, le corps en S pour montrer la trace.
+                    var p = new Vector3(6, 0, -2);
+                    var c = w.HostSpawnEnemy(EnemyType.Centipede, p);
+                    c.GlobalPosition = p;
+                    c.Rotation = new Vector3(0, 1.0f, 0);
+                    c.Model.SeedCentipedeTrail(0.45f);
+                }
             };
         ScheduleShots(app, dir, $"mission{mission}");
     }

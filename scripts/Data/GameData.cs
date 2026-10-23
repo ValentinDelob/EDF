@@ -176,7 +176,7 @@ public class WeaponInstance
     public int TotalStars => Stars.Sum();
 }
 
-public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress }
+public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede }
 
 public record EnemyDef(
     EnemyType Type,
@@ -208,6 +208,8 @@ public static class Enemies
         new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.3f, Flying: true, Ranged: true),
         // Forteresse marcheuse : Damage = un tir laser (missiles, piétinement et canon en multiples).
         new(EnemyType.Fortress, "Forteresse marcheuse", 150000, 2.5f, 5, 170f, 4f, 12f, 1f, Ranged: true, Boss: true),
+        // Mille-pattes : morsure au contact et courte giclée d'acide à mi-distance (Damage pour les deux).
+        new(EnemyType.Centipede, "Mille-pattes", 360, 7f, 10, 4.5f, 1.5f, 1.25f, 0.6f),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];

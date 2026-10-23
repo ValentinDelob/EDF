@@ -425,7 +425,8 @@ public partial class World : Node3D
         foreach (var e in EnemiesById.Values)
         {
             if (e.State == EnemyState.Dead || e.Def.Flying || e.IsStatic || e.IsBoss) continue;
-            if (e.GlobalPosition.DistanceTo(at) > radius + e.Def.Size) continue;
+            if (e.GlobalPosition.DistanceTo(at) > radius + e.Def.Size
+                && (e.Def.Type != EnemyType.Centipede || e.BodyDistance(at) > radius + e.Def.Size)) continue;
             Net.I.SendDamageEnemy(e.Id, dmg, e.Center, false);
         }
     }
@@ -684,7 +685,7 @@ public partial class World : Node3D
         foreach (var e in EnemiesById.Values.ToList())
         {
             if (e.State == EnemyState.Dead) continue;
-            var d = e.Center.DistanceTo(pos) - e.Def.Size * 1.2f;
+            var d = e.BodyDistance(pos) - e.Def.Size * 1.2f;
             if (e.Def.Type == EnemyType.Nest) d = e.GlobalPosition.DistanceTo(pos) - 6f;
             if (d > radius) continue;
             var f = Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
