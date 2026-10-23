@@ -146,11 +146,8 @@ public partial class World : Node3D
 
     private void BuildEnvironment()
     {
-        var sky = new ProceduralSkyMaterial();
         var env = new Godot.Environment
         {
-            BackgroundMode = Godot.Environment.BGMode.Sky,
-            Sky = new Sky { SkyMaterial = sky },
             AmbientLightSource = Godot.Environment.AmbientSource.Sky,
             ReflectedLightSource = Godot.Environment.ReflectionSource.Sky,
             TonemapMode = Godot.Environment.ToneMapper.Agx,
@@ -174,7 +171,7 @@ public partial class World : Node3D
             DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel4Splits,
             ShadowBlur = 1.2f,
         };
-        Grade.Apply(env, sky, _sun, Mission.Time, Mission.Weather, Mission.Fog);
+        Grade.Apply(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);
         AddChild(_sun);

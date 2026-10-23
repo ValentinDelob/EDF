@@ -22,11 +22,8 @@ public partial class MenuBackground : Node3D
 
     public override void _Ready()
     {
-        var sky = new ProceduralSkyMaterial();
         var env = new Godot.Environment
         {
-            BackgroundMode = Godot.Environment.BGMode.Sky,
-            Sky = new Sky { SkyMaterial = sky },
             TonemapMode = Godot.Environment.ToneMapper.Agx,
             SsaoEnabled = true,
             VolumetricFogEnabled = Settings.I.Quality >= 2,
@@ -34,7 +31,7 @@ public partial class MenuBackground : Node3D
         };
         var sun = new DirectionalLight3D { ShadowEnabled = true, DirectionalShadowMaxDistance = 150f };
         // Même direction artistique que les missions : crépuscule enfumé sur une ville envahie.
-        Grade.Apply(env, sky, sun, TimeOfDay.Dusk, Weather.Clear, 0.006f);
+        Grade.Apply(env, sun, TimeOfDay.Dusk, Weather.Clear, 0.006f);
         sun.RotationDegrees = new Vector3(-14, 68, 0);
         env.AmbientLightEnergy = 1.4f; // les soldats du salon doivent rester lisibles
         env.VolumetricFogAlbedo = env.FogLightColor;
