@@ -46,10 +46,18 @@ function Invoke-Godot {
     Write-Host ""
     Write-Host "==> $Step" -ForegroundColor Cyan
     Write-Host "    $Godot $($GodotArgs -join ' ')"
-    & $Godot @GodotArgs
+    $log = & $Godot @GodotArgs 2>&1 | ForEach-Object { $_.ToString() }
+    $log | Where-Object { $_ -notmatch 'savepack|reimport|Stockage' } | Select-Object -Last 40 | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Echec de l'etape '$Step' (code $LASTEXITCODE)."
         exit $LASTEXITCODE
+    }
+    # Godot peut terminer avec le code 0 malgre une erreur de compilation ou d'export .NET.
+    $fatal = $log | Where-Object { $_ -match 'ERROR: Export|error CS\d{4}|no solution file|Build failed' }
+    if ($fatal) {
+        $fatal | Select-Object -First 10 | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        Write-Error "Echec de l'etape '$Step' : erreurs detectees dans la sortie de Godot."
+        exit 1
     }
 }
 

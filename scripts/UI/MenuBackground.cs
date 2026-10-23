@@ -76,8 +76,8 @@ public partial class MenuBackground : Node3D
         {
             var root = new Node3D { Position = SlotPosition(i, false), Visible = false };
             AddChild(root);
-            var name = new Label3D { FontSize = 64, OutlineSize = 12, PixelSize = 0.0042f, Position = new Vector3(0, -0.2f, 0.6f), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Font = UiKit.HeadFont };
-            var sub = new Label3D { FontSize = 40, OutlineSize = 10, PixelSize = 0.0042f, Position = new Vector3(0, -0.42f, 0.6f), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Modulate = UiKit.Muted, Font = UiKit.BodyFont };
+            var name = new Label3D { FontSize = 64, OutlineSize = 12, PixelSize = 0.0042f, Position = new Vector3(0, 2.32f, 0), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Font = UiKit.HeadFont };
+            var sub = new Label3D { FontSize = 40, OutlineSize = 10, PixelSize = 0.0042f, Position = new Vector3(0, 2.12f, 0), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Modulate = UiKit.Muted, Font = UiKit.BodyFont };
             root.AddChild(name);
             root.AddChild(sub);
             _slots.Add((root, null, name, sub));
@@ -139,13 +139,13 @@ public partial class MenuBackground : Node3D
                 name.Modulate = UiKit.Text;
                 sub.Text = Classes.Get(p.Class).Name + (solo || p.Id == 1 ? "" : p.Ready ? "  ·  PRÊT" : "");
                 sub.Modulate = !solo && p.Ready ? UiKit.Good : UiKit.Muted;
-                name.Position = new Vector3(0, -0.2f, 0.6f);
+                name.Position = new Vector3(0, 2.32f, 0);
             }
             else
             {
                 name.Text = "+";
                 name.Modulate = UiKit.Dim;
-                name.Position = new Vector3(0, 1.1f, 0.6f);
+                name.Position = new Vector3(0, 1.1f, 0);
                 sub.Text = "Place libre";
                 sub.Modulate = UiKit.Dim;
             }

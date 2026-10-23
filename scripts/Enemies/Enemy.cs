@@ -168,8 +168,8 @@ public partial class Enemy : CharacterBody3D
             }
         }
         // Séparation entre ennemis.
-        var sep = _world.Separation(this, 2.6f * Def.Size);
-        var move = desired + sep * 1.2f;
+        var sep = _world.Separation(this, 3.2f * Def.Size);
+        var move = desired + sep * 2.2f;
         if (move.LengthSquared() > 1) move = move.Normalized();
         _moveDir = _moveDir.Lerp(move, Mathf.Clamp(dt * 6f, 0, 1));
         var speed = Def.Speed * (attacking ? 0.15f : 1f);

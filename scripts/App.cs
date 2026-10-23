@@ -189,6 +189,35 @@ public static class AutoTest
             Shot(15f, app.ShowJoin, "menu_join");
         }
 
+        // Test LAN : --autohost=2 (attend 2 joueurs puis lance) / --autojoin=127.0.0.1
+        Player.Bot = Screenshot.CmdArg("bot") != null;
+        if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
+        if (Screenshot.CmdArg("class") is { } cc && int.TryParse(cc, out var ccls)) Profile.I.Data.SelectedClass = (SoldierClass)ccls;
+        var mission0 = int.TryParse(Screenshot.CmdArg("mission") ?? "0", out var mm) ? mm : 0;
+        if (Screenshot.CmdArg("autohost") is { } ah && int.TryParse(ah, out var expected))
+        {
+            app.GetTree().CreateTimer(0.5f).Timeout += app.Host;
+            var started = false;
+            Net.I.LobbyChanged += () =>
+            {
+                if (started || Net.I.Players.Count < expected) return;
+                started = true;
+                app.GetTree().CreateTimer(2f).Timeout += () =>
+                {
+                    Net.I.SetLobbyMission(mission0, Difficulty.Normal);
+                    Net.I.HostStartMission();
+                };
+            };
+            ScheduleShots(app, dir, "host");
+            return;
+        }
+        if (Screenshot.CmdArg("autojoin") is { } ip)
+        {
+            app.GetTree().CreateTimer(2f).Timeout += () => { app.ShowJoin(); Net.I.Join(ip); };
+            ScheduleShots(app, dir, "client");
+            return;
+        }
+
         var auto = Screenshot.CmdArg("autostart");
         if (auto == null) return;
         if (Screenshot.CmdArg("class") is { } c && int.TryParse(c, out var cls)) Profile.I.Data.SelectedClass = (SoldierClass)cls;
@@ -201,10 +230,15 @@ public static class AutoTest
             Net.I.SetLobbyMission(mission, diff);
             Net.I.HostStartMission();
         };
+        ScheduleShots(app, dir, $"mission{mission}");
+    }
+
+    private static void ScheduleShots(App app, string dir, string prefix)
+    {
         if (dir == null) return;
         var times = (Screenshot.CmdArg("shot-times") ?? "6,12").Split(',')
             .Select(s => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var f) ? f : 5f);
         foreach (var t in times)
-            app.GetTree().CreateTimer(t, true, false, true).Timeout += () => Screenshot.Take(app.GetViewport(), $"mission{mission}");
+            app.GetTree().CreateTimer(t, true, false, true).Timeout += () => Screenshot.Take(app.GetViewport(), prefix);
     }
 }
