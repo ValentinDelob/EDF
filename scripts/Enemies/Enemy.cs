@@ -94,6 +94,19 @@ public partial class Enemy : CharacterBody3D
             e.State = EnemyState.Moving;
             e.Model.Stomp += e.OnFortressStomp;
         }
+        else if (type == EnemyType.Centipede)
+        {
+            // 0 = cou, 1 = tête (point faible), puis une sphère par segment, recalée chaque image sur le corps.
+            e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.1f, 0.8f, 0.7f) * s }, Position = new Vector3(0, 0.6f, -0.15f) * s });
+            e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 0.5f * s }, Position = new Vector3(0, 0.65f, 0.4f) * s });
+            e._segShapes = new CollisionShape3D[e.Model.CentipedeSegmentCount];
+            for (var i = 0; i < e._segShapes.Length; i++)
+            {
+                e._segShapes[i] = new CollisionShape3D { Shape = new SphereShape3D { Radius = 0.55f * s * e.Model.CentipedeSegmentScale(i) } };
+                e.AddChild(e._segShapes[i]);
+            }
+            e.SyncSegmentShapes();
+        }
         else if (type is EnemyType.Wasp or EnemyType.Drone)
         {
             e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.6f, 1.4f, 3.4f) * s }, Position = new Vector3(0, 0, -0.5f) * s });
@@ -128,14 +141,34 @@ public partial class Enemy : CharacterBody3D
     }
 
     public Vector3 Center => IsFortress ? GlobalPosition + Vector3.Up * BugModel.FortHullY
-        : GlobalPosition + Vector3.Up * (Def.Flying ? 0 : 1.1f * Def.Size);
+        : GlobalPosition + Vector3.Up * (Def.Flying ? 0 : (_segShapes != null ? 0.65f : 1.1f) * Def.Size);
 
     private bool IsFortress => Def.Type == EnemyType.Fortress;
+
+    /// <summary>Formes de collision des segments du mille-pattes (le corps suit la trace de la tête).</summary>
+    private CollisionShape3D[] _segShapes;
 
     private void AnimateModel(float dt, float speed, float attack)
     {
         if (IsFortress) Model.AnimateFortress(dt, speed, attack);
         else Model.Animate(dt, speed, attack);
+        if (_segShapes != null) SyncSegmentShapes();
+    }
+
+    /// <summary>Recale les formes de collision sur les segments affichés (hôte et clients : les tirs touchent tout le corps).</summary>
+    private void SyncSegmentShapes()
+    {
+        var xf = Model.Transform;
+        for (var i = 0; i < _segShapes.Length; i++) _segShapes[i].Position = xf * Model.CentipedeSegmentLocal(i);
+    }
+
+    /// <summary>Distance d'un point au corps : le centre, ou le segment le plus proche pour le mille-pattes.</summary>
+    public float BodyDistance(Vector3 p)
+    {
+        var d = Center.DistanceTo(p);
+        if (_segShapes != null)
+            foreach (var sh in _segShapes) d = Mathf.Min(d, sh.GlobalPosition.DistanceTo(p));
+        return d;
     }
 
     // ---------------- Hôte ----------------
@@ -153,10 +186,10 @@ public partial class Enemy : CharacterBody3D
             var k = Mathf.Clamp(_emergeT / 1.2f, 0, 1);
             if (!Def.Flying) Model.Position = new Vector3(0, Mathf.Lerp(-2.5f * Def.Size, 0, k), 0);
             if (k >= 1) State = EnemyState.Moving;
-            Model.Animate(dt, 3f, 0);
+            AnimateModel(dt, 3f, 0);
             return;
         }
-        if (Def.Static) { Model.Animate(dt, 0, 0); return; }
+        if (Def.Static) { AnimateModel(dt, 0, 0); return; }
 
         _attackCd -= dt;
         _specialCd -= dt;
@@ -187,7 +220,7 @@ public partial class Enemy : CharacterBody3D
         }
         if (Def.Flying) TickFlying(dt, peer, target, ally);
         else TickGround(dt, peer, target, ally);
-        Model.Animate(dt, _speedNow, _attackAnim);
+        AnimateModel(dt, _speedNow, _attackAnim);
     }
 
     private void TickGround(float dt, long peer, Vector3 target, Ally ally)
@@ -276,6 +309,14 @@ public partial class Enemy : CharacterBody3D
             Rotation = new Vector3(0, _yaw, 0);
         }
 
+        // Mille-pattes : courte giclée d'acide sur une cible à mi-distance, entre deux morsures.
+        if (Def.Type == EnemyType.Centipede && ally == null && _specialCd <= 0 && dist > reach + 3f && dist < 24f)
+        {
+            _specialCd = (float)GD.RandRange(4.5, 7.5);
+            _attackAnim = 1f;
+            _world.HostEnemyProjectile(this, 0, Center + Basis.Z * 1.4f * Def.Size, target + Vector3.Up, 1);
+            Net.I.BroadcastEnemyAttack(Id, 1, target);
+        }
         if (attacking && _attackCd <= 0)
         {
             _attackCd = Def.AttackCooldown * (float)GD.RandRange(0.85, 1.15);
