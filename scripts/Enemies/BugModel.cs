@@ -32,7 +32,7 @@ public partial class BugModel : Node3D
             case EnemyType.RedAnt: m.BuildAnt(new Color(0.45f, 0.09f, 0.05f), 1.15f, 1.05f); break;
             case EnemyType.AcidAnt: m.BuildAnt(new Color(0.42f, 0.4f, 0.08f), 1f, 1f, acid: true); break;
             case EnemyType.Scavenger: m.BuildAnt(new Color(0.48f, 0.38f, 0.27f), 0.85f, 1.35f); break;
-            case EnemyType.Queen: m.BuildAnt(new Color(0.25f, 0.06f, 0.05f), 3.8f, 1.1f, queen: true); break;
+            case EnemyType.Queen: m.BuildAnt(new Color(0.25f, 0.06f, 0.05f), 3.8f, 0.85f, queen: true); break;
             case EnemyType.Wasp: m.BuildWasp(); break;
             case EnemyType.Nest: m.BuildNest(); break;
         }
@@ -256,9 +256,10 @@ public partial class BugModel : Node3D
     /// <summary>Bref flash blanc à l'impact (retour visuel des tirs).</summary>
     public void Flash()
     {
+        if (Type is EnemyType.Queen or EnemyType.Nest) return; // cibles touchées en continu : pas de flash
         _flashMat ??= new StandardMaterial3D
         {
-            AlbedoColor = new Color(1f, 0.85f, 0.6f, 0.3f),
+            AlbedoColor = new Color(1f, 0.55f, 0.3f, 0.16f),
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             BlendMode = BaseMaterial3D.BlendModeEnum.Add,
@@ -269,9 +270,9 @@ public partial class BugModel : Node3D
             foreach (var n in FindChildren("*", "MeshInstance3D", true, false)) _meshes.Add((GeometryInstance3D)n);
         }
         // Pas plus d'un flash toutes les 0,2 s : sous un feu continu, l'insecte ne doit pas rester blanc.
-        if (_flashT > -0.13f) return;
+        if (_flashT > -0.2f) return;
         foreach (var m in _meshes) m.MaterialOverlay = _flashMat;
-        _flashT = 0.06f;
+        _flashT = 0.05f;
     }
 
     /// <summary>Anime la démarche (vitesse en m/s), l'attaque (0..1) et le vol.</summary>

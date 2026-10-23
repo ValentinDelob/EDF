@@ -245,6 +245,7 @@ public partial class World : Node3D
         }
 
         if (LocalPlayer != null && !LocalPlayer.Downed) LocalPickupCheck();
+        FlushDamageNumbers(dt);
     }
 
     private void HostProcess(float dt)
@@ -445,6 +446,18 @@ public partial class World : Node3D
         }
     }
 
+    private readonly Dictionary<int, (float dmg, Vector3 at, bool weak)> _pendingDamage = new();
+    private float _damageFlush;
+
+    private void FlushDamageNumbers(float dt)
+    {
+        _damageFlush -= dt;
+        if (_damageFlush > 0 || _pendingDamage.Count == 0) return;
+        _damageFlush = 0.15f;
+        foreach (var (_, v) in _pendingDamage) Effects.DamageNumber(this, v.at, v.dmg, v.weak);
+        _pendingDamage.Clear();
+    }
+
     public Vector3 Separation(Enemy self, float radius)
     {
         var p = self.GlobalPosition;
@@ -563,7 +576,12 @@ public partial class World : Node3D
     {
         Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
-        if (damage > 0 && Settings.I.DamageNumbers) Effects.DamageNumber(this, at, damage, weak);
+        if (damage > 0 && Settings.I.DamageNumbers)
+        {
+            // Regroupement par ennemi (feu continu : un chiffre toutes les 0,15 s au lieu d'une pile).
+            _pendingDamage.TryGetValue(e.Id, out var acc);
+            _pendingDamage[e.Id] = (acc.dmg + damage, at, acc.weak || weak);
+        }
         if (sound) Sfx.Ui("hitmarker", -8f, 1f, 40);
     }
 
