@@ -560,6 +560,8 @@ public partial class World : Node3D
         var yaw = Rng.RandfRange(-Mathf.Pi, Mathf.Pi);
         if (Enemies.Get(type).Flying) pos.Y = Rng.RandfRange(25, 40);
         var hpMul = HealthMul;
+        var def = Enemies.Get(type);
+        if (!def.Static && !def.Boss && !Enemy.Frozen && Rng.Randf() < 0.06f) hpMul = -hpMul; // élite
         var e = Enemy.Create(this, id, type, pos, yaw, hpMul);
         AddChild(e);
         EnemiesById[id] = e;
@@ -676,11 +678,12 @@ public partial class World : Node3D
         var drops = 0;
         if (e.Def.Boss) drops = 10;
         else if (e.Def.Type == EnemyType.Nest) drops = 4;
+        else if (e.Elite) drops = 2;
         else if (Rng.Randf() < e.Def.DropChance) drops = 1;
         drops += e.EatenCrates + (e.EatenCrates > 0 ? 1 : 0);
         for (var i = 0; i < drops; i++)
         {
-            var type = e.Def.Boss && i < 5 ? CrateType.Weapon : Crates.Roll(Rng);
+            var type = (e.Def.Boss && i < 5) || (e.Elite && i == 0) ? CrateType.Weapon : Crates.Roll(Rng);
             HostSpawnCrate(type, ground + new Vector3(Rng.RandfRange(-2, 2) * (e.Def.Size), 0, Rng.RandfRange(-2, 2) * e.Def.Size));
         }
     }
@@ -730,23 +733,23 @@ public partial class World : Node3D
         Projectile p;
         if (kind == 2)
         {
-            p = Projectile.Spawn(this, ProjectileKind.Web, from, BallisticVelocity(from, target, 32f, 9f), true, e.Def.Damage * DamageMul, 2.5f);
+            p = Projectile.Spawn(this, ProjectileKind.Web, from, BallisticVelocity(from, target, 32f, 9f), true, e.Def.Damage * DamageMul * e.DamageScale, 2.5f);
             Sfx.At("spit", from, 0f, 1.3f);
         }
         else if (kind == 3)
         {
-            p = Projectile.Spawn(this, ProjectileKind.Laser, from, (target - from).Normalized() * 90f, true, e.Def.Damage * DamageMul, 1.2f);
+            p = Projectile.Spawn(this, ProjectileKind.Laser, from, (target - from).Normalized() * 90f, true, e.Def.Damage * DamageMul * e.DamageScale, 1.2f);
             Sfx.At("laser", from, -2f, 0.7f);
         }
         else if (kind == 0)
         {
             var pk = size >= 3 ? ProjectileKind.AcidBig : ProjectileKind.Acid;
-            p = Projectile.Spawn(this, pk, from, BallisticVelocity(from, target, size >= 3 ? 26f : 30f, 9f), true, e.Def.Damage * DamageMul, size >= 3 ? 5f : 2.5f);
+            p = Projectile.Spawn(this, pk, from, BallisticVelocity(from, target, size >= 3 ? 26f : 30f, 9f), true, e.Def.Damage * DamageMul * e.DamageScale, size >= 3 ? 5f : 2.5f);
             Sfx.At("spit", from, 0f);
         }
         else
         {
-            p = Projectile.Spawn(this, ProjectileKind.Stinger, from, (target - from).Normalized() * 60f, true, e.Def.Damage * DamageMul, 1.5f);
+            p = Projectile.Spawn(this, ProjectileKind.Stinger, from, (target - from).Normalized() * 60f, true, e.Def.Damage * DamageMul * e.DamageScale, 1.5f);
             Sfx.At("buzz", from, 0f);
         }
         p.SourceEnemy = e;

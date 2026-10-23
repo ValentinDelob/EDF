@@ -1,5 +1,28 @@
 # Journal des versions
 
+## v0.2.0 — Contenu et sensations
+
+### Nouveautés
+- **Char de combat** pilotable (E pour monter) : canon, mitrailleuse, écrasement des insectes, synchronisé en LAN.
+- **Escouades alliées** : soldats PNJ qui suivent le joueur et tirent sur les insectes.
+- **Nouveaux ennemis** : araignée géante (bonds, toiles) et drone d'attaque (lasers).
+- **2 missions bonus** : « La toile » et « Ciel noir », débloquées après « La reine » ; missions débloquées progressivement.
+- **Progression de classe** : expérience, niveaux 1 à 60 (+1 % de dégâts, +3 PV par niveau).
+- **Atelier** : amélioration d'une étoile d'arme contre des crédits.
+- **13 armes de haut niveau** (32 au total), dont des salves multi-roquettes.
+- **Musique procédurale** (menu, calme, combat, boss) avec fondus enchaînés, bruitages enrichis.
+- **Météo** : pluie (Nids sous la ville) et orage avec éclairs (La reine).
+- **Manette** : déplacement, caméra au stick droit, gâchettes et boutons.
+- **Tableau des scores** (Tab) et escouade dans le bilan ; écran **Guide**.
+
+### Sensations
+- Flash discret à l'impact, chiffres de dégâts regroupés, aimantation des caisses, bond des fourmis à la morsure.
+- Arme tenue selon l'arme équipée, animation de rechargement, rappel des commandes en début de mission.
+- Options : échelle du HUD, affichage des chiffres de dégâts ; touches affichées selon la disposition du clavier (ZQSD en AZERTY).
+
+### Technique
+- CI plus rapide (2 min 30 au lieu de 13 min), profil de test séparé, sauvegarde atomique du profil.
+
 ## v0.1.0 — Premier POC jouable
 
 ### Jeu

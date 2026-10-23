@@ -17,6 +17,9 @@ public partial class Enemy : CharacterBody3D
     public EnemyState State = EnemyState.Emerging;
     public BugModel Model;
     public int EatenCrates;
+    /// <summary>Variante élite : dorée, PV ×3, dégâts ×1,5, butin garanti.</summary>
+    public bool Elite;
+    public float DamageScale = 1f;
     public bool IsBoss => Def.Boss;
     public bool IsStatic => Def.Static;
 
@@ -53,9 +56,23 @@ public partial class Enemy : CharacterBody3D
             CollisionMask = 0,
             _world = world,
         };
-        e.MaxHealth = e.Health = def.Health * hpMul;
+        // Un multiplicateur négatif transmis par le réseau signale une variante élite.
+        e.Elite = hpMul < 0;
+        hpMul = Mathf.Abs(hpMul);
+        e.MaxHealth = e.Health = def.Health * hpMul * (e.Elite ? 3f : 1f);
+        e.DamageScale = e.Elite ? 1.5f : 1f;
         e.Model = BugModel.Create(type);
         e.AddChild(e.Model);
+        if (e.Elite)
+        {
+            var gold = Mats.Chitin(new Color(0.78f, 0.58f, 0.14f));
+            foreach (var n in e.Model.FindChildren("*", "MeshInstance3D", true, false))
+            {
+                var mi = (MeshInstance3D)n;
+                if (mi.Mesh is SphereMesh && mi.Scale.X > 0.5f) mi.MaterialOverride = gold;
+            }
+            e.Model.Scale *= 1.12f;
+        }
         var s = def.Size;
         if (type == EnemyType.Nest)
         {
@@ -235,7 +252,7 @@ public partial class Enemy : CharacterBody3D
             _attackAnim = 1f;
             if (ally != null)
             {
-                _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * (Def.Ranged ? 0.6f : 1f));
+                _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * DamageScale * (Def.Ranged ? 0.6f : 1f));
                 Net.I.BroadcastEnemyAttack(Id, Def.Ranged ? 1 : 0, target);
                 if (Def.Ranged) Projectile.Spawn(_world, ProjectileKind.Acid, Center + Basis.Z * 1.5f * Def.Size, World.BallisticVelocity(Center, target + Vector3.Up, 30f, 9f), false, 0, 0);
             }
@@ -247,7 +264,7 @@ public partial class Enemy : CharacterBody3D
             }
             else
             {
-                Net.I.DamagePlayer(peer, Def.Damage * _world.DamageMul, pos);
+                Net.I.DamagePlayer(peer, Def.Damage * _world.DamageMul * DamageScale, pos);
                 Net.I.BroadcastEnemyAttack(Id, 0, target);
                 Sfx.At("hit", pos, 0f, 0.7f);
             }
@@ -292,7 +309,7 @@ public partial class Enemy : CharacterBody3D
             _attackAnim = 1;
             if (ally != null)
             {
-                _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul);
+                _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * DamageScale);
                 Projectile.Spawn(_world, ProjectileKind.Stinger, pos + Vector3.Down * 0.8f, (target + Vector3.Up - pos).Normalized() * 60f, false, 0, 0);
             }
             else _world.HostEnemyProjectile(this, Def.Type == EnemyType.Drone ? 3 : 1, pos + Vector3.Down * 0.8f, target + Vector3.Up * 1f, 1);
