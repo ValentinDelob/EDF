@@ -58,7 +58,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.paths.outputs.root }}
-        key: godot-${{ steps.paths.outputs.tag }}-mono-win64-v1
+        key: godot-${{ steps.paths.outputs.tag }}-mono-win64-v2
 
     - name: Download Godot + export templates
       if: steps.cache-godot.outputs.cache-hit != 'true'
@@ -80,7 +80,12 @@ runs:
         Invoke-WebRequest "$base/Godot_v${tag}_mono_export_templates.tpz" -OutFile $tpz
         Expand-Archive $tpz -DestinationPath $root -Force
 
-        Get-ChildItem $root
+        # Ne garder que les modeles Windows x86_64 (1,9 Go -> ~250 Mo) : cache bien plus rapide.
+        Get-ChildItem (Join-Path $root "templates") |
+          Where-Object { $_.Name -notmatch '^(windows_(debug|release)_x86_64(_console)?\.exe|version\.txt|icudt_godot\.dat)$' } |
+          Remove-Item -Recurse -Force
+        Remove-Item $zip, $tpz -Force
+        Get-ChildItem $root -Recurse -Depth 1 | Select-Object FullName, Length
 
     - name: Install export templates
       shell: pwsh
