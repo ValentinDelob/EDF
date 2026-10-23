@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.5.0 — Lisière
+
+- **Hélicoptère d'attaque** pilotable (E pour monter) : roquettes et canon, vol stationnaire, synchronisé en LAN. Char et hélicoptère partagent une base commune de véhicule.
+- **Nouvelle carte « Banlieue boisée »** : village avec mairie, église et cimetière, pavillons avec jardins, supermarché, stade, rivière guéable et ponts, forêt dense en lisière.
+- **Mission 8 « Lisière »** : vagues venues de la forêt, traversée de la rivière, assaut final de fourmis rouges et d'araignées.
+- **Nouvel ennemi : le mille-pattes géant** : corps de 12 segments qui serpente, morsure et crachat acide, chaque segment encaisse les tirs et les explosions.
+- **Équilibrage de la forteresse** : 70 000 PV au lieu de 150 000, missiles moins puissants.
+- **Salon** : liste des missions compacte (le détail n'apparaît que pour la mission choisie).
+- **Corrections** : le menu ne reste plus affiché au lancement d'une mission, la place d'un véhicule est libérée quand son conducteur quitte la partie, message d'aide déplacé pour ne plus masquer la vie.
+
 ## v0.4.0 — La forteresse
 
 - **Boss « Forteresse marcheuse »** : robot quadrupède de 35 m qui écrase les immeubles, salves laser des tourelles, barrages de missiles, canon principal à charge visible (zones rouges au sol), point faible sur le noyau, seconde phase avec lâcher de drones, séquence de destruction.

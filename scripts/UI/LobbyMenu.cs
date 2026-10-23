@@ -118,28 +118,31 @@ public partial class LobbyMenu : MenuScreen
         {
             var idx = m.Index;
             var locked = !MissionUnlocked(idx);
-            var b = UiKit.Button("", () => { Net.I.SetLobbyMission(idx, Net.I.LobbyDifficulty); Refresh(); }, "Row", 52);
+            var sel = Net.I.LobbyMission == idx;
+            // Lignes compactes (une ligne) ; seule la mission choisie affiche son détail : 8+ missions tiennent sans défiler.
+            var b = UiKit.Button("", () => { Net.I.SetLobbyMission(idx, Net.I.LobbyDifficulty); Refresh(); }, "Row", sel ? 56 : 38);
             b.ToggleMode = true;
-            b.SetPressedNoSignal(Net.I.LobbyMission == idx);
+            b.SetPressedNoSignal(sel);
             b.Disabled = !host || locked;
             var v = UiKit.VBox(0);
             v.MouseFilter = MouseFilterEnum.Ignore;
             UiKit.FillRect(v);
-            v.OffsetLeft = 22; v.OffsetTop = 4;
-            if (locked)
-            {
-                v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 21, UiKit.Dim, true));
-                v.AddChild(UiKit.Label(idx >= 3 ? "Mission bonus · terminez « La reine »" : "Verrouillée · terminez la mission précédente", 14, UiKit.Dim));
-                b.AddChild(v);
-                Item(b, $"m{idx}");
-                continue;
-            }
+            v.OffsetLeft = 22; v.OffsetRight = -16; v.OffsetTop = sel ? 5 : 3;
+            var line = UiKit.HBox(12);
+            line.MouseFilter = MouseFilterEnum.Ignore;
+            var title = UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", sel ? 21 : 19, locked ? UiKit.Dim : sel ? UiKit.Text : UiKit.Muted, true);
+            title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            line.AddChild(title);
             var cleared = Enumerable.Range(0, 5).Where(d => Profile.I.IsCleared(idx, (Difficulty)d)).Select(d => Difficulties.Names[d]).LastOrDefault();
-            var sel = Net.I.LobbyMission == idx;
-            v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 21, sel ? UiKit.Text : UiKit.Muted, true));
-            var goal = m.Goal switch { MissionGoal.Exterminate => "Extermination", MissionGoal.DestroyNests => "Destruction de nids", _ => "Boss" };
-            var time = m.Time switch { TimeOfDay.Day => "Jour", TimeOfDay.Dusk => "Crépuscule", _ => "Nuit" };
-            v.AddChild(UiKit.Label($"{goal} · {time}" + (cleared != null ? $" · ✓ {cleared}" : ""), 14, cleared != null && sel ? UiKit.Good : UiKit.Muted));
+            if (locked) line.AddChild(UiKit.Label(idx >= 3 ? "après « La reine »" : "verrouillée", 13, UiKit.Dim));
+            else if (cleared != null && !sel) line.AddChild(UiKit.Label("✓", 15, UiKit.Good));
+            v.AddChild(line);
+            if (sel)
+            {
+                var goal = m.Goal switch { MissionGoal.Exterminate => "Extermination", MissionGoal.DestroyNests => "Destruction de nids", _ => "Boss" };
+                var time = m.Time switch { TimeOfDay.Day => "Jour", TimeOfDay.Dusk => "Crépuscule", _ => "Nuit" };
+                v.AddChild(UiKit.Label($"{goal} · {time}" + (cleared != null ? $" · ✓ {cleared}" : ""), 14, cleared != null ? UiKit.Good : UiKit.Muted));
+            }
             b.AddChild(v);
             Item(b, $"m{idx}");
         }

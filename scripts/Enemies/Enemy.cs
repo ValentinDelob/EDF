@@ -625,7 +625,7 @@ public partial class Enemy : CharacterBody3D
         var flat = new Vector3(aim.X - from.X, 0, aim.Z - from.Z);
         var t = Mathf.Clamp(flat.Length() / 22f, 2.4f, 5f);
         var v = flat / t + Vector3.Up * ((aim.Y - from.Y + 0.5f * Projectile.BombGravity * t * t) / t);
-        var p = Projectile.Spawn(_world, ProjectileKind.Bomb, from, v, host, host ? Def.Damage * 3f * _world.DamageMul * DamageScale : 0, 5f);
+        var p = Projectile.Spawn(_world, ProjectileKind.Bomb, from, v, host, host ? Def.Damage * 2f * _world.DamageMul * DamageScale : 0, 5f);
         if (host) p.SourceEnemy = this;
         Sfx.At("launcher", from, 4f, 0.55f);
     }
