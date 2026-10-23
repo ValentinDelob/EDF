@@ -95,7 +95,12 @@ public partial class World : Node3D
             if (id == Net.I.MyId)
             {
                 var cls = Profile.I.Data.SelectedClass;
-                LocalPlayer = Player.Create(this, cls, Profile.I.Equipped(cls), Profile.I.Armor(cls));
+                var armor = Profile.I.Armor(cls);
+                var cap = Difficulties.OnlineArmorCap[(int)Difficulty];
+                var capped = !Net.I.IsSolo && cap > 0 && armor > cap;
+                if (capped) armor = cap;
+                LocalPlayer = Player.Create(this, cls, Profile.I.Equipped(cls), armor);
+                if (capped) CallDeferred(MethodName.CapNotice, cap);
                 AddChild(LocalPlayer);
                 LocalPlayer.GlobalPosition = spawn;
                 LocalPlayer.SetYaw(0);
@@ -314,6 +319,8 @@ public partial class World : Node3D
             Net.I.BroadcastEnemySnapshot(ms.ToArray());
         }
     }
+
+    private void CapNotice(float cap) => Hud?.Toast($"Armure plafonnée à {cap:0} PV pour cette difficulté en multijoueur.");
 
     public void TogglePause()
     {

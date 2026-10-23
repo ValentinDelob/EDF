@@ -222,6 +222,8 @@ public static class Difficulties
     public static readonly int[] LevelMax = { 25, 40, 60, 80, 100 };
     public static readonly float[] ArmorPerCrate = { 1, 1, 2, 3, 4 };
     public static readonly float[] XpMul = { 0.75f, 1f, 1.5f, 2f, 3f };
+    /// <summary>Plafond d'armure en multijoueur (0 = aucun).</summary>
+    public static readonly float[] OnlineArmorCap = { 0, 1500, 3000, 6000, 0 };
 }
 
 public enum CrateType { Weapon = 0, Armor = 1, Health = 2, Credits = 3 }
