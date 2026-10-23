@@ -1,5 +1,12 @@
 # Journal des versions
 
+## v0.4.0 — La forteresse
+
+- **Boss « Forteresse marcheuse »** : robot quadrupède de 35 m qui écrase les immeubles, salves laser des tourelles, barrages de missiles, canon principal à charge visible (zones rouges au sol), point faible sur le noyau, seconde phase avec lâcher de drones, séquence de destruction.
+- **Mission 7 « La forteresse »** : crépuscule sous l'orage, escortes de fourmis rouges, drones et araignées.
+- **Interface peaufinée** : navigation complète au clavier et à la manette (focus visible, listes qui bouclent, onglets Q/E), sélecteurs « ‹ valeur › », transitions douces, mise en page 1280×720, arsenal avec une seule action principale et atelier dans la fiche, révélation des armes avec flash de rareté, pause avec confirmation, radar avec nord et cône de vue.
+- **Qualité** : tests de non-régression automatisés en CI (7 missions, char, bilan, partie LAN hôte + client).
+
 ## v0.3.0 — Réalisme et nouvelle carte
 
 - **Soldats réalistes** : maillages lissés, camouflage généré par classe (woodland, urbain, désert, sombre), gilet porte-plaques, casque moderne avec lunettes et casque audio, exosquelette du Grenadier ; mains guidées par IK sur l'arme, postures de visée, course, sprint, réception, rechargement.
