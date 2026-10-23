@@ -10,6 +10,9 @@ namespace Rempart;
 /// </summary>
 public partial class Hud : CanvasLayer
 {
+    /// <summary>Test « --nohud » : HUD masqué (fonds de maquettes).</summary>
+    public static bool ForceHidden;
+
     public World World;
     private Control _root;
     private Label _objective, _remaining, _radio, _toast, _bossName, _hpText, _className, _abilityText, _reviveText, _downed, _resourceLabel;
@@ -347,7 +350,7 @@ void fragment() {
     {
         var dt = (float)delta;
         var p = World.LocalPlayer;
-        Visible = !World.Ended && !World.Paused;
+        Visible = !ForceHidden && !World.Ended && !World.Paused;
         // Échelle du HUD : on agrandit la racine et on réduit sa taille logique d'autant.
         var s = Mathf.Clamp(Settings.I.HudScale, 0.8f, 1.2f);
         if (!Mathf.IsEqualApprox(_root.Scale.X, s) || _root.Size != GetViewport().GetVisibleRect().Size / s)

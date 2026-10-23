@@ -328,6 +328,7 @@ public static class AutoTest
 
         var auto = Screenshot.CmdArg("autostart");
         if (auto == null) return;
+        Hud.ForceHidden = Screenshot.CmdArg("nohud") != null; // --nohud : captures sans interface (fonds de maquettes)
         if (Screenshot.CmdArg("class") is { } c && int.TryParse(c, out var cls)) Profile.I.Data.SelectedClass = (SoldierClass)cls;
         var diff = Screenshot.CmdArg("difficulty") is { } ds && int.TryParse(ds, out var di) ? (Difficulty)di : Difficulty.Normal;
         int.TryParse(auto, out var mission);
