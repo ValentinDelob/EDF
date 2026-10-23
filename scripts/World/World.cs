@@ -524,6 +524,7 @@ public partial class World : Node3D
 
     public void OnPeerLeft(long id)
     {
+        Net.I.ReleaseVehicleSeats(id);
         if (Remotes.Remove(id, out var r))
         {
             Hud?.Toast($"{r.PlayerName} a quitté la mission.");

@@ -496,6 +496,14 @@ public partial class Net : Node
         else if (!enter && v.Driver == who) ToAll(MethodName.VehicleDriver, id, 0L);
     }
 
+    /// <summary>Hôte : libère les places tenues par un joueur parti (sinon le véhicule reste bloqué).</summary>
+    public void ReleaseVehicleSeats(long who)
+    {
+        if (!IsHost || W == null) return;
+        foreach (var (id, v) in W.Vehicles)
+            if (v.Driver == who) ToAll(MethodName.VehicleDriver, id, 0L);
+    }
+
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void VehicleDriver(int id, long driver) => W?.OnVehicleDriver(id, driver);
 
