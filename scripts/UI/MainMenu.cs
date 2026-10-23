@@ -36,6 +36,7 @@ public partial class MainMenu : Control
         menu.AddChild(UiKit.Button("Rejoindre (LAN)", () => App.I.ShowJoin(), "MenuItem", 54));
         menu.AddChild(UiKit.Button("Arsenal", () => App.I.ShowArsenal(() => App.I.ShowMain()), "MenuItem", 54));
         menu.AddChild(UiKit.Button("Options", () => App.I.ShowOptions(), "MenuItem", 54));
+        menu.AddChild(UiKit.Button("Guide", () => App.I.ShowGuide(), "MenuItem", 54));
         var quit = UiKit.Button("Quitter", () => App.I.Quit(), null, 40);
         quit.ThemeTypeVariation = "MenuItem";
         quit.AddThemeFontOverride("font", UiKit.BodyFont);

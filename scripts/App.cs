@@ -84,6 +84,12 @@ public partial class App : Node
         SetScreen(new ArsenalMenu { OnBack = back });
     }
 
+    public void ShowGuide()
+    {
+        EnsureBackground();
+        SetScreen(new GuideMenu());
+    }
+
     public void ShowOptions()
     {
         var o = new OptionsMenu { OnClose = () => { } };
@@ -187,6 +193,7 @@ public static class AutoTest
             Shot(9f, () => app.ShowOptions(), "menu_options");
             Shot(12f, () => app.ShowArsenal(app.ShowMain), "menu_arsenal");
             Shot(15f, app.ShowJoin, "menu_join");
+            Shot(18f, app.ShowGuide, "menu_guide");
         }
 
         // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.
