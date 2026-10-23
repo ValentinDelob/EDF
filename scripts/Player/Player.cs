@@ -296,6 +296,18 @@ public partial class Player : CharacterBody3D
     public override void _Process(double delta)
     {
         var dt = (float)delta;
+        // Caméra au stick droit de la manette.
+        if (!World.Paused && !World.Ended)
+        {
+            var look = Input.GetVector("look_left", "look_right", "look_up", "look_down");
+            if (look.LengthSquared() > 0.0001f)
+            {
+                var sens = 3.2f * Settings.I.MouseSensitivity * (Aiming ? Settings.I.AimSensitivity : 1f) * dt;
+                _yaw -= look.X * Mathf.Abs(look.X) * sens;
+                _pitch -= look.Y * Mathf.Abs(look.Y) * sens * 0.7f * (Settings.I.InvertY ? -1 : 1);
+                _pitch = Mathf.Clamp(_pitch, -1.35f, 1.2f);
+            }
+        }
         _camYaw.Rotation = new Vector3(0, _yaw, 0);
         _camPitch.Rotation = new Vector3(_pitch, 0, 0);
 

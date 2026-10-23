@@ -29,7 +29,18 @@ public partial class Profile : Node
     public static Profile I { get; private set; }
     public ProfileData Data { get; private set; } = new();
 
-    private const string FilePath = "user://profile.json";
+    /// <summary>Les lancements de test automatisés utilisent un profil séparé pour ne pas polluer celui du joueur.</summary>
+    private static string FilePath => IsTestRun ? "user://profile_test.json" : "user://profile.json";
+
+    private static bool IsTestRun
+    {
+        get
+        {
+            foreach (var a in OS.GetCmdlineUserArgs())
+                if (a.StartsWith("--autostart") || a.StartsWith("--autohost") || a.StartsWith("--autojoin") || a.StartsWith("--menu-shots")) return true;
+            return false;
+        }
+    }
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     public override void _EnterTree()

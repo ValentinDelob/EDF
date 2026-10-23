@@ -169,6 +169,26 @@ public partial class Settings : Node
         return null;
     }
 
+    /// <summary>Liaisons manette (disposition Xbox), non remappables pour l'instant.</summary>
+    private static readonly System.Collections.Generic.Dictionary<string, InputEvent[]> PadBindings = new()
+    {
+        ["move_forward"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.LeftY, AxisValue = -1 } },
+        ["move_back"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.LeftY, AxisValue = 1 } },
+        ["move_left"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.LeftX, AxisValue = -1 } },
+        ["move_right"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.LeftX, AxisValue = 1 } },
+        ["jump"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.A } },
+        ["sprint"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.LeftStick } },
+        ["dodge"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.B } },
+        ["fire"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.TriggerRight, AxisValue = 1 } },
+        ["aim"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.TriggerLeft, AxisValue = 1 } },
+        ["reload"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.X } },
+        ["weapon_swap"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.Y } },
+        ["ability"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.RightShoulder } },
+        ["grenade"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.LeftShoulder } },
+        ["interact"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.DpadUp } },
+        ["scoreboard"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.Back } },
+    };
+
     private void ApplyInput()
     {
         foreach (var a in Actions)
@@ -177,11 +197,20 @@ public partial class Settings : Node
             InputMap.ActionEraseEvents(a.Id);
             var ev = Deserialize(_bindings[a.Id]);
             if (ev != null) InputMap.ActionAddEvent(a.Id, ev);
+            if (PadBindings.TryGetValue(a.Id, out var pads))
+                foreach (var pe in pads) InputMap.ActionAddEvent(a.Id, pe);
+        }
+        foreach (var (name, axis, value) in new[] { ("look_left", JoyAxis.RightX, -1f), ("look_right", JoyAxis.RightX, 1f), ("look_up", JoyAxis.RightY, -1f), ("look_down", JoyAxis.RightY, 1f) })
+        {
+            if (!InputMap.HasAction(name)) InputMap.AddAction(name, 0.15f);
+            InputMap.ActionEraseEvents(name);
+            InputMap.ActionAddEvent(name, new InputEventJoypadMotion { Axis = axis, AxisValue = value });
         }
         if (!InputMap.HasAction("pause"))
         {
             InputMap.AddAction("pause");
             InputMap.ActionAddEvent("pause", new InputEventKey { PhysicalKeycode = Key.Escape });
+            InputMap.ActionAddEvent("pause", new InputEventJoypadButton { ButtonIndex = JoyButton.Start });
         }
         if (!InputMap.HasAction("debug_screenshot"))
         {

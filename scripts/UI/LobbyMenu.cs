@@ -94,14 +94,23 @@ public partial class LobbyMenu : MenuScreen
         foreach (var m in Missions.All)
         {
             var idx = m.Index;
+            var locked = !MissionUnlocked(idx);
             var b = UiKit.Button("", () => { Net.I.SetLobbyMission(idx, Net.I.LobbyDifficulty); Refresh(); }, "Row", 64);
             b.ToggleMode = true;
             b.SetPressedNoSignal(Net.I.LobbyMission == idx);
-            b.Disabled = !host;
+            b.Disabled = !host || locked;
             var v = UiKit.VBox(0);
             v.MouseFilter = MouseFilterEnum.Ignore;
             UiKit.FillRect(v);
             v.OffsetLeft = 22; v.OffsetTop = 9;
+            if (locked)
+            {
+                v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 24, UiKit.Dim, true));
+                v.AddChild(UiKit.Label(idx >= 3 ? "Mission bonus · terminez « La reine »" : "Verrouillée · terminez la mission précédente", 14, UiKit.Dim));
+                b.AddChild(v);
+                _col.AddChild(b);
+                continue;
+            }
             var cleared = Enumerable.Range(0, 5).Where(d => Profile.I.IsCleared(idx, (Difficulty)d)).Select(d => Difficulties.Names[d]).LastOrDefault();
             var sel = Net.I.LobbyMission == idx;
             v.AddChild(UiKit.Label($"{idx + 1:00}  {m.Name.ToUpperInvariant()}", 24, sel ? UiKit.Text : UiKit.Muted, true));
@@ -138,6 +147,16 @@ public partial class LobbyMenu : MenuScreen
         brief.CustomMinimumSize = new Vector2(420, 0);
         _col.AddChild(brief);
         if (!host) _col.AddChild(UiKit.Label("L'hôte choisit la mission et la difficulté.", 14, UiKit.Dim));
+    }
+
+    /// <summary>Une mission est jouable si la précédente a été réussie (toutes difficultés) ; bonus après la reine.</summary>
+    private static bool MissionUnlocked(int idx)
+    {
+        if (idx == 0) return true;
+        var need = idx >= 3 ? 2 : idx - 1;
+        for (var d = 0; d < 5; d++)
+            if (Profile.I.IsCleared(need, (Difficulty)d)) return true;
+        return false;
     }
 
     private void BuildEquipment()
