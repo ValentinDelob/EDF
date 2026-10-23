@@ -174,6 +174,28 @@ public partial class ArsenalMenu : MenuScreen
             _detail.AddChild(UiKit.Label($"Comparaison avec {current.T.Name} Nv.{current.Level}", 14, UiKit.Dim));
         }
 
+        // Recyclage d'une arme non équipée (dernier exemplaire de départ conservé).
+        var starter = Weapons.StarterLoadout[_cls].Contains(w.TemplateId) && Profile.I.Data.Arsenal.Count(x => x.TemplateId == w.TemplateId) <= 1;
+        if (!equipped.Contains(w) && !starter)
+        {
+            var value = 50 + w.Level * 10 + (int)w.Rarity * 150 + w.TotalStars * 15;
+            var confirm = false;
+            Button rec = null;
+            rec = UiKit.Button($"Recycler · +{value} cr.", () =>
+            {
+                if (!confirm) { confirm = true; rec.Text = "Confirmer le recyclage ?"; return; }
+                Profile.I.Data.Arsenal.Remove(w);
+                Profile.I.Data.Credits += value;
+                Profile.I.Save();
+                Sfx.Ui("pickup", -2f, 0.7f);
+                HeaderRight.Text = $"{Profile.I.Data.Credits} crédits";
+                _selected = null;
+                Rebuild();
+            }, null, 60);
+            rec.TooltipText = "Démonte l'arme contre des crédits. Double clic pour confirmer.";
+            FooterRight.AddChild(rec);
+        }
+
         // Atelier : +1 étoile sur la statistique la plus faible contre des crédits.
         var weakest = Enumerable.Range(0, 5).OrderBy(i => w.Stars[i]).First();
         if (w.Stars[weakest] < 5)
