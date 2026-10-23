@@ -125,12 +125,23 @@ public partial class Enemy : CharacterBody3D
             return;
         }
 
-        if (Def.Flying) TickFlying(dt, peer, target);
-        else TickGround(dt, peer, target);
+        // Les soldats alliés plus proches que le joueur deviennent la cible.
+        Ally ally = null;
+        if (!Def.Boss)
+        {
+            var a = _world.Allies?.Nearest(GlobalPosition, 45f);
+            if (a != null && a.GlobalPosition.DistanceTo(GlobalPosition) < target.DistanceTo(GlobalPosition) * 0.85f)
+            {
+                ally = a;
+                target = a.GlobalPosition;
+            }
+        }
+        if (Def.Flying) TickFlying(dt, peer, target, ally);
+        else TickGround(dt, peer, target, ally);
         Model.Animate(dt, _speedNow, _attackAnim);
     }
 
-    private void TickGround(float dt, long peer, Vector3 target)
+    private void TickGround(float dt, long peer, Vector3 target, Ally ally)
     {
         var pos = GlobalPosition;
         var goal = target;
@@ -197,7 +208,13 @@ public partial class Enemy : CharacterBody3D
         {
             _attackCd = Def.AttackCooldown * (float)GD.RandRange(0.85, 1.15);
             _attackAnim = 1f;
-            if (Def.Ranged && (!Def.Boss || dist > 10f))
+            if (ally != null)
+            {
+                _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * (Def.Ranged ? 0.6f : 1f));
+                Net.I.BroadcastEnemyAttack(Id, Def.Ranged ? 1 : 0, target);
+                if (Def.Ranged) Projectile.Spawn(_world, ProjectileKind.Acid, Center + Basis.Z * 1.5f * Def.Size, World.BallisticVelocity(Center, target + Vector3.Up, 30f, 9f), false, 0, 0);
+            }
+            else if (Def.Ranged && (!Def.Boss || dist > 10f))
             {
                 var from = Center + Basis.Z * 1.5f * Def.Size;
                 _world.HostEnemyProjectile(this, 0, from, target + Vector3.Up, Def.Boss ? 3 : 1);
@@ -225,7 +242,7 @@ public partial class Enemy : CharacterBody3D
         State = attacking ? EnemyState.Attacking : EnemyState.Moving;
     }
 
-    private void TickFlying(float dt, long peer, Vector3 target)
+    private void TickFlying(float dt, long peer, Vector3 target, Ally ally)
     {
         var pos = GlobalPosition;
         _orbit += dt * 0.5f;
@@ -248,7 +265,12 @@ public partial class Enemy : CharacterBody3D
         {
             _attackCd = Def.AttackCooldown * (float)GD.RandRange(0.8, 1.3);
             _attackAnim = 1;
-            _world.HostEnemyProjectile(this, 1, pos + Vector3.Down * 0.8f, target + Vector3.Up * 1f, 1);
+            if (ally != null)
+            {
+                _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul);
+                Projectile.Spawn(_world, ProjectileKind.Stinger, pos + Vector3.Down * 0.8f, (target + Vector3.Up - pos).Normalized() * 60f, false, 0, 0);
+            }
+            else _world.HostEnemyProjectile(this, 1, pos + Vector3.Down * 0.8f, target + Vector3.Up * 1f, 1);
             Net.I.BroadcastEnemyAttack(Id, 3, target);
         }
         State = EnemyState.Moving;

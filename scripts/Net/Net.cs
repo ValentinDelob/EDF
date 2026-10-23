@@ -462,6 +462,28 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 2)]
     private void EnemyHitFx(int id, Vector3 at) => W?.OnEnemyHitFx(id, at);
 
+    // ---------- Alliés PNJ ----------
+
+    public void BroadcastAllySpawn(int id, Vector3 pos, Vector3 formation) => ToOthers(MethodName.AllySpawn, id, pos, formation);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void AllySpawn(int id, Vector3 pos, Vector3 formation) => W?.Allies.Spawn(id, pos, formation);
+
+    public void BroadcastAllySnapshot(byte[] data) => ToOthers(MethodName.AllySnapshot, data);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 5)]
+    private void AllySnapshot(byte[] data) => W?.Allies.ApplySnapshot(data);
+
+    public void BroadcastAllyShot(int id, Vector3 to) => ToOthers(MethodName.AllyShot, id, to);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 2)]
+    private void AllyShot(int id, Vector3 to) => W?.Allies.OnShot(id, to);
+
+    public void BroadcastAllyDeath(int id) => ToAll(MethodName.AllyDeath, id);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void AllyDeath(int id) => W?.Allies.OnDeath(id);
+
     // ---------- Caisses ----------
 
     public void BroadcastCrateSpawn(int id, int type, Vector3 pos) => ToOthers(MethodName.CrateSpawn, id, type, pos);

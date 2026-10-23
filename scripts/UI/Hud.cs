@@ -579,6 +579,9 @@ public partial class Radar : Control
             var big = e.IsBoss || e.IsStatic;
             DrawCircle(q, big ? 6 : 2.6f, e.Def.Flying ? new Color(1f, 0.6f, 0.3f) : UiKit.Danger);
         }
+        if (World.Allies != null)
+            foreach (var a in World.Allies.ById.Values)
+                if (!a.Dead) DrawCircle(Map(a.GlobalPosition), 2.5f, new Color(UiKit.Info, 0.7f));
         foreach (var rp in World.Remotes.Values)
             DrawCircle(Map(rp.GlobalPosition), 4, rp.Downed ? UiKit.Accent : UiKit.Info);
         // Joueur : triangle pointant vers le haut

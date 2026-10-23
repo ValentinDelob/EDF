@@ -42,6 +42,7 @@ public partial class World : Node3D
     public string BossName = "";
 
     private MissionDirector _director;
+    public AllyManager Allies;
     private int _nextEnemyId = 1;
     private int _nextCrateId = 1;
     private float _snapshotTimer;
@@ -108,7 +109,14 @@ public partial class World : Node3D
         AddChild(_pause);
         Input.MouseMode = Input.MouseModeEnum.Captured;
 
-        if (Net.I.IsHost) _director = new MissionDirector(this);
+        Allies = new AllyManager(this);
+        if (Net.I.IsHost)
+        {
+            _director = new MissionDirector(this);
+            // Escouades alliées : une près du point de départ, une en avant.
+            Allies.HostSpawnSquad(new Vector3(0, 0, 18), Mission.Index == 1 ? 4 : 3);
+            if (Mission.Index != 1) Allies.HostSpawnSquad(new Vector3(-25, 0, -25), 3);
+        }
         Hud.Briefing(Mission);
         Settings.I.Changed += ApplyGraphics;
     }
@@ -229,8 +237,12 @@ public partial class World : Node3D
         if (!Ended) Elapsed += dt;
         if (Input.IsActionJustPressed("debug_screenshot")) Screenshot.Take(GetViewport(), "capture");
 
-        if (Net.I.IsHost) HostProcess(dt);
-        else foreach (var e in EnemiesById.Values) e.ClientTick(dt);
+        if (Net.I.IsHost) { HostProcess(dt); Allies.HostTick(dt); }
+        else
+        {
+            foreach (var e in EnemiesById.Values) e.ClientTick(dt);
+            Allies.ClientTick(dt);
+        }
 
         if (LocalPlayer != null && !LocalPlayer.Downed) LocalPickupCheck();
     }
@@ -312,6 +324,14 @@ public partial class World : Node3D
             if (d < best) { best = d; peer = id; at = r.GlobalPosition; }
         }
         return peer != 0;
+    }
+
+    public bool PlayerPosition(long peer, out Vector3 pos)
+    {
+        pos = Vector3.Zero;
+        if (peer == Net.I.MyId && LocalPlayer != null && !LocalPlayer.Downed) { pos = LocalPlayer.GlobalPosition; return true; }
+        if (Remotes.TryGetValue(peer, out var r) && !r.Downed) { pos = r.GlobalPosition; return true; }
+        return false;
     }
 
     private bool AllPlayersDown()
