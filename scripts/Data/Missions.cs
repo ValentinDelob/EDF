@@ -21,7 +21,10 @@ public record MissionDef(
     TimeOfDay Time,
     float Fog,
     int NestCount,
-    PhaseDef[] Phases);
+    PhaseDef[] Phases,
+    Weather Weather = Weather.Clear);
+
+public enum Weather { Clear, Rain, Storm }
 
 public static class Missions
 {
@@ -52,7 +55,7 @@ public static class Missions
                     new WaveDef("east", 0, "Essaim de guêpes en approche par l'est !", (EnemyType.Wasp, 14))),
                 new PhaseDef(0, 140,
                     new WaveDef("west", 0, "Renforts ennemis à l'ouest.", (EnemyType.AcidAnt, 10), (EnemyType.RedAnt, 8), (EnemyType.Scavenger, 4))),
-            }),
+            }, Weather.Rain),
         new(2, "La reine",
             "Une reine fourmi a été localisée sur la plage. Abattez-la : toute la colonie défendra sa mère.",
             MissionGoal.Boss, TimeOfDay.Night, 0.012f, 0,
@@ -67,7 +70,7 @@ public static class Missions
                     new WaveDef("west", 0, "La colonie envoie tout ce qu'elle a !", (EnemyType.BlackAnt, 20), (EnemyType.RedAnt, 10), (EnemyType.Scavenger, 6))),
                 new PhaseDef(0, 180,
                     new WaveDef("south", 0, "Nouvel essaim au sud !", (EnemyType.Wasp, 16), (EnemyType.AcidAnt, 10))),
-            }),
+            }, Weather.Storm),
         new(3, "La toile",
             "Des araignées géantes ont tissé leurs toiles entre les immeubles. Elles bondissent sur leurs proies : gardez vos distances et couvrez-vous mutuellement.",
             MissionGoal.Exterminate, TimeOfDay.Dusk, 0.008f, 0,

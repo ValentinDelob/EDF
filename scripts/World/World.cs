@@ -45,6 +45,7 @@ public partial class World : Node3D
     public string BossName = "";
 
     private MissionDirector _director;
+    private WeatherFx _weather;
     public AllyManager Allies;
     public readonly Dictionary<int, Tank> Tanks = new();
     private int _nextEnemyId = 1;
@@ -106,6 +107,8 @@ public partial class World : Node3D
                 Remotes[id] = r;
             }
         }
+
+        if (Mission.Weather != Weather.Clear) _weather = WeatherFx.Create(this, Mission.Weather);
 
         Hud = new Hud { World = this };
         AddChild(Hud);
@@ -208,6 +211,14 @@ public partial class World : Node3D
                 env.TonemapExposure = 1.7f;
                 env.FogDensity = Mission.Fog * 0.5f;
                 break;
+        }
+        if (Mission.Weather != Weather.Clear)
+        {
+            // Ciel couvert : moins de soleil, plus de brouillard.
+            _sun.LightEnergy *= 0.55f;
+            env.FogDensity *= 1.6f;
+            sky.SkyTopColor = sky.SkyTopColor.Lerp(new Color(0.25f, 0.27f, 0.3f), 0.5f);
+            sky.SkyHorizonColor = sky.SkyHorizonColor.Lerp(new Color(0.35f, 0.37f, 0.4f), 0.5f);
         }
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);

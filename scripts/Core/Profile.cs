@@ -146,8 +146,11 @@ public partial class Profile : Node
     {
         try
         {
-            using var f = FileAccess.Open(FilePath, FileAccess.ModeFlags.Write);
-            f?.StoreString(JsonSerializer.Serialize(Data, JsonOpts));
+            // Écriture atomique : fichier temporaire unique puis renommage (deux instances locales ne corrompent plus le profil).
+            var tmp = $"{FilePath}.{OS.GetProcessId()}.tmp";
+            using (var f = FileAccess.Open(tmp, FileAccess.ModeFlags.Write))
+                f?.StoreString(JsonSerializer.Serialize(Data, JsonOpts));
+            DirAccess.RenameAbsolute(ProjectSettings.GlobalizePath(tmp), ProjectSettings.GlobalizePath(FilePath));
         }
         catch (Exception e)
         {
