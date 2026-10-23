@@ -430,7 +430,7 @@ public partial class Player : CharacterBody3D
         foreach (var (e, v) in perEnemy)
         {
             Net.I.SendDamageEnemy(e.Id, v.dmg, v.at, v.weak);
-            World.LocalHitFx(e, v.at);
+            World.LocalHitFx(e, v.at, true, v.dmg, v.weak);
             HitMarker = 1f;
             if (Def.Id == SoldierClass.Support) CallCredits = Mathf.Min(CallCost * 2, CallCredits + v.dmg * 0.08f);
         }
@@ -483,7 +483,7 @@ public partial class Player : CharacterBody3D
             if (_beamAccum >= 0.1f)
             {
                 Net.I.SendDamageEnemy(e.Id, _beamDamage, end, false);
-                World.LocalHitFx(e, end);
+                World.LocalHitFx(e, end, true, _beamDamage);
                 HitMarker = 1f;
                 _beamDamage = 0;
                 _beamAccum = 0;

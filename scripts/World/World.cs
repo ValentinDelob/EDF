@@ -539,10 +539,11 @@ public partial class World : Node3D
         if (EnemiesById.TryGetValue(id, out var e)) LocalHitFx(e, at, false);
     }
 
-    public void LocalHitFx(Enemy e, Vector3 at, bool sound = true)
+    public void LocalHitFx(Enemy e, Vector3 at, bool sound = true, float damage = 0, bool weak = false)
     {
         Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
+        if (damage > 0) Effects.DamageNumber(this, at, damage, weak);
         if (sound) Sfx.Ui("hitmarker", -8f, 1f, 40);
     }
 
@@ -712,9 +713,13 @@ public partial class World : Node3D
         _pickupRequestT -= (float)GetProcessDeltaTime();
         var p = LocalPlayer.GlobalPosition;
         var radius = 2.4f;
+        var dt = (float)GetProcessDeltaTime();
         foreach (var c in CratesById.Values)
         {
             if (c.Taken) continue;
+            // Aimantation douce des caisses proches.
+            if (c.GlobalPosition.DistanceTo(p) < 7f && !(c.Type == CrateType.Health && LocalPlayer.Health >= LocalPlayer.MaxHealth))
+                c.Attract(p, dt);
             var d = c.GlobalPosition - p;
             d.Y *= 0.5f;
             if (d.Length() > radius) continue;

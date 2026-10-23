@@ -50,6 +50,17 @@ public partial class Crate : Node3D
         CullMode = BaseMaterial3D.CullModeEnum.Disabled,
     };
 
+    /// <summary>Glisse vers le joueur (effet d'aimant local).</summary>
+    public void Attract(Vector3 target, float dt)
+    {
+        if (!_landed) return;
+        var to = target + Vector3.Up * 0.45f - Position;
+        to.Y = 0;
+        var d = to.Length();
+        if (d < 0.1f) return;
+        Position += to / d * Mathf.Min(d, (14f - d) * dt);
+    }
+
     public override void _Process(double delta)
     {
         var dt = (float)delta;

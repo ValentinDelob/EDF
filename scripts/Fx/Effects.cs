@@ -273,6 +273,33 @@ public static class Effects
         Tracer(world.FxRoot, from, to, color, width, 0.05f);
     }
 
+    /// <summary>Chiffre de dégâts flottant (jaune sur point faible).</summary>
+    public static void DamageNumber(World world, Vector3 pos, float amount, bool weak)
+    {
+        var l = new Label3D
+        {
+            Text = Mathf.RoundToInt(amount).ToString(),
+            Font = UiKit.HeadFont,
+            FontSize = weak ? 64 : 48,
+            OutlineSize = 10,
+            OutlineModulate = new Color(0, 0, 0, 0.75f),
+            Modulate = weak ? UiKit.Gold : Colors.White,
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+            NoDepthTest = true,
+            FixedSize = true,
+            PixelSize = 0.0009f,
+            RenderPriority = 10,
+        };
+        world.FxRoot.AddChild(l);
+        l.GlobalPosition = pos + new Vector3((float)GD.RandRange(-0.4, 0.4), 0.6f, (float)GD.RandRange(-0.4, 0.4));
+        var tw = l.CreateTween();
+        tw.SetParallel();
+        tw.TweenProperty(l, "global_position:y", l.GlobalPosition.Y + 1.6f, 0.7f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        tw.TweenProperty(l, "modulate:a", 0f, 0.3f).SetDelay(0.4f);
+        tw.TweenProperty(l, "outline_modulate:a", 0f, 0.3f).SetDelay(0.4f);
+        tw.Chain().TweenCallback(Callable.From(l.QueueFree));
+    }
+
     public static void Ring(World world, Vector3 pos, float radius, Color color, float life)
     {
         var m = new MeshInstance3D

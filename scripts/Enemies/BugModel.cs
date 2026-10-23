@@ -241,10 +241,38 @@ public partial class BugModel : Node3D
         AddChild(new OmniLight3D { Position = new Vector3(0, 5.5f, 0), LightColor = new Color(0.65f, 0.9f, 0.3f), LightEnergy = 1.5f, OmniRange = 14 });
     }
 
+    private static StandardMaterial3D _flashMat;
+    private List<GeometryInstance3D> _meshes;
+    private float _flashT;
+
+    /// <summary>Bref flash blanc à l'impact (retour visuel des tirs).</summary>
+    public void Flash()
+    {
+        _flashMat ??= new StandardMaterial3D
+        {
+            AlbedoColor = new Color(1f, 0.92f, 0.75f, 0.55f),
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+        };
+        if (_meshes == null)
+        {
+            _meshes = new List<GeometryInstance3D>();
+            foreach (var n in FindChildren("*", "MeshInstance3D", true, false)) _meshes.Add((GeometryInstance3D)n);
+        }
+        if (_flashT <= 0) foreach (var m in _meshes) m.MaterialOverlay = _flashMat;
+        _flashT = 0.07f;
+    }
+
     /// <summary>Anime la démarche (vitesse en m/s), l'attaque (0..1) et le vol.</summary>
     public void Animate(float dt, float speed, float attack)
     {
         _t += dt;
+        if (_flashT > 0)
+        {
+            _flashT -= dt;
+            if (_flashT <= 0 && _meshes != null) foreach (var m in _meshes) m.MaterialOverlay = null;
+        }
         if (Type == EnemyType.Nest)
         {
             Scale = Vector3.One * (1f + Mathf.Sin(_t * 1.5f) * 0.015f);

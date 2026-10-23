@@ -6,4 +6,9 @@
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Worktrees des agents et sorties de build : jamais compilés avec le jeu. -->
+    <Compile Remove=".claude/**" />
+    <Compile Remove="build/**" />
+  </ItemGroup>
 </Project>

@@ -326,5 +326,6 @@ public partial class Enemy : CharacterBody3D
     public void FlashHit()
     {
         _attackAnim = Mathf.Max(_attackAnim, 0.25f);
+        Model.Flash();
     }
 }
