@@ -35,20 +35,26 @@ public partial class Enemy
     /// <summary>Hauteur des sondes au-dessus de la surface : en dessous, l'obstacle est enjambé ; au-dessus, c'est une paroi.</summary>
     private float ProbeH => 0.75f * Def.Size;
 
-    private static PhysicsRayQueryParameters3D _ray;
+    /// <summary>Rayon partagé : un nœud RayCast3D n'alloue rien par requête (IntersectRay crée un dictionnaire de résultats).</summary>
+    private static RayCast3D _caster;
 
     /// <summary>Rayon contre le décor solide ; la normale renvoyée regarde l'origine du rayon. Les murs invisibles de bord de carte ne comptent pas.</summary>
     private bool Ray(Vector3 from, Vector3 to, out Vector3 point, out Vector3 normal)
     {
-        _ray ??= new PhysicsRayQueryParameters3D { CollisionMask = 1, HitBackFaces = true };
-        _ray.From = from;
-        _ray.To = to;
-        var hit = GetWorld3D().DirectSpaceState.IntersectRay(_ray);
+        if (_caster == null || !IsInstanceValid(_caster) || _caster.GetParent() != _world)
+        {
+            _caster = new RayCast3D { Name = "SurfaceProbe", Enabled = false, CollisionMask = 1, HitBackFaces = true, ExcludeParent = false };
+            _world.AddChild(_caster);
+        }
+        // Le monde est à l'origine : la position locale est la position globale.
+        _caster.Position = from;
+        _caster.TargetPosition = to - from;
+        _caster.ForceRaycastUpdate();
         point = to;
         normal = Vector3.Up;
-        if (hit.Count == 0) return false;
-        point = (Vector3)hit["position"];
-        normal = (Vector3)hit["normal"];
+        if (!_caster.IsColliding()) return false;
+        point = _caster.GetCollisionPoint();
+        normal = _caster.GetCollisionNormal();
         if (normal.Dot(from - point) < 0) normal = -normal;
         if (Mathf.Abs(point.X) > CityBuilder.Half + 3f || point.Z < -CityBuilder.Half - 3f || point.Z > CityBuilder.SeaStart + 7f) return false;
         return true;
