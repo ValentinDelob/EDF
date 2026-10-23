@@ -25,7 +25,7 @@ public record MissionDef(
     Weather Weather = Weather.Clear,
     MapId Map = MapId.City);
 
-public enum MapId { City, Port }
+public enum MapId { City, Port, Suburb }
 
 public enum Weather { Clear, Rain, Storm }
 
@@ -126,5 +126,23 @@ public static class Missions
                 new PhaseDef(0, 180,
                     new WaveDef("south", 0, "Des araignées au sud ! Elles nous prennent à revers !", (EnemyType.Spider, 14))),
             }, Weather.Storm),
+        new(7, "Lisière",
+            "La colonie sort de la forêt et se répand dans un paisible lotissement de banlieue, bordé au sud par une rivière. Tenez le bourg et exterminez toutes les vagues avant qu'elles n'atteignent la place de l'église.",
+            MissionGoal.Exterminate, TimeOfDay.Day, 0.005f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Mouvements à la lisière nord ! Des fourmis sortent du bois.", (EnemyType.BlackAnt, 18)),
+                    new WaveDef("west", 9, "D'autres fourmis à l'ouest, elles longent la forêt !", (EnemyType.BlackAnt, 12))),
+                new PhaseDef(6, 0,
+                    new WaveDef("west", 0, "Des araignées descendent des arbres à l'ouest !", (EnemyType.Spider, 10), (EnemyType.BlackAnt, 8)),
+                    new WaveDef("north", 6, "Fourmis acides au nord, gardez vos distances !", (EnemyType.AcidAnt, 10))),
+                new PhaseDef(6, 0,
+                    new WaveDef("east", 0, "Essaim de guêpes au-dessus des toits, à l'est !", (EnemyType.Wasp, 14)),
+                    new WaveDef("south", 6, "Elles traversent la rivière au sud !", (EnemyType.BlackAnt, 12), (EnemyType.Scavenger, 5))),
+                new PhaseDef(5, 0,
+                    new WaveDef("north", 0, "Dernière vague : fourmis rouges en masse depuis la forêt, des spécimens d'élite repérés !", (EnemyType.RedAnt, 14), (EnemyType.BlackAnt, 10)),
+                    new WaveDef("west", 5, null, (EnemyType.RedAnt, 8), (EnemyType.Spider, 6))),
+            }, Weather.Clear, MapId.Suburb),
     };
 }

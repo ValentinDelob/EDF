@@ -7,7 +7,7 @@ namespace Rempart;
 /// Mobilier urbain et véhicules : maillages fusionnés (un ArrayMesh par modèle, mis en cache).
 /// Convention : l'avant du modèle regarde +Z, posé sur y = 0.
 /// </summary>
-public static class Props
+public static partial class Props
 {
     private static readonly Dictionary<string, ArrayMesh> Cache = new();
 
@@ -240,7 +240,7 @@ public static class Props
     private static readonly Vector3[] Ico = BuildIco();
 
     /// <summary>Icosaèdre subdivisé deux fois (320 faces), sommets sur la sphère unité, par triangles.</summary>
-    private static Vector3[] BuildIco()
+    private static Vector3[] BuildIco(int levels = 2)
     {
         var t = (1f + Mathf.Sqrt(5f)) / 2f;
         Vector3[] v =
@@ -256,7 +256,7 @@ public static class Props
         var tris = new List<Vector3>();
         for (var i = 0; i < f.Length; i++) tris.Add(v[f[i]].Normalized());
         // Deux subdivisions (320 faces) : silhouette assez ronde pour de gros houppiers.
-        for (var level = 0; level < 2; level++)
+        for (var level = 0; level < levels; level++)
         {
             var res = new List<Vector3>();
             for (var i = 0; i < tris.Count; i += 3)
