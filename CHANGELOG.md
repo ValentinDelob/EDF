@@ -2,6 +2,15 @@
 
 ## v0.5.0 — Lisière
 
+### Direction artistique « invasion »
+- **Ciel nuageux** procédural (deux couches qui dérivent, éclairées côté soleil), lumière voilée, palette grise et désaturée, vignettage et grain.
+- **Villes en ruines** : épaves calcinées, barrages militaires abandonnés, gravats, façades noircies, vitres soufflées, incendies et colonnes de fumée, toiles et résine d'insectes, réservoirs en feu au port, maisons brûlées et arbres morts en banlieue.
+- **Matières patinées** : coulures de pluie, salissures, flaques, asphalte fissuré, trottoirs cassés, angles chanfreinés, véhicules ternis et rouillés.
+
+### Gameplay
+- **Les insectes grimpent** : fourmis, araignées et mille-pattes escaladent les façades, traversent les toits et attaquent les joueurs perchés (solo et LAN).
+- **Collisions précises** : murets, balcons, parapets, clôtures, toitures, mobilier et véhicules arrêtent les tirs et les joueurs là où ils sont visibles.
+
 - **Hélicoptère d'attaque** pilotable (E pour monter) : roquettes et canon, vol stationnaire, synchronisé en LAN. Char et hélicoptère partagent une base commune de véhicule.
 - **Nouvelle carte « Banlieue boisée »** : village avec mairie, église et cimetière, pavillons avec jardins, supermarché, stade, rivière guéable et ponts, forêt dense en lisière.
 - **Mission 8 « Lisière »** : vagues venues de la forêt, traversée de la rivière, assaut final de fourmis rouges et d'araignées.

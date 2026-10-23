@@ -45,6 +45,116 @@ Les captures sont dans `docs/ui-refs/` (ignorées par git : images tierces sous 
 | Daemon X Machina | Résultats (analyse arme) | dxm-results.jpg | https://interfaceingame.com/wp-content/uploads/daemon-x-machina/daemon-x-machina-results.jpg |
 | Daemon X Machina | Hangar — liste d'armes | dxm-weapon-list.jpg | https://interfaceingame.com/wp-content/uploads/daemon-x-machina/daemon-x-machina-weapon-list.jpg |
 
+### 1.b Sources ajoutées (Analyse 2, 91 captures)
+
+Les fichiers sont dans `docs/ui-refs/` (toujours git-ignorés). Les sites marqués « guide » sont des articles de presse ; les images y sont plus petites (1024–1200 px) mais ce sont les seules captures de menus trouvées pour Helldivers 2, Space Marine 2 et Darktide.
+
+| Jeu | Écran | Fichier local | URL |
+|---|---|---|---|
+| **— Sélection d'arme / armurerie / inspection / comparaison (29)** | | | |
+| CoD Black Ops 4 | Créer une classe (slots + pick-10) | bo4-create-class.jpg | https://interfaceingame.com/wp-content/uploads/call-of-duty-black-ops-4/call-of-duty-black-ops-4-create-class.jpg |
+| CoD MW3 (2023) | Gunsmith (arme 3D, nœuds d'accessoires, barres avec delta) | mw3-gunsmith.jpg | https://staticg.sportskeeda.com/editor/2023/10/c597d-16962715261675-1920.jpg |
+| Space Marine 2 | Armurerie — arbre de perks, stats avec delta ▲▼ | sm2-armouring-perk-tree.jpg | https://shacknews-www.s3.amazonaws.com/assets/editorial/2024/09/melta-rifle-perk-tree-in-space-marine-2.jpg |
+| Space Marine 2 | Armurerie — vue d'ensemble | sm2-armouring-hall.jpg | https://shacknews-www.s3.amazonaws.com/assets/editorial/2024/09/the-armouring-hall-screen-in-space-marine-2.jpg |
+| Space Marine 2 | Versions / paliers de rareté (Standard → Relic) | sm2-weapon-versions-tiers.jpg | https://www.destructoid.com/wp-content/uploads/2024/09/Space-Marine-2-upgrading-artificer-weapons.jpg |
+| Helldivers 2 | Weaponry (liste par catégorie + stats + Equip) | helldivers2-weaponry.jpg | https://www.destructoid.com/wp-content/uploads/2024/02/How-to-change-your-default-loadout-in-Helldivers-2-2.jpg |
+| Helldivers 2 | Armory — 3 cartes de slot | helldivers2-armory-categories.jpg | https://www.destructoid.com/wp-content/uploads/2024/02/How-to-change-your-default-loadout-in-Helldivers-2-3.jpg |
+| Darktide | Carte de stats d'arme (rating, rareté, barres) | darktide-weapon-stats-card.jpg | https://primagames.com/wp-content/uploads/2022/11/Warhammer-40K-Darktide-Weapon-Stats.jpg |
+| Darktide | Loadout (slots arme + rating) | darktide-loadout.jpg | https://gamerjournalist.com/wp-content/uploads/2022/12/loadout-in-darktide.jpg |
+| Aliens: Fireteam Elite | Armes — inspection, étoiles, combat rating, jauges | aliensfe-weapons-inspect.jpg | https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1549970/ss_f271d11ec630b3c8fe11f9f196842718e1145f9c.1920x1080.jpg |
+| The Division 2 | Inventaire armes — comparaison chiffrée avec delta | division2-weapon-compare.jpg | https://cdn.dtmg.xyz/uploads/2019/03/division-2-builds-and-specializations-guide-10.jpg |
+| The Division 2 | Weapon modding | division2-weapon-modding.jpg | https://cdn.dtmg.xyz/uploads/2019/03/division-2-builds-and-specializations-guide-14.jpg |
+| Destiny 2 | Inspection d'arme (perks, puissance, barres) | destiny2-weapon-inspect.jpg | https://www.highgroundgaming.com/wp-content/uploads/2021/06/Masterwork-1024x576.jpg |
+| Insurgency: Sandstorm | Loadout — liste + accessoires + stats chiffrées | insurgency-loadout-weapon-stats.jpg | https://interfaceingame.com/wp-content/uploads/insurgency-sandstorm/insurgency-sandstorm-loadout.jpg |
+| Insurgency: Sandstorm | Loadout de classe (slots, presets) | insurgency-class-loadout.jpg | https://interfaceingame.com/wp-content/uploads/insurgency-sandstorm/insurgency-sandstorm-class-inventory.jpg |
+| Insurgency: Sandstorm | Équipement (déblocage) | insurgency-equipment.jpg | https://interfaceingame.com/wp-content/uploads/insurgency-sandstorm/insurgency-sandstorm-equipment.jpg |
+| Killing Floor 2 | Marchand entre vagues (achat / amélioration) | kf2-trader-weapon-upgrade.jpg | https://interfaceingame.com/wp-content/uploads/killing-floor-2/killing-floor-2-upgrade-gear.jpg |
+| R6 Extraction | Loadout (étapes Opérateur › Loadout › Prêt) | r6x-loadout.png | https://interfaceingame.com/wp-content/uploads/rainbow-six-siege-extraction/rainbow-six-siege-extraction-loadout.png |
+| Star Wars Zero Company | Armurerie — liste d'armes + rendu 3D | swzero-armory-weapon-list.png | https://interfaceingame.com/wp-content/uploads/star-wars-zero-company/star-wars-zero-company-armory.png |
+| The Ascent | Loadout — tableau de stats | ascent-loadout-stats-table.png | https://interfaceingame.com/wp-content/uploads/the-ascent/the-ascent-loadout.png |
+| Warframe | Arsenal (slots + perso sur socle) | warframe-arsenal-loadout.jpg | https://interfaceingame.com/wp-content/uploads/warframe/warframe-inventory.jpg |
+| Warframe | Collection d'armes (tuiles + rang) | warframe-weapon-collection.jpg | https://interfaceingame.com/wp-content/uploads/warframe/warframe-equipment-inspection.jpg |
+| Warframe | Détail d'objet | warframe-item-details.jpg | https://interfaceingame.com/wp-content/uploads/warframe/warframe-item-details.jpg |
+| XDefiant | Édition des loadouts | xdefiant-loadouts.png | https://interfaceingame.com/wp-content/uploads/xdefiant-beta/xdefiant-beta-loadouts.png |
+| Ghost Recon Breakpoint | Loadout (armes + gear score) | ghostrecon-bp-loadout.jpg | https://interfaceingame.com/wp-content/uploads/tom-clancys-ghost-recon-breakpoint/tom-clancys-ghost-recon-breakpoint-loadout.jpg |
+| Metro Exodus | Établi diégétique | metro-exodus-workbench.png | https://interfaceingame.com/wp-content/uploads/metro-exodus/metro-exodus-weapon-cleaning.png |
+| DOOM: The Dark Ages | Arsenal (améliorations) | doomtda-arsenal.png | https://interfaceingame.com/wp-content/uploads/doom-the-dark-ages/doom-the-dark-ages-arsenal.png |
+| DOOM: The Dark Ages | Inspection 3D plein écran | doomtda-weapon-inspect-3d.png | https://interfaceingame.com/wp-content/uploads/doom-the-dark-ages/doom-the-dark-ages-3d-model.png |
+| Helldivers (1) | Loadout 4 joueurs côte à côte | helldivers1-loadout-4players.png | https://interfaceingame.com/wp-content/uploads/helldivers/helldivers-loadout.png |
+| **— Inventaire / grille / rareté (8)** | | | |
+| Killing Floor 2 | Inventaire, grille à liseré de rareté + filtres | kf2-inventory-rarity-grid.jpg | https://interfaceingame.com/wp-content/uploads/killing-floor-2/killing-floor-2-inventory.jpg |
+| Remnant II | Personnage — slots en arc autour du perso | remnant2-character-equipment.png | https://interfaceingame.com/wp-content/uploads/remnant-ii/remnant-ii-inventory.png |
+| Remnant II | Grille d'inventaire par catégories | remnant2-inventory-grid.png | https://interfaceingame.com/wp-content/uploads/remnant-ii/remnant-ii-inventory-2.png |
+| Vermintide 2 | Équipement — grille colorée par rareté | vermintide2-equipment-rarity.jpg | https://interfaceingame.com/wp-content/uploads/warhammer-vermintide-2/warhammer-vermintide-2-equipment.jpg |
+| S.T.A.L.K.E.R. 2 | Butin / équipement / inventaire | stalker2-inventory.png | https://interfaceingame.com/wp-content/uploads/s-t-a-l-k-e-r-2-heart-of-chornobyl/s-t-a-l-k-e-r-2-heart-of-chornobyl-inventory.png |
+| Generation Zero | Inventaire + carte d'arme (état, barres) | genzero-inventory-weapon-card.jpg | https://interfaceingame.com/wp-content/uploads/generation-zero/generation-zero-inventory.jpg |
+| Cronos: The New Dawn | Inventaire style terminal | cronos-inventory-terminal.png | https://interfaceingame.com/wp-content/uploads/cronos-the-new-dawn/cronos-the-new-dawn-inventory.png |
+| Aliens: Fireteam Elite | Inventaire (cartes colorées par rareté) | aliensfe-inventory-cards.jpg | https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1549970/ss_79561b151ad9f129f9ece9d7a9c7158a516a3e96.1920x1080.jpg |
+| **— Butin / révélation de récompense (7)** | | | |
+| Vermintide 2 | Révélation de coffre (cartes) | vermintide2-chest-reveal.jpg | https://interfaceingame.com/wp-content/uploads/warhammer-vermintide-2/warhammer-vermintide-2-chest-loot.jpg |
+| Vermintide 2 | Butin de mission → niveau de coffre | vermintide2-items-collected.jpg | https://interfaceingame.com/wp-content/uploads/warhammer-vermintide-2/warhammer-vermintide-2-items-collected.jpg |
+| CoD Black Ops 4 | Révélation (carte à cadre de rareté) | bo4-reward-reveal.jpg | https://interfaceingame.com/wp-content/uploads/call-of-duty-black-ops-4/call-of-duty-black-ops-4-rewards.jpg |
+| CoD Black Ops 4 | Piste de récompenses de niveau | bo4-level-rewards.jpg | https://interfaceingame.com/wp-content/uploads/call-of-duty-black-ops-4/call-of-duty-black-ops-4-level-rewards.jpg |
+| Apex Legends | Ouverture de pack (3 objets, rareté) | apex-packs-reveal.jpg | https://interfaceingame.com/wp-content/uploads/apex-legends/apex-legends-apex-packs.jpg |
+| Apex Legends | Déblocage d'arme (héros centré) | apex-weapon-unlock.jpg | https://interfaceingame.com/wp-content/uploads/apex-legends/apex-legends-weapon-unlock.jpg |
+| Helldivers (1) | Récompense de mission par joueur | helldivers1-mission-reward.png | https://interfaceingame.com/wp-content/uploads/helldivers/helldivers-event-mission-reward.png |
+| **— HUD en jeu (14)** | | | |
+| Remnant II | HUD minimal (vie centrée, armes bas-droite) | remnant2-hud.png | https://interfaceingame.com/wp-content/uploads/remnant-ii/remnant-ii-hud.png |
+| Remnant II | HUD (variante) | remnant2-hud-2.png | https://interfaceingame.com/wp-content/uploads/remnant-ii/remnant-ii-hud-2.png |
+| Aliens: Fireteam Elite | HUD coop (escouade haut-gauche, radar arc) | aliensfe-hud.jpg | https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1549970/ss_b0cb31b2977312de10720ddf052e0a8a74a85d6a.1920x1080.jpg |
+| The Division 2 | HUD + chiffres de dégâts / DPS | division2-hud-damage-numbers.jpg | https://cdn.dtmg.xyz/uploads/2019/03/division-2-builds-and-specializations-guide-12.jpg |
+| Halo Infinite | HUD (objectif, bouclier, munitions) | halo-infinite-hud.png | https://interfaceingame.com/wp-content/uploads/halo-infinite/halo-infinite-hud-2.png |
+| Halo Infinite | HUD + toast de ramassage | halo-infinite-hud-pickup.png | https://interfaceingame.com/wp-content/uploads/halo-infinite/halo-infinite-hud-3.png |
+| Borderlands 4 | HUD (bouclier/vie, bannière mission) | borderlands4-hud.png | https://interfaceingame.com/wp-content/uploads/borderlands-4/borderlands-4-hud.png |
+| Gears of War: E-Day | HUD quasi absent + carte de chapitre | gears-eday-hud.png | https://interfaceingame.com/wp-content/uploads/gears-of-war-e-day/gears-of-war-e-day-hud.png |
+| The Finals | HUD (variante) | thefinals-hud-2.png | https://interfaceingame.com/wp-content/uploads/the-finals/the-finals-hud-2.png |
+| S.T.A.L.K.E.R. 2 | HUD (quête, boussole, munitions) | stalker2-hud.png | https://interfaceingame.com/wp-content/uploads/s-t-a-l-k-e-r-2-heart-of-chornobyl/s-t-a-l-k-e-r-2-heart-of-chornobyl-hud.png |
+| Marvel Rivals | HUD (vie centrée segmentée) | marvelrivals-hud.png | https://interfaceingame.com/wp-content/uploads/marvel-rivals/marvel-rivals-hud.png |
+| Apex Legends | Ramassage d'arme in-world + comparaison | apex-hud-pickup-compare.jpg | https://interfaceingame.com/wp-content/uploads/apex-legends/apex-legends-replace-weapon.jpg |
+| Cronos: The New Dawn | Sélection rapide d'arme (4 slots) | cronos-hud-weapon-quickselect.png | https://interfaceingame.com/wp-content/uploads/cronos-the-new-dawn/cronos-the-new-dawn-weapon-selection.png |
+| Hunt: Showdown | Bannière d'annonce (« Get Ready ») | hunt-announcement-banner.jpg | https://interfaceingame.com/wp-content/uploads/hunt-showdown/hunt-showdown-get-ready.jpg |
+| **— Menu principal (6)** | | | |
+| DOOM: The Dark Ages | Menu principal | doomtda-main-menu.png | https://interfaceingame.com/wp-content/uploads/doom-the-dark-ages/doom-the-dark-ages-main-menu.png |
+| R6 Extraction | Menu principal | r6x-main-menu.png | https://interfaceingame.com/wp-content/uploads/rainbow-six-siege-extraction/rainbow-six-siege-extraction-main-menu.png |
+| Vermintide 2 | Menu principal (héros 3D) | vermintide2-main-menu.jpg | https://interfaceingame.com/wp-content/uploads/warhammer-vermintide-2/warhammer-vermintide-2-main-menu.jpg |
+| Helldivers (1) | Menu principal | helldivers1-main-menu.png | https://interfaceingame.com/wp-content/uploads/helldivers/helldivers-main-menu.png |
+| Cronos: The New Dawn | Menu principal (terminal) | cronos-main-menu.png | https://interfaceingame.com/wp-content/uploads/cronos-the-new-dawn/cronos-the-new-dawn-main-menu.png |
+| XDefiant | Menu principal | xdefiant-main-menu.png | https://interfaceingame.com/wp-content/uploads/xdefiant-beta/xdefiant-beta-main-menu.png |
+| **— Sélection de mission / difficulté (7)** | | | |
+| Helldivers (1) | Briefing de mission | helldivers1-mission-briefing.png | https://interfaceingame.com/wp-content/uploads/helldivers/helldivers-mission-briefing.png |
+| World War Z | Sélection d'épisode | wwz-select-episode.jpg | https://interfaceingame.com/wp-content/uploads/world-war-z/world-war-z-select-episode.jpg |
+| Deep Rock Galactic | Carte holo des régions | drg-select-region.jpg | https://interfaceingame.com/wp-content/uploads/deep-rock-galactic/deep-rock-galactic-select-region.jpg |
+| Ghost Recon Breakpoint | Missions (tableau de liège) | ghostrecon-bp-missions.jpg | https://interfaceingame.com/wp-content/uploads/tom-clancys-ghost-recon-breakpoint/tom-clancys-ghost-recon-breakpoint-missions.jpg |
+| Warframe | Carte des missions (nœuds) | warframe-star-chart.jpg | https://interfaceingame.com/wp-content/uploads/warframe/warframe-level-selection.jpg |
+| Halo Infinite | Difficulté (liste + aperçu) | halo-infinite-difficulty.png | https://interfaceingame.com/wp-content/uploads/halo-infinite/halo-infinite-difficulty-select.png |
+| Gears of War: E-Day | Difficulté (4 cartes) + prêt | gears-eday-difficulty.png | https://interfaceingame.com/wp-content/uploads/gears-of-war-e-day/gears-of-war-e-day-difficulty-selection.png |
+| **— Lobby escouade / prêt / classe (6)** | | | |
+| Helldivers 2 | Loadout de mission + READY UP, 3 slots vides | helldivers2-loadout-readyup.jpg | https://www.destructoid.com/wp-content/uploads/2024/02/How-to-change-your-default-loadout-in-Helldivers-2-8.jpg |
+| Helldivers (1) | Lobby diégétique 4 joueurs | helldivers1-lobby.png | https://interfaceingame.com/wp-content/uploads/helldivers/helldivers-lobby.png |
+| Gears 5 | Lobby coop 3 colonnes | gears5-lobby.png | https://interfaceingame.com/wp-content/uploads/gears-5/gears-5-lobby.png |
+| CoD Black Ops 4 | Lobby (groupe + DEPLOY) | bo4-lobby.jpg | https://interfaceingame.com/wp-content/uploads/call-of-duty-black-ops-4/call-of-duty-black-ops-4-lobby.jpg |
+| Ghost Recon Breakpoint | Lobby 4 slots | ghostrecon-bp-lobby.jpg | https://interfaceingame.com/wp-content/uploads/tom-clancys-ghost-recon-breakpoint/tom-clancys-ghost-recon-breakpoint-lobby.jpg |
+| Marvel Rivals | Sélection de héros (compte à rebours) | marvelrivals-hero-select.png | https://interfaceingame.com/wp-content/uploads/marvel-rivals/marvel-rivals-hero-selection.png |
+| **— Résultats de mission (5)** | | | |
+| R6 Extraction | Extraction réussie + XP par joueur | r6x-extraction-results.png | https://interfaceingame.com/wp-content/uploads/rainbow-six-siege-extraction/rainbow-six-siege-extraction-stats.png |
+| Hunt: Showdown | Résumé de mission | hunt-mission-summary.jpg | https://interfaceingame.com/wp-content/uploads/hunt-showdown/hunt-showdown-mission-summary.jpg |
+| Insurgency: Sandstorm | Résumé (VICTOIRE + stats) | insurgency-match-summary.jpg | https://interfaceingame.com/wp-content/uploads/insurgency-sandstorm/insurgency-sandstorm-match-summary.jpg |
+| The Finals | Tableau de scores | thefinals-summary.png | https://interfaceingame.com/wp-content/uploads/the-finals/the-finals-summary-2.png |
+| Deep Rock Galactic | Mission accomplie (paie) | drg-mission-complete.jpg | https://interfaceingame.com/wp-content/uploads/deep-rock-galactic/deep-rock-galactic-assignment-mission-complete.jpg |
+| **— Pause (5)** | | | |
+| Insurgency: Sandstorm | Pause à onglets + infos mission | insurgency-pause.jpg | https://interfaceingame.com/wp-content/uploads/insurgency-sandstorm/insurgency-sandstorm-paused.jpg |
+| S.T.A.L.K.E.R. 2 | Pause | stalker2-pause.png | https://interfaceingame.com/wp-content/uploads/s-t-a-l-k-e-r-2-heart-of-chornobyl/s-t-a-l-k-e-r-2-heart-of-chornobyl-pause.png |
+| XDefiant | Menu en jeu | xdefiant-ingame-menu.png | https://interfaceingame.com/wp-content/uploads/xdefiant-beta/xdefiant-beta-in-game-menu.png |
+| The Finals | Pause | thefinals-pause.png | https://interfaceingame.com/wp-content/uploads/the-finals/the-finals-pause.png |
+| Hunt: Showdown | Pause + équipement | hunt-pause-equipment.jpg | https://interfaceingame.com/wp-content/uploads/hunt-showdown/hunt-showdown-menu.jpg |
+| **— Options / touches (4)** | | | |
+| DOOM: The Dark Ages | Contrôles | doomtda-controls.png | https://interfaceingame.com/wp-content/uploads/doom-the-dark-ages/doom-the-dark-ages-controls.png |
+| Star Wars Zero Company | Contrôles (onglets LB/RB, LT/RT) | swzero-controls.png | https://interfaceingame.com/wp-content/uploads/star-wars-zero-company/star-wars-zero-company-controls.png |
+| Helldivers (1) | Réassignation des touches | helldivers1-keybindings.png | https://interfaceingame.com/wp-content/uploads/helldivers/helldivers-keybindings.png |
+| Hunt: Showdown | Options HUD (masquage auto par élément) | hunt-hud-options.jpg | https://interfaceingame.com/wp-content/uploads/hunt-showdown/hunt-showdown-hud.jpg |
+
+Non trouvés (Analyse 2) : captures de menus Starship Troopers: Extermination, Back 4 Blood, Battlefield 2042, EDF 6 (hors existantes). Leurs captures Steam ne montrent que du gameplay sans UI. Gameuidatabase.com et helldivers.wiki.gg bloquent le téléchargement automatique (Cloudflare / 403). Pour Helldivers 2 et Darktide, les seules captures de menus viennent d'articles-guides, en 1200 px. Pour Space Marine 2, elles viennent aussi d'articles-guides (1200–1920 px).
+
 Non trouvés en image exploitable : menus EDF 5/4.1 (même structure qu'EDF 6), loadout Helldivers 2, menus Space Marine 2 et Battlefield 2042 (les captures Steam ne montrent pas d'UI). Galeries utiles à consulter à la main : https://interfaceingame.com/games/ (Division 2, Destiny 2, Apex, DRG, WWZ, The Finals, Halo Infinite, Remnant II), https://www.gameuidatabase.com/ (recherche par jeu/écran), https://helldivers.wiki.gg/wiki/Heads-Up_Display.
 
 ---
@@ -277,3 +387,211 @@ Règle commune : fond 3D, titre d'écran haut-gauche (56 px), onglets en haut, r
 - Tout afficher en permanence (kill feed, escouade, compteurs) : contextualiser.
 - Rareté indiquée par la couleur seule : toujours doubler avec étoiles/forme.
 - Effets glitch, scanlines, animations > 250 ms sur la navigation.
+
+---
+
+## 7. Analyse 2 — tendances modernes
+
+Observations faites en regardant les 91 nouvelles captures (section 1.b). Elles complètent les sections 2 à 6 et, en cas de conflit, priment pour la refonte. La priorité est l'écran de **sélection d'arme**, jugé « horrible » aujourd'hui.
+
+### 7.1 Sélection d'arme / armurerie : ce que font les jeux modernes
+
+**Composition dominante (≈ 80 % des captures) : 3 zones, toujours dans le même ordre.**
+1. **Gauche (25–30 % de la largeur) : liste ou grille de choix.** Chaque ligne est une *carte d'arme* : rendu ou silhouette de l'arme (≈ 2:1), nom, et 1 à 3 méta-données (niveau, ★, score, coût). Exemples : Helldivers 2 `helldivers2-weaponry`, Star Wars Zero Company `swzero-armory-weapon-list`, Insurgency `insurgency-loadout-weapon-stats`, XDefiant, Ghost Recon.
+2. **Centre / droite (≈ 45 %) : l'arme focus en grand,** en 3D, sur fond flouté ou sombre, légèrement en perspective. Elle n'est jamais dans un cadre. Variantes : établi diégétique (Metro, Insurgency, CoD), fond studio uni (SM2, MW3, Aliens FE).
+3. **Bloc de stats ancré sous ou à côté de l'arme :** nom en grand, puis type et rareté sur une ligne secondaire, puis stats.
+- Navigation : **onglets de slot en haut** (`PRIMARY · SECONDARY · GRENADE` dans HD2, `RIFLE SLOT · HEAVY SLOT` dans Aliens FE). Raccourcis `Q/E` ou `L1/R1` pour les slots et `L2/R2` pour les sous-catégories. Dans Space Marine 2, les **silhouettes d'armes servent d'onglets**, avec Q/E de part et d'autre.
+- **Action primaire unique** dans un bouton plein, sur la couleur d'accent : `EQUIP` (HD2, en bas à droite, contour jaune), `CONFIRM LOADOUT` (R6X, en haut à gauche), `ACCEPT` (Insurgency).
+- Barre d'aide en bas : `Retour · Pivoter · Comparer · Équiper` (HD2), `Back · Viewer mode · Rotate` (Aliens FE), `Preview · Reset` (SM2).
+
+**Comment les stats sont présentées.** Il existe 4 patterns. Rempart devrait combiner 1 et 2.
+1. **Libellé + valeur + barre fine + delta coloré** (SM2 `sm2-armouring-perk-tree`, MW3 `mw3-gunsmith`, Insurgency).
+   - Disposition : libellé à gauche en gris, valeur en blanc tabulaire, barre de 3–4 px sur 180–220 px, puis delta `▲ 2` vert ou `▼ 1` rouge **à droite de la barre**.
+   - Barre de MW3 : la portion gagnée s'affiche en **vert au bout de la barre**, la portion perdue en **rouge sur la piste**. C'est le pattern le plus lisible pour comparer.
+   - Pour les stats sans échelle (chargeur, réserve), SM2 n'affiche que le nombre et son delta, sans barre.
+2. **Gros chiffres « héros » pour 3 stats clés + delta en dessous** (Division 2 `division2-weapon-compare`).
+   - Exemple : `DMG 2.6k / -9741`, `RPM 900 / +720`, `MAG 50 / +40`, à environ 56 px.
+   - Les barres sont réservées aux stats secondaires (précision, stabilité), avec un segment rouge ou vert sur la différence.
+   - La **courbe de chute de dégâts** se compare en superposant 2 lignes (blanc = équipée, orange = focus).
+   - La liste elle-même montre des **mini-flèches ▲▼** à côté de chaque valeur (`4.2k ▼ 605 ▲`) : on compare sans ouvrir l'arme.
+3. **Mini-barres en tirets + valeur à 3 chiffres** (HD2 : `DAMAGE ▮▮▮▮▮▮ 112`, `CAPACITY 020`).
+   - Les zéros devant (`020`) ont un rendu « terminal militaire » ; 4 stats seulement.
+   - Arrowhead a retiré une page plus détaillée, jugée trop complexe. Rempart garde donc 4 à 6 stats visibles et met le détail dans une vue « Inspecter ».
+4. **Jauges circulaires + tableau 2 colonnes** (Aliens FE : `ACCURACY 77`, `STABILITY 86` en anneaux, `COMBAT RATING 100`, puis un tableau `Damage 135 / Reload 1.90…`).
+   - Le « combat rating » unique, comme le rating de Darktide (`143`) ou la puissance de Destiny (`1310`), résume la valeur en un nombre. Pour Rempart, `Lv` + ★ jouent ce rôle.
+
+**Comment la rareté est montrée.**
+- **Couleur sur le texte du palier, pas sur le panneau.** SM2 : `Melta Rifle / Artificer` en violet, `Master-Crafted` en vert, `Relic` en orange. Darktide : nom de l'arme en vert pour la rareté « Black Market ».
+- **Liseré ou cadre de tuile.**
+  - Killing Floor 2 : contour coloré de 2–3 px autour de l'icône (jaune, bleu, vert). Sélection = fond orange plein.
+  - Vermintide 2 : fond de tuile teinté de la rareté.
+  - Division 2 : fond de ligne violet pour « Superior », orange plein pour « High-End » ; lignes très saturées, à éviter telles quelles.
+- **Piste de paliers horizontale** (SM2 `sm2-weapon-versions-tiers`) : `STANDARD · MASTER-CRAFTED · ARTIFICER · RELIC` avec un seuil d'XP au-dessus de chaque segment. Les variantes verrouillées affichent un cadenas, avec une infobulle « il vous faut… ».
+  - **Ce pattern s'applique directement à Lv/★ de Rempart :** la piste montre les étoiles de l'arme et la prochaine étoile à débloquer.
+- **Étoiles en ligne à droite du nom** (Aliens FE `★★★★` + `MAX RANK`). Chez KF2, une étoile montre le palier d'amélioration.
+
+**Comment le loadout est présenté.**
+- **Personnage 3D central + colonnes de slots de chaque côté**, avec le perso qui tient l'arme focus : Insurgency, Ghost Recon, Warframe, R6X, Remnant II (slots en arc autour du perso), The Ascent.
+  - Les slots d'armes ont un rendu large ; les slots d'équipement sont carrés.
+  - Slot vide : `+` en filigrane ou `[Empty]` (XDefiant). Slot verrouillé : cadenas + condition (« Débloqué au niveau 8 », Darktide).
+- **Loadout de mission coop** (Helldivers 1 `helldivers1-loadout-4players`, HD2 `helldivers2-loadout-readyup`) :
+  - 1 carte verticale par joueur : nom + grade, slots arme/équipement en icônes, bouton `CONFIRM` ou `READY UP` par carte.
+  - En-tête de mission en haut : environnement, ennemi, difficulté en barre colorée.
+  - Les slots non occupés affichent `EMPTY SLOT` hachuré.
+  - **C'est exactement le besoin d'un lobby coop 1–4 joueurs.**
+
+### 7.2 Inventaire / grille
+
+- **Tuiles carrées de 96–128 px à 1080p**, espacées de 8–12 px, avec compteur `x3` en bas à droite. Badge `!` pour « nouveau » (Remnant II, Division 2).
+- **Filtres** en liste à gauche ou en menus déroulants (rareté, perk, type) ; **tri** en menu déroulant à droite (Warframe `SORT BY`).
+- La rareté passe par le **liseré de 2–3 px** (KF2) ou un **fond teinté sombre** (Aliens FE cartes, Vermintide). Le focus utilise **une autre couleur que la rareté** : orange plein (KF2) ou contour blanc (Remnant).
+- **Infobulle-carte au survol** (Remnant II) :
+  - Contenu : nom, type, rendu, 2 gros chiffres (`Armor 9 / Weight 5`), résistances en icônes + valeurs, texte d'ambiance en italique.
+  - Pied : actions avec touches `Sélectionner · Retirer · Inspecter`.
+- **Remnant II ou STALKER 2 conviennent au ton « gris en ruine »** : charbon `#141414`, grilles à peine visibles (blanc à 4 %), aucune couleur sauf la vie (rouge) et le poids (vert). Le risque est le manque de contraste des cases vides.
+
+### 7.3 Révélation de butin / caisses
+
+- **Butin de mission puis coffre** (Vermintide 2 `vermintide2-items-collected`) :
+  - À gauche, liste des contributions : mission accomplie ✓, bonus, `tome x2`. Les contributions absentes sont grisées.
+  - Une barre de progression mène au **palier de coffre**. Le coffre est posé sur un socle dans un décor brumeux.
+  - **Modèle parfait pour les caisses ramassées pendant la mission.**
+- **Révélation en cartes alignées** : 2–3 objets côte à côte, le central plus grand ; puce de rareté au-dessus du nom (`RARE` bleu, `COMMON` gris) (Apex `apex-packs-reveal`, Vermintide `vermintide2-chest-reveal`). Les objets pas encore ouverts gardent la forme de la caisse.
+- **Carte héros pleine hauteur** au cadre coloré par la rareté, avec la grille des autres gains à gauche (BO4 `bo4-reward-reveal`).
+- Coop : **1 colonne par joueur** avec sa récompense et un compte à rebours `CONTINUER : 19` (Helldivers 1). Les 4 joueurs voient le même écran.
+
+### 7.4 Menus principal / mission / lobby / résultats / pause / options
+
+- **Menu principal**
+  - Logo en haut à gauche, liste de 5–7 entrées en texte à gauche, séparées par des filets de 1 px. Entrée focus : **barre pleine** (orange chez DOOM TDA, blanc texte noir chez Cronos, coup de pinceau blanc chez STALKER 2).
+  - Grand visuel à droite. Version et état réseau en bas à gauche.
+- **Mission**
+  - World War Z `wwz-select-episode` : titre géant en haut à gauche, liste à gauche avec barre rouge sur le focus, globe 3D au centre, image + description à droite, difficulté en **rangée de crânes** modifiable avec `R`. C'est la meilleure référence.
+  - Gears E-Day : 4 **cartes de difficulté** horizontales (emblème, nom, description) ; sélection = bord supérieur coloré + coche, avec `0/1 PRÊT` au-dessus.
+  - Halo Infinite : fil d'Ariane `CAMPAGNE > NOUVELLE PARTIE`, liste à filets, gros bouton `JOUER` cyan.
+  - Deep Rock Galactic : carte holographique diégétique.
+- **Lobby**
+  - Gears 5 : 3 colonnes de joueurs, avec `+ INVITER` sur les vides.
+  - BO4 : `GROUPE 1/4` en haut à droite + bouton `DEPLOY` orange en bas à droite.
+  - R6X : progression `OPÉRATEUR › LOADOUT › PRÊT` avec compte à rebours `87`. **À reprendre pour Rempart : Classe › Loadout › Prêt.**
+- **Résultats**
+  - R6X : grande tuile jaune avec coche + `EXTRACTION RÉUSSIE`, puis 3 opérateurs 3D, chacun avec sa **barre d'XP verte et ses flèches**.
+  - Insurgency : bandeau sombre centré `VICTOIRE !`, rangée de stats `valeur / moyenne de carrière`.
+  - DRG : bande orange `TERMINÉ` + icônes de paie, bouton `CONTINUER` jaune.
+- **Pause**
+  - Insurgency : onglets `JEU · CLASSE · LOADOUT` avec Q/E, liste condensée à gauche (focus = aplat crème), panneau mission à droite bordé d'un filet rouge.
+  - XDefiant : liste de boutons plats, focus blanc + barre jaune à gauche.
+  - Pour Rempart, permettre **de changer de loadout depuis la pause** en coop (Insurgency).
+- **Options**
+  - Toujours : onglets icône + libellé avec Q/E, sous-onglets avec LT/RT (SW Zero Company), en-têtes de section en bande, ligne focus en aplat ou contour, sliders avec valeur numérique, **panneau de description à droite**.
+  - Hunt propose un **masquage automatique par élément du HUD**.
+
+### 7.5 HUD
+
+- **Densité : la tendance est au « presque rien ».**
+  - Remnant II (le plus proche du ton de Rempart) : une barre de vie rouge fine + endurance **centrées en bas** (≈ 420 px), deux tuiles d'arme empilées en bas à droite (active plus grande, rendu + `chargeur / réserve`), minicarte carrée en haut à droite. Rien d'autre.
+  - Gears E-Day : objectif en une ligne en haut à gauche, puis rien.
+- **Munitions**
+  - Toujours en **bas à droite**, au format `36 | 108` ou `44 / 537` : chargeur en grand (≈ 40 px), réserve en petit et gris.
+  - Silhouette blanche de l'arme active ; arme secondaire en plus petit en dessous (Aliens FE, Halo).
+  - Variante Division 2 : munitions **près du réticule** (bas-centre-droit) avec barre segmentée de vie/armure au-dessus.
+- **Escouade**
+  - En haut à gauche chez Aliens FE (icône de classe + nom + barre fine + compteur de kits) ; en bas à gauche chez Apex et The Finals.
+  - Toujours : **icône de classe + nom + barre fine** de 160–280 px.
+- **Objectif**
+  - En haut à gauche ou en haut à droite, sur 1–2 lignes : titre de lieu en petites capitales + objectif. Le sous-objectif a une puce radio (STALKER 2) ou un fond translucide (Halo).
+  - Annonces de phase en **bannière centrée** (`MISSION PRINCIPALE TERMINÉE` dans Borderlands 4, `Get Ready` sur coup de pinceau noir dans Hunt, carte de chapitre en lettres espacées dans Gears).
+- **Radar** : demi-cercle ou arc en bas à droite (Aliens FE, avec distances `22.4m`) ou cercle en haut à gauche (Division 2). Cible : 180–220 px.
+- **Toasts de ramassage**
+  - À droite, une ligne `OBJET ACQUIS` + `[Tab]` (Halo).
+  - Apex : **carte de comparaison ancrée près du réticule** pour remplacer une arme : `MAINTENIR E REMPLACER`, nom, slots d'accessoires colorés par rareté. **À utiliser pour les caisses d'armes de Rempart** (comparer avant de prendre).
+- **Chiffres de dégâts** : blancs, groupés, avec DPS facultatif (stand de tir Division 2). Hitmarker = 4 traits en coin autour du réticule (Division 2 orange, Aliens FE blanc).
+
+### 7.6 Animation et retours (déduits des captures et conventions de ces jeux)
+
+- **Focus**
+  - Remplissage de barre de gauche à droite en 120–160 ms (DOOM TDA, XDefiant).
+  - Coins en crochets qui se resserrent sur la tuile (BO4, Aliens FE `[01]`).
+  - Effet de clic court ; pas de grossissement au-delà de 1,03×.
+- **Changement de stat** : le segment delta apparaît en fondu (vert/rouge) et la valeur défile, ou « roule », en 200 ms. La flèche ▲▼ clignote une fois.
+- **Révélation**
+  - Pause → flash de la couleur de rareté (80 ms) → l'arme tourne une fois → les stats s'animent ligne par ligne (40 ms de décalage).
+  - Les raretés hautes ajoutent des particules ou un halo (Apex, BO4).
+  - On peut toujours **passer** l'animation (maintenir A/Espace).
+- **Prêt coop** : la carte du joueur passe à la couleur d'accent avec une coche ; un compte à rebours démarre quand tous sont prêts (R6X `87`, HD1 `CONTINUE : 19`).
+
+### 7.7 Trois directions de design pour Rempart
+
+Les trois directions respectent les fondamentaux de la section 3 : un accent, action primaire en bas à droite, grille de 8 px, Q/E. Elles diffèrent par la matière, la typo et la place du diégétique.
+
+#### A. « Terminal tactique militaire »
+*Esprit : le soldat consulte un ordinateur de commandement EDF ou ONU ; froid, chiffré, discipliné.*
+- **Exemples** : Helldivers 2 (Weaponry, chiffres `020`, contours fins), Aliens: Fireteam Elite (onglets en aplat lime, `// MODS`, `// PERKS`), R6 Extraction (progression d'étapes, rayures de danger), Cronos (monospace), Insurgency (stats avec unités `m/s`, `rpm`).
+- **Palette**
+
+  | Token | Hex | Usage |
+  |---|---|---|
+  | `bg` | `#0B0E0D` | Fond |
+  | `panel` | `#121816` à 85 % | Panneaux |
+  | `line` | `#2C3833` | Filets 1 px, réticules de coin |
+  | `text` | `#DDE5DF` | Texte |
+  | `text-dim` | `#7E8C85` | Texte secondaire |
+  | **`accent`** | **`#D7E04A`** (jaune-lime signal) | Accent |
+  | `danger` | `#E5483B` | Danger |
+  | `ok` | `#59D17A` | Validation |
+
+- **Typo** : titres en **Rajdhani / Barlow Condensed SemiBold en capitales**, tracking +6 %. Chiffres et étiquettes en **JetBrains Mono** ou **IBM Plex Mono** (`DMG 112`, `MAG 020`), zéros devant.
+- **Signes distinctifs**
+  - Préfixes `//` sur les sections, coordonnées et horodatage en très petit dans les coins, crochets `[ ]` sur le focus.
+  - Barres en **tirets segmentés** (10 segments), hachures diagonales sur les slots vides ou verrouillés.
+  - Une rayure de danger noir/jaune réservée au bouton `DÉPLOYER`.
+- **Arme** : rendu studio sur fond sombre et quadrillé ; 4 stats en tirets + 3 « traits » textuels ; carte de comparaison en 2 colonnes `ÉQUIPÉE | SÉLECTION`.
+- **Risque** : peut sembler « sci-fi propre » plutôt qu'apocalyptique. Il faut le salir avec du grain, de légères aberrations (sans glitch animé) et un fond de ville grise.
+
+#### B. « AAA moderne épuré »
+*Esprit : clarté maximale, l'arme et le soldat sont les héros, l'UI se retire.*
+- **Exemples** : CoD MW3 Gunsmith, Space Marine 2 Armurerie (hors cadres dorés), Star Wars Zero Company, Halo Infinite, The Division 2 (chiffres héros), Destiny 2, Remnant II.
+- **Palette** : celle de la section 3.4 telle quelle, avec un orange signal `#FF8A1F`.
+  - Fond `#0E1114` ; panneaux en verre dépoli noir à 60 % avec flou d'arrière-plan.
+  - Texte `#F2F4F5` / `#9AA4AD` ; deltas `#5BD16E` / `#E8413C`.
+  - Raretés de 4.4 sur le **texte du palier** et un liseré de 3 px.
+- **Typo** : **Barlow** (Regular/SemiBold) pour tout. Titres d'écran **très grands, fins, très espacés** comme SM2 (`P R I M A R Y  W E A P O N`) ou CoD ; chiffres tabulaires ; chiffres héros de 56–72 px pour 3 stats clés.
+- **Signes distinctifs**
+  - Aucun cadre, des filets de 1 px. L'arme en 3D occupe 50 % de l'écran sur un fond studio dégradé (gris bleuté → noir).
+  - Barres fines de 3 px avec **delta vert ou rouge collé au bout** (MW3) et `▲ 2 / ▼ 1` à droite (SM2).
+  - **Piste de paliers ★1→★5** sous l'arme, comme les versions de SM2 ; liste à gauche en cartes larges (rendu + nom + ★ + Lv).
+- **Risque** : générique. Il faut le rattacher à Rempart par des photos et un fond 3D de ruines grises, et par l'iconographie (silhouettes d'insectes, insignes).
+
+#### C. « Équipement de terrain, diégétique et sale »
+*Esprit : on est dans un dépôt de fortune ; le matériel est posé sur un établi, les fiches sont des étiquettes de caisse.*
+- **Exemples** : Metro Exodus (établi, bandeau orange rouillé), STALKER 2 (inventaire à grille, poids), Hunt: Showdown (bannières au pinceau, typo serif sobre, texture papier), Remnant II (charbon, matières usées), Deep Rock Galactic (terminal dans la base), Vermintide 2 / Darktide (gris sale + une couleur de rareté), Insurgency (pièce réelle derrière le loadout).
+- **Palette**
+
+  | Token | Hex | Usage |
+  |---|---|---|
+  | `bg` | `#151413` | Charbon chaud |
+  | `panel` | `#1E1C1A` à 88 % | Panneaux, grain de bruit 3 % |
+  | `line` | `#3A3631` | Filets |
+  | `text` | `#E8E2D6` | Texte, blanc cassé « papier » |
+  | `text-dim` | `#8F887C` | Texte secondaire |
+  | **`accent`** | **`#E0782A`** (orange rouille / signalisation) | Accent |
+  | `danger` | `#C8352B` | Danger |
+  | `ok` | `#8DBF5A` | Validation |
+
+  Raretés désaturées de 15 % : gris `#B5B2AA`, vert `#7FB35A`, bleu `#4C8FD6`, violet `#9466D6`, or `#E2B23A`.
+- **Typo** : titres en **Oswald / Bebas Neue** ou un stencil sobre (**Saira Stencil One** pour les seuls titres d'écran). Corps en **Barlow**. Étiquettes en capitales, style « pochoir sur caisse ».
+- **Signes distinctifs**
+  - Le menu Arsenal **est** une scène 3D : établi ou râtelier dans un hangar en ruine, la caméra glisse d'une arme à l'autre.
+  - La fiche de stats est une **étiquette de caisse** : fond blanc cassé, texte noir, barres en blocs. Le bouton principal ressemble à un **coup de pinceau ou ruban adhésif** orange.
+  - Les bannières d'annonce du HUD sont au pinceau noir (Hunt) ; les caisses de loot sont de vraies caisses 3D qui s'ouvrent.
+- **Risque**
+  - Coût de production le plus élevé (scènes 3D, textures) et lisibilité en danger si la texture dépasse 5 % d'opacité.
+  - Limiter le diégétique à l'Arsenal, au lobby et à la révélation de caisses. Le HUD et les options restent en style B.
+
+**Recommandation de travail :** prendre une base **B** pour le HUD, les options, la pause et la navigation, et ajouter les touches **A** pour les stats, l'escouade et les briefings (chiffres monospace, préfixes `//`, crochets de focus). Réserver le **C** aux moments forts : écran titre, Arsenal sur établi, révélation de caisses. L'**écran Sélection d'arme** suit alors :
+- onglets de slots en haut (Q/E) ;
+- liste de cartes à gauche (rendu + nom + Lv + ★ + liseré de rareté) ;
+- arme 3D au centre-droite ;
+- bloc stats en bas à droite, avec 3 chiffres héros (Dégâts, Cadence, Chargeur) puis 3 barres fines avec delta vs arme équipée (Rechargement, Portée, Précision) ;
+- piste ★ sous l'arme ;
+- `ÉQUIPER` plein en bas à droite ; `Maintenir C : Comparer` et `I : Inspecter` dans la barre d'aide.
