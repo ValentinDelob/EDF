@@ -99,11 +99,7 @@ public static partial class PortBuilder
         res.PlayerSpawns.Add(new Vector3(4, 1, 6));
         res.PlayerSpawns.Add(new Vector3(-4, 1, 12));
         res.PlayerSpawns.Add(new Vector3(4, 1, 12));
-<<<<<<< HEAD
         DressPort(root, statics, res, night);
-=======
-        CityCam.Attach(root); // caméra de contrôle visuel (inactive sans « --citycam »)
->>>>>>> worktree-agent-a1c5c7740ed2fdacc
         return res;
     }
 

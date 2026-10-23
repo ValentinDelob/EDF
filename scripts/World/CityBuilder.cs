@@ -428,13 +428,9 @@ public static partial class CityBuilder
     private static void BuildVehicle(Node3D root, StaticBody3D body, Vector3 p, float yaw, Props.VehicleType type, Color paint, float len, RandomNumberGenerator vrng)
     {
         // Les fourgons sont surtout blancs ; les camions portent une bande de couleur sur leur caisse.
-<<<<<<< HEAD
-        if (type == Props.VehicleType.Van && vrng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
-        if (RuinVehicle(root, p, yaw, type, ref paint, len)) return; // épave calcinée à la place (sinon carrosserie couverte de cendre)
-=======
         if (type == Props.VehicleType.Van && vrng.Randf() < 0.6f) paint = new Color(0.6f, 0.6f, 0.58f);
-        if (Props.Burnt(p)) paint = Mats.BurntPaint; // épave calcinée (sans tirage aléatoire)
->>>>>>> worktree-agent-a1c5c7740ed2fdacc
+        if (RuinVehicle(root, p, yaw, type, ref paint, len)) return; // épave calcinée à la place (sinon carrosserie couverte de cendre)
+        if (Props.Burnt(p)) paint = Mats.BurntPaint; // carrosserie brûlée (sans tirage aléatoire)
         var mesh = Props.Vehicle(type, paint, len);
         root.AddChild(new MeshInstance3D
         {
