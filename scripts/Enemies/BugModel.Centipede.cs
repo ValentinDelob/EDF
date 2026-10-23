@@ -327,14 +327,18 @@ public partial class BugModel
             var dir = TrailPoint(head, Mathf.Max(d - h, 0f)) - TrailPoint(head, d + h);
             var lp = inv * p;
             var ld = inv.Basis * dir;
-            var yaw = ld.LengthSquared() > 1e-8f ? Mathf.Atan2(ld.X, ld.Z) : 0f;
+            // La trace suit les surfaces (sol, mur, toit) : chaque segment prend la pente de la trace dans le repère de la tête.
+            var horiz = new Vector2(ld.X, ld.Z).Length();
+            var yaw = horiz > 0.3f * ld.Length() ? Mathf.Atan2(ld.X, ld.Z) : 0f;
+            var pitch = ld.LengthSquared() > 1e-8f ? -Mathf.Atan2(ld.Y, yaw == 0f ? Mathf.Abs(ld.Z) * Mathf.Sign(ld.Z + 1e-6f) : horiz) : 0f;
             // Vague de pas qui remonte vers la queue, légère ondulation latérale, l'avant se cabre pour mordre.
             var ph = _gait - k * 0.85f;
             var rear = k < 3 ? attack * 0.3f * (1f - k / 3f) : 0f;
             var lat = Mathf.Sin(_gait * 0.22f - k * 0.7f) * 0.05f * amp;
-            var side = new Vector3(Mathf.Cos(yaw), 0, -Mathf.Sin(yaw));
-            seg.Node.Position = new Vector3(lp.X / s, CentiPivot * seg.Scale + Mathf.Sin(ph * 2f) * 0.012f * amp + rear, lp.Z / s) + side * lat;
-            seg.Node.Rotation = new Vector3(-rear * 0.5f, yaw, Mathf.Sin(ph) * 0.03f * amp);
+            var rot = new Vector3(-rear * 0.5f + pitch, yaw, Mathf.Sin(ph) * 0.03f * amp);
+            var sb = Basis.FromEuler(rot);
+            seg.Node.Position = lp / s + sb.Y * (CentiPivot * seg.Scale + Mathf.Sin(ph * 2f) * 0.012f * amp + rear) + sb.X * lat;
+            seg.Node.Rotation = rot;
             if (seg.Legs != null) seg.Legs.Rotation = new Vector3(0, Mathf.Sin(ph) * 0.3f * amp, -Mathf.Cos(ph) * 0.08f * amp);
         }
 

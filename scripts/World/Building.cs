@@ -89,12 +89,24 @@ public partial class Building : StaticBody3D
             b.AddChild(b.Visual);
             b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });
             if (roofShape != null) b.AddChild(new CollisionShape3D { Shape = roofShape });
+            b.AddDetailCollision();
             return b;
         }
         b.Visual = new MeshInstance3D { Mesh = style.Kind == BuildingKind.Industrial ? BuildPlainMesh(size, facade, roof) : BuildMesh(size, facade, roof, style, rng) };
         b.AddChild(b.Visual);
         b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });
+        b.AddDetailCollision();
         return b;
+    }
+
+    /// <summary>
+    /// Collision exacte de tout ce qui dépasse du volume principal (acrotère, corniches, socle, piliers, balcons,
+    /// stores, enseignes, équipements de toit, débords de toiture, cheminées...) : les triangles solides du maillage,
+    /// en une seule forme par immeuble. Le volume principal reste une boîte pleine (robuste pour les tirs et les pas).
+    /// </summary>
+    private void AddDetailCollision()
+    {
+        if (MeshKit.ShapeOf(Visual.Mesh) is { } detail) AddChild(new CollisionShape3D { Name = "Detail", Shape = detail });
     }
 
     /// <summary>Volume simple (entrepôt, conteneurs) : quatre façades à UV en mètres (1 U = 3 m) et un toit.</summary>
@@ -136,7 +148,7 @@ public partial class Building : StaticBody3D
     /// </summary>
     private static ArrayMesh BuildMesh(Vector3 s, Material facade, Material roof, BuildingStyle style, RandomNumberGenerator rng)
     {
-        var kit = new MeshKit();
+        var kit = new MeshKit { Record = true };
         var hx = s.X / 2;
         var hz = s.Z / 2;
         var h = s.Y;
@@ -245,6 +257,7 @@ public partial class Building : StaticBody3D
                     var textW = sw * rng.RandfRange(0.5f, 0.75f);
                     var words = rng.RandiRange(1, 3);
                     var x0 = -textW / 2;
+                    kit.Solid = false; // lettres de 3 cm d'épaisseur sur le panneau : la collision du panneau suffit
                     for (var wi = 0; wi < words; wi++)
                     {
                         var ww = (textW - (words - 1) * 0.25f) / words * rng.RandfRange(0.7f, 1.1f);
@@ -258,6 +271,7 @@ public partial class Building : StaticBody3D
                         }
                         x0 += ww + 0.25f;
                     }
+                    kit.Solid = true;
                 }
                 // Store banne incliné avec lambrequin.
                 var depth = Mathf.Min(1.4f, style.Clearance - 0.3f);
@@ -500,6 +514,9 @@ public partial class Building : StaticBody3D
                 Position = new Vector3(0, Mathf.Min(3.5f, Size.Y * 0.15f) / 2 - 0.3f, 0),
             };
             AddChild(rubble);
+            // Le tas de gravats est solide (on peut y monter, les insectes l'escaladent).
+            AddChild(new CollisionShape3D { Name = "Rubble", Shape = rubble.Mesh.CreateConvexShape(), Position = rubble.Position });
+            CollisionLayer = 1;
         }));
         Effects.Debris(world, pos, Size, FacadeMat);
     }

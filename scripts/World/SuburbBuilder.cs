@@ -89,23 +89,28 @@ public static partial class SuburbBuilder
         private const float Size = 110f;
         private readonly Dictionary<(int, int), MeshKit> _kits = new();
         private readonly List<(int, int)> _order = new();
+        /// <summary>Secteurs solides : leurs triangles deviennent une collision exacte par secteur.</summary>
+        private readonly bool _solid;
+
+        public Chunks(bool solid = false) => _solid = solid;
 
         public MeshKit At(Vector3 p)
         {
             var key = (Mathf.FloorToInt(p.X / Size), Mathf.FloorToInt(p.Z / Size));
             if (_kits.TryGetValue(key, out var k)) return k;
-            k = new MeshKit();
+            k = new MeshKit { Record = _solid };
             _kits[key] = k;
             _order.Add(key);
             return k;
         }
 
-        public void Flush(Node3D root, string name, bool shadows, float range = 0f)
+        public void Flush(Node3D root, string name, bool shadows, float range = 0f, StaticBody3D body = null)
         {
             foreach (var key in _order)
             {
                 var k = _kits[key];
                 if (k.Empty) continue;
+                if (body != null) CityBuilder.AddSolid(body, k);
                 root.AddChild(new MeshInstance3D
                 {
                     Name = $"{name}_{key.Item1}_{key.Item2}",
@@ -170,7 +175,7 @@ public static partial class SuburbBuilder
         public readonly Grid Mask = new();
         public readonly PropScatter Props = new();
         public readonly Chunks Ground = new();   // allées, clôtures, haies, marquages (sans ombres)
-        public readonly Chunks Solid = new();    // murets, bancs maçonnés, ponts (avec ombres)
+        public readonly Chunks Solid = new(true); // murets, bancs maçonnés, ponts (avec ombres, collision exacte)
         public readonly List<Road> Roads = new();
         /// <summary>Points d'arbres de collision (troncs) déjà posés, pour éviter les doublons.</summary>
         public readonly List<Vector3> Trunks = new();
@@ -205,7 +210,7 @@ public static partial class SuburbBuilder
         BuildForest(c);
 
         c.Ground.Flush(root, "SuburbGround", false, 0f);
-        c.Solid.Flush(root, "SuburbSolid", true, 0f);
+        c.Solid.Flush(root, "SuburbSolid", true, 0f, c.Body);
         c.Props.Flush(root);
 
         // Murs invisibles en bordure (mêmes limites que la ville).
@@ -726,8 +731,7 @@ public static partial class SuburbBuilder
             var yaw = Mathf.Atan2(dir.X, dir.Z);
             if (roll < 0.25f)
             {
-                c.Props.Add(Props.GardenShed(), spot, yaw + Mathf.Pi, range: 150, shadows: true);
-                c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = Sz(2.4f, 2.4f, 2f) }, Position = spot + Vector3.Up * 1.2f });
+                c.Props.Add(Props.GardenShed(), spot, yaw + Mathf.Pi, range: 150, shadows: true); // collision exacte (PropScatter)
             }
             else if (roll < 0.4f) c.Props.Add(Props.Trampoline(), spot, 0, range: 140, shadows: true);
             else if (roll < 0.52f) c.Props.Add(Props.SwingSet(), spot, yaw, range: 140, shadows: true);
@@ -763,6 +767,7 @@ public static partial class SuburbBuilder
         var alongX = Mathf.Abs(dir.X) > 0.5f;
         var k = c.Ground.At((a + b) / 2);
         var h = front ? 1.0f : 1.6f;
+        var solidThick = 0.3f;   // épaisseur de la collision (celle du visuel)
         switch (kind)
         {
             case 0:
@@ -778,6 +783,8 @@ public static partial class SuburbBuilder
                     var seg = len / n + 0.05f;
                     k.Box(Mats.Foliage(), p + Vector3.Up * (hh / 2), alongX ? new Vector3(seg, hh, thick) : new Vector3(thick, hh, seg), null, false);
                 }
+                solidThick = thick;
+                h += front ? 0f : 0.2f;
                 break;
             }
             case 1 when front:
@@ -795,8 +802,10 @@ public static partial class SuburbBuilder
                     var q = a + dir * t + Vector3.Up * 0.66f;
                     k.Box(m, q + Vector3.Up * 0.25f, new Vector3(0.02f, 0.5f, 0.02f), null, false, false);
                 }
-                h = 1.2f;
-                break;
+                // Muret plein (on peut y monter) ; la grille au-dessus est une paroi mince.
+                c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = alongX ? new Vector3(len, 0.66f, 0.32f) : new Vector3(0.32f, 0.66f, len) }, Position = (a + b) / 2 + Vector3.Up * 0.33f });
+                c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = alongX ? new Vector3(len, 0.52f, 0.05f) : new Vector3(0.05f, 0.52f, len) }, Position = (a + b) / 2 + Vector3.Up * 0.92f });
+                return;
             }
             case 1:
             {
@@ -814,6 +823,8 @@ public static partial class SuburbBuilder
                 k.Col = wood.Darkened(0.1f);
                 for (var y = 0.35f; y < h; y += 0.3f)
                     k.Box(Mats.Detail(), (a + b) / 2 + Vector3.Up * y, alongX ? new Vector3(len, 0.02f, 0.06f) : new Vector3(0.06f, 0.02f, len), null, false, false);
+                solidThick = 0.1f;
+                h += 0.1f;
                 break;
             }
             default:
@@ -831,10 +842,11 @@ public static partial class SuburbBuilder
                 k.Col = new Color(0.2f, 0.32f, 0.22f) * 0.9f;
                 k.Box(Mats.Glass(), (a + b) / 2 + Vector3.Up * (h * 0.45f), alongX ? new Vector3(len, h * 0.8f, 0.01f) : new Vector3(0.01f, h * 0.8f, len), null, false, false);
                 h *= 0.85f;
+                solidThick = 0.06f;
                 break;
             }
         }
-        var size = alongX ? new Vector3(len, h, 0.3f) : new Vector3(0.3f, h, len);
+        var size = alongX ? new Vector3(len, h, solidThick) : new Vector3(solidThick, h, len);
         c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = (a + b) / 2 + Vector3.Up * (h / 2) });
     }
 
@@ -842,8 +854,8 @@ public static partial class SuburbBuilder
     private static void AddCar(Ctx c, Vector3 p, float yaw, Props.VehicleType type, Color paint, float len, RandomNumberGenerator rng)
     {
         if (type == Props.VehicleType.Van && rng.Randf() < 0.6f) paint = new Color(0.9f, 0.9f, 0.88f);
-        var size = Props.VehicleSize(type, len);
-        c.Root.AddChild(new MeshInstance3D { Mesh = Props.Vehicle(type, paint, len), Position = p, Rotation = new Vector3(0, yaw, 0), VisibilityRangeEnd = 260f });
-        c.Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = p + new Vector3(0, size.Y / 2 + 0.05f, 0), Rotation = new Vector3(0, yaw, 0) });
+        var mesh = Props.Vehicle(type, paint, len);
+        c.Root.AddChild(new MeshInstance3D { Mesh = mesh, Position = p, Rotation = new Vector3(0, yaw, 0), VisibilityRangeEnd = 260f });
+        c.Body.AddChild(CityBuilder.VehicleShape(mesh, type, len, p, yaw));
     }
 }

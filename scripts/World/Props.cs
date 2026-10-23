@@ -14,7 +14,8 @@ public static partial class Props
     private static ArrayMesh Cached(string key, System.Action<MeshKit> build)
     {
         if (Cache.TryGetValue(key, out var m)) return m;
-        var kit = new MeshKit();
+        // Triangles solides enregistrés : les accessoires posés par PropScatter sont solides (sauf le feuillage).
+        var kit = new MeshKit { Record = true };
         build(kit);
         m = kit.Commit();
         Cache[key] = m;
@@ -524,7 +525,14 @@ public class PropScatter
 
     private readonly Dictionary<(Mesh, int, int), Batch> _batches = new();
 
-    public void Add(Mesh mesh, Vector3 pos, float yaw, Color? color = null, float range = 160f, bool shadows = false, float scale = 1f)
+    /// <summary>Triangles solides des accessoires (repère monde), par cellule : une forme de collision par cellule.</summary>
+    private readonly Dictionary<(int, int), List<Vector3>> _solids = new();
+
+    /// <summary>
+    /// Pose une instance. Si le maillage a des triangles solides (<see cref="MeshKit.Record"/>), ils rejoignent la
+    /// collision fusionnée de la cellule (<paramref name="solid"/> = false : décor traversable).
+    /// </summary>
+    public void Add(Mesh mesh, Vector3 pos, float yaw, Color? color = null, float range = 160f, bool shadows = false, float scale = 1f, bool solid = true)
     {
         var cx = Mathf.FloorToInt(pos.X / Cell);
         var cz = Mathf.FloorToInt(pos.Z / Cell);
@@ -540,6 +548,11 @@ public class PropScatter
         }
         b.Xf.Add(new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), pos - b.Origin));
         b.Colors.Add(color ?? Colors.White);
+        var faces = solid ? MeshKit.FacesOf(mesh) : System.Array.Empty<Vector3>();
+        if (faces.Length == 0) return;
+        if (!_solids.TryGetValue((cx, cz), out var list)) _solids[(cx, cz)] = list = new List<Vector3>();
+        var xf = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), pos);
+        foreach (var f in faces) list.Add(xf * f);
     }
 
     public void Flush(Node3D root)
@@ -568,5 +581,11 @@ public class PropScatter
             });
         }
         _batches.Clear();
+        if (_solids.Count == 0) return;
+        var body = new StaticBody3D { Name = "PropSolids", CollisionLayer = 1, CollisionMask = 0 };
+        root.AddChild(body);
+        foreach (var list in _solids.Values)
+            body.AddChild(new CollisionShape3D { Shape = new ConcavePolygonShape3D { Data = list.ToArray(), BackfaceCollision = true } });
+        _solids.Clear();
     }
 }

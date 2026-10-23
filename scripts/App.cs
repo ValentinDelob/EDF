@@ -296,6 +296,9 @@ public static class AutoTest
             app.GetTree().CreateTimer(boardAt).Timeout += () => Input.ActionPress("scoreboard");
         // Test LAN : --autohost=2 (attend 2 joueurs puis lance) / --autojoin=127.0.0.1
         Player.Bot = Screenshot.CmdArg("bot") != null;
+        Player.God = Screenshot.CmdArg("god") != null;
+        Player.BotHoldFire = Screenshot.CmdArg("holdfire") != null;
+        RoofTest(app);
         if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
         if (Screenshot.CmdArg("class") is { } cc && int.TryParse(cc, out var ccls)) Profile.I.Data.SelectedClass = (SoldierClass)ccls;
         var mission0 = int.TryParse(Screenshot.CmdArg("mission") ?? "0", out var mm) ? mm : 0;
@@ -376,6 +379,57 @@ public static class AutoTest
                 }
             };
         ScheduleShots(app, dir, $"mission{mission}");
+    }
+
+    /// <summary>
+    /// --roof[=N] : le soldat (bot immobile) est posé sur le toit de l'immeuble le plus proche du départ et N insectes (30)
+    /// apparaissent autour : ils doivent escalader les façades pour l'atteindre. --holdfire : le bot vise sans tirer.
+    /// Fonctionne aussi avec --autohost (le soldat de l'hôte monte sur le toit, test de l'escalade vue du client).
+    /// </summary>
+    private static void RoofTest(App app)
+    {
+        if (Screenshot.CmdArg("roof") is not { } arg) return;
+        var n = int.TryParse(arg, out var v) ? v : 30;
+        Player.BotStill = true;
+        void Try()
+        {
+            app.GetTree().CreateTimer(1f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w?.LocalPlayer == null || !GodotObject.IsInstanceValid(w.LocalPlayer) || w.Elapsed < 2.5f) { Try(); return; }
+                // Immeuble le plus proche du départ dont le toit est plat à l'endroit où l'on pose le soldat.
+                Building best = null;
+                var spot = Vector3.Zero;
+                var bd = float.MaxValue;
+                var space = w.GetWorld3D().DirectSpaceState;
+                foreach (var b in w.Buildings)
+                {
+                    if (b.Destroyed || b.Size.Y < 6f || b.Size.Y > 26f || b.Size.X < 9f || b.Size.Z < 9f) continue;
+                    var d = new Vector2(b.GlobalPosition.X, b.GlobalPosition.Z).Length();
+                    if (d >= bd) continue;
+                    var p = b.GlobalPosition + new Vector3(b.Size.X * 0.22f, 0, b.Size.Z * 0.22f);
+                    var hit = space.IntersectRay(PhysicsRayQueryParameters3D.Create(p + Vector3.Up * (b.Size.Y + 30f), p, 1));
+                    if (hit.Count == 0 || ((Vector3)hit["normal"]).Y < 0.95f || ((Vector3)hit["position"]).Y < b.GlobalPosition.Y + b.Size.Y - 0.5f) continue;
+                    bd = d;
+                    best = b;
+                    spot = (Vector3)hit["position"];
+                }
+                if (best == null) return;
+                var c = best.GlobalPosition;
+                w.LocalPlayer.GlobalPosition = spot + Vector3.Up * 1.5f;
+                w.LocalPlayer.Velocity = Vector3.Zero;
+                GD.Print($"[roof] soldat sur l'immeuble {best.Id} ({best.Size.X:0}×{best.Size.Z:0} m, {best.Size.Y:0} m de haut) en {c.X:0},{c.Z:0}");
+                if (!Net.I.IsHost) return;
+                for (var i = 0; i < n; i++)
+                {
+                    var a = i * Mathf.Tau / n;
+                    var r = Mathf.Max(best.Size.X, best.Size.Z) / 2 + 12f + (i % 3) * 6f;
+                    var type = i % 9 == 4 ? EnemyType.Spider : i % 11 == 7 ? EnemyType.Centipede : i % 5 == 2 ? EnemyType.RedAnt : EnemyType.BlackAnt;
+                    w.HostSpawnEnemy(type, c + new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r));
+                }
+            };
+        }
+        Try();
     }
 
     private static void ScheduleShots(App app, string dir, string prefix)

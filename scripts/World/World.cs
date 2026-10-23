@@ -308,13 +308,14 @@ public partial class World : Node3D
 
     private void SendSnapshots()
     {
-        // Par paquets de 60 ennemis pour rester sous la taille d'un datagramme.
+        // Par paquets de 70 ennemis (18 octets chacun) pour rester sous la taille d'un datagramme.
         var list = EnemiesById.Values.Where(e => e.State != EnemyState.Dead && !e.IsStatic).ToList();
-        for (var i = 0; i < list.Count; i += 60)
+        const int perPacket = 1260 / Enemy.SnapshotBytes;
+        for (var i = 0; i < list.Count; i += perPacket)
         {
             using var ms = new MemoryStream();
             using var w = new BinaryWriter(ms);
-            foreach (var e in list.Skip(i).Take(60)) e.PackSnapshot(w);
+            foreach (var e in list.Skip(i).Take(perPacket)) e.PackSnapshot(w);
             w.Flush();
             Net.I.BroadcastEnemySnapshot(ms.ToArray());
         }
@@ -611,7 +612,8 @@ public partial class World : Node3D
             {
                 if (o == self) continue;
                 var d = p - o.GlobalPosition;
-                if (!self.Def.Flying) d.Y = 0;
+                // Au sol, écartement horizontal ; les grimpeurs (murs, toits) s'écartent en 3D.
+                if (!self.Def.Flying && !self.Climbs) d.Y = 0;
                 var r = radius + o.Def.Size * 1.3f;
                 var len = d.Length();
                 if (len < r && len > 0.001f) push += d / len * (1f - len / r);
@@ -627,6 +629,12 @@ public partial class World : Node3D
         if (Enemies.Get(type).Flying) pos.Y = Rng.RandfRange(25, 40);
         var hpMul = HealthMul;
         var def = Enemies.Get(type);
+        // Les grimpeurs apparaissent sur la surface la plus haute (jamais dans un immeuble ou une voiture : sur le toit).
+        if (!def.Flying && !def.Static && !def.Boss)
+        {
+            var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(new Vector3(pos.X, 200f, pos.Z), new Vector3(pos.X, -5f, pos.Z), 1));
+            if (hit.Count > 0) pos.Y = Mathf.Max(pos.Y, ((Vector3)hit["position"]).Y);
+        }
         if (!def.Static && !def.Boss && !Enemy.Frozen && Rng.Randf() < 0.06f) hpMul = -hpMul; // élite
         var e = Enemy.Create(this, id, type, pos, yaw, hpMul);
         AddChild(e);
@@ -651,14 +659,16 @@ public partial class World : Node3D
         using var r = new BinaryReader(ms);
         while (ms.Position < ms.Length)
         {
+            // Voir Enemy.PackSnapshot (18 octets par ennemi).
             var id = r.ReadInt32();
-            var pos = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-            var yaw = r.ReadInt16() / 10000f;
+            var pos = Enemy.UnpackPos(r);
+            var up = Enemy.UnpackDir(r.ReadUInt16());
+            var fwd = Enemy.UnpackDir(r.ReadUInt16());
             var state = (EnemyState)r.ReadByte();
             var hp = r.ReadByte() / 255f;
             var atk = r.ReadByte() / 255f;
             var spd = r.ReadByte() / 10f;
-            if (EnemiesById.TryGetValue(id, out var e)) e.ApplySnapshot(pos, yaw, state, hp, atk, spd);
+            if (EnemiesById.TryGetValue(id, out var e)) e.ApplySnapshot(pos, up, fwd, state, hp, atk, spd);
         }
     }
 
@@ -743,8 +753,8 @@ public partial class World : Node3D
         Net.I.BroadcastEnemyDeath(e.Id, pos);
         _director?.OnEnemyKilled(e);
 
-        // Butin
-        var ground = new Vector3(pos.X, 0, pos.Z);
+        // Butin : là où le corps tombe (au pied du mur, ou sur le toit).
+        var ground = e.LandingPoint;
         var drops = 0;
         if (e.Def.Boss) drops = 10;
         else if (e.Def.Type == EnemyType.Nest) drops = 4;
