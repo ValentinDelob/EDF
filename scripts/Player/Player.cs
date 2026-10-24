@@ -136,6 +136,15 @@ public partial class Player : CharacterBody3D
                 return;
             }
             var t = World.VehicleNear(GlobalPosition);
+            // Escouade à son poste à portée : on la rallie (sauf si un véhicule est plus près).
+            Ally sm = null;
+            var squad = World.Allies?.UnralliedNear(GlobalPosition, RallyRange, out sm) ?? -1;
+            if (squad >= 0 && World.DownedTeammateNear(GlobalPosition, 3.5f) == 0
+                && (t == null || sm.GlobalPosition.DistanceTo(GlobalPosition) < t.GlobalPosition.DistanceTo(GlobalPosition)))
+            {
+                Net.I.RequestRally(squad);
+                return;
+            }
             if (t != null && World.DownedTeammateNear(GlobalPosition, 3.5f) == 0) { Net.I.RequestVehicleSeat(t.Id, true); return; }
         }
         if (e.IsActionPressed("ping"))
@@ -901,8 +910,21 @@ public partial class Player : CharacterBody3D
         }
     }
 
+    /// <summary>Portée du ralliement d'une escouade PNJ (touche d'interaction).</summary>
+    public const float RallyRange = 10f;
+
+    private float _botRally;
+
     private void BotAim(float dt)
     {
+        // Le bot rallie les escouades qu'il croise (tests automatiques).
+        _botRally -= dt;
+        if (_botRally <= 0)
+        {
+            _botRally = 1f;
+            var sq = World.Allies?.UnralliedNear(GlobalPosition, RallyRange, out _) ?? -1;
+            if (sq >= 0) Net.I.RequestRally(sq);
+        }
         BotDodge(dt);
         // Saisi : le bot tire sur la tête de la fourmi qui le tient (le seul moyen de se libérer).
         var held = GrabbedBy != null && IsInstanceValid(GrabbedBy) ? GrabbedBy : null;

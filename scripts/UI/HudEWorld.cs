@@ -25,6 +25,7 @@ public partial class HudWorldMarkers : Control
     private readonly Dictionary<long, (int meters, string text)> _downedText = new();
     private readonly HashSet<long> _labelsHidden = new();
     private string _reviveText = "";
+    private string _rallyText = "Rallier";
     private float _keyRefresh;
 
     public override void _Ready()
@@ -41,6 +42,7 @@ public partial class HudWorldMarkers : Control
         {
             _keyRefresh = 2f;
             _reviveText = $"Relever [{UiKit.KeyName("interact")}]";
+            _rallyText = $"Rallier [{UiKit.KeyName("interact")}]";
         }
         QueueRedraw();
     }
@@ -81,6 +83,18 @@ public partial class HudWorldMarkers : Control
                 var f = Mathf.Clamp(a.Health / Mathf.Max(1f, a.MaxHealth), 0, 1);
                 DrawRect(new Rect2(r.Position, new Vector2(w * f, h)), new Color(HudE.Ally, 0.9f));
             }
+
+        // Escouade à son poste toute proche : « Rallier [E] » au-dessus du soldat le plus près.
+        if (World.Allies != null && !p.Downed && p.Vehicle == null && World.Allies.UnralliedNear(me, 20f, out var near) >= 0)
+        {
+            var head = near.GlobalPosition + Vector3.Up * 2.5f;
+            if (!cam.IsPositionBehind(head))
+            {
+                var sp = cam.UnprojectPosition(head);
+                var inRange = near.GlobalPosition.DistanceTo(me) <= Player.RallyRange;
+                Txt(HudE.Cond, 16 * S, inRange ? _rallyText : "Escouade", new Vector2(sp.X, 0), sp.Y - 26 * S, inRange ? Colors.White : new Color(1, 1, 1, 0.7f));
+            }
+        }
 
         foreach (var rp in World.Remotes.Values)
         {

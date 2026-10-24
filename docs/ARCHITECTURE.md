@@ -47,6 +47,12 @@ Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni 
 - **Direction** : sur une paroi, vouloir la traverser fait monter, vouloir s'en éloigner fait descendre. Le champ de flux a un second calcul pondéré (`FlowField.ClimbDirection`, Dijkstra) où les immeubles sont franchissables avec un coût selon leur hauteur : les insectes passent par-dessus quand c'est plus court et rejoignent les joueurs sur les toits. La portée d'attaque des grimpeurs est mesurée en 3D.
 - **Réseau** : instantané ennemi de 18 octets (id, position 3 × 16 bits au 1/64 m, normale et regard en projection octaédrique sur 2 octets chacun, état, PV, attaque, vitesse) ; les clients interpolent position et orientation (quaternion).
 
+## Escouades PNJ (`scripts/World/Allies.cs`, `scripts/Net/Net.Squads.cs`)
+
+- L'hôte crée les escouades (`AllyManager.HostSpawnSquad`) et diffuse leur état par `SquadState` (membres, poste, chef). Sans chef, l'escouade tient son poste et tire sur place.
+- Ralliement : touche d'interaction à moins de `Player.RallyRange` (10 m) d'un membre → `RallyRequest` à l'hôte, qui vérifie la distance (12 m) et la limite par classe (`AllyManager.MaxSquads` : 2 pour le Fusilier, 1 sinon). Le bot de test rallie automatiquement.
+- Chef déconnecté : l'escouade reprend un poste là où elle se trouve. Chef à terre : elle reste sur place.
+
 ## Saisie de la fourmi rouge
 
 La morsure de la fourmi rouge est une saisie (`Enemy.Grab.cs`, animation `BugModel.Grab.cs`) : à portée d'attaque, elle attrape le joueur (ou, s'il est la cible, un soldat allié) dans ses mandibules et ne le lâche qu'à sa mort.

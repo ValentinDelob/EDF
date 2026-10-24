@@ -1,10 +1,14 @@
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using Godot;
 
 namespace Rempart;
 
-/// <summary>Soldat allié non joueur : suit le joueur le plus proche et tire sur les insectes.</summary>
+/// <summary>
+/// Soldat allié non joueur. Son escouade tient son poste et tire sur les insectes jusqu'à ce qu'un joueur la rallie
+/// (touche d'interaction à moins de 10 m) ; elle suit alors ce joueur.
+/// </summary>
 public partial class Ally : Node3D
 {
     public int Id;
@@ -12,6 +16,8 @@ public partial class Ally : Node3D
     public float MaxHealth = 120;
     public bool Dead;
     public long Leader;
+    public int Squad;
+    public Vector3 Post;
     public SoldierModel Model;
     private Label3D _label;
     private float _yaw, _pitch, _speed, _recoil;
@@ -31,6 +37,8 @@ public partial class Ally : Node3D
         {
             Text = "Soldat", Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, FontSize = 36, OutlineSize = 8, PixelSize = 0.005f,
             Position = new Vector3(0, 2.2f, 0), Modulate = new Color(0.65f, 0.85f, 1f, 0.8f), Font = UiKit.BodyFont, VisibilityRangeEnd = 40f,
+            // Le HUD dessine déjà une barre fine au-dessus des PNJ (sans nom) : l'étiquette 3D reste masquée.
+            Visible = false,
         };
         a.AddChild(a._label);
         a.Position = pos;
@@ -46,15 +54,20 @@ public partial class Ally : Node3D
         _recoil = Mathf.MoveToward(_recoil, 0, dt * 4f);
         var pos = GlobalPosition;
 
-        // Choix du chef : le joueur vivant le plus proche dans 25 m.
-        if (Leader == 0 || !w.PlayerPosition(Leader, out _))
-            if (w.NearestPlayer(pos, out var p, out var pp) && pp.DistanceTo(pos) < 25f) Leader = p;
-
+        // Escouade ralliée : suit son chef (sur place s'il est à terre) ; sinon elle tient son poste.
         var goal = pos;
-        if (Leader != 0 && w.PlayerPosition(Leader, out var lp))
+        if (Leader != 0)
         {
-            var behind = lp + _formation;
-            if (behind.DistanceTo(pos) > 3f) goal = behind;
+            if (w.PlayerPosition(Leader, out var lp))
+            {
+                var behind = lp + _formation;
+                if (behind.DistanceTo(pos) > 3f) goal = behind;
+            }
+        }
+        else
+        {
+            var post = Post + _formation;
+            if (post.DistanceTo(pos) > 2.5f) goal = post;
         }
         var to = goal - pos;
         to.Y = 0;
@@ -179,6 +192,9 @@ public class AllyManager
 {
     private readonly World _w;
     public readonly Dictionary<int, Ally> ById = new();
+    /// <summary>Chef de chaque escouade (0 = escouade à son poste, à rallier).</summary>
+    public readonly Dictionary<int, long> SquadLeader = new();
+    private int _nextSquad;
     private int _nextId = 1;
     private float _snap;
 
@@ -186,6 +202,8 @@ public class AllyManager
 
     public void HostSpawnSquad(Vector3 center, int count)
     {
+        var squad = _nextSquad++;
+        var members = new int[count];
         for (var i = 0; i < count; i++)
         {
             // Formation en éventail sur les flancs du chef.
@@ -195,7 +213,46 @@ public class AllyManager
             var pos = center + new Vector3(i * 1.8f - count, 0, (i % 2) * 1.5f);
             Spawn(id, pos, formation);
             Net.I.BroadcastAllySpawn(id, pos, formation);
+            members[i] = id;
         }
+        Net.I.BroadcastSquadState(squad, 0, center, members);
+    }
+
+    /// <summary>État d'une escouade (tous les pairs) : membres, poste et chef.</summary>
+    public void ApplySquad(int squad, long leader, Vector3 post, int[] members)
+    {
+        SquadLeader[squad] = leader;
+        foreach (var id in members)
+            if (ById.TryGetValue(id, out var a)) { a.Squad = squad; a.Post = post; a.Leader = leader; }
+    }
+
+    /// <summary>Nombre d'escouades qu'un joueur peut commander : deux pour le Fusilier, une pour les autres classes.</summary>
+    public static int MaxSquads(SoldierClass c) => c == SoldierClass.Rifleman ? 2 : 1;
+
+    /// <summary>Hôte : un joueur demande à rallier une escouade (à moins de 12 m d'un de ses membres).</summary>
+    public void HostRally(int squad, long peer)
+    {
+        if (!SquadLeader.TryGetValue(squad, out var leader) || leader != 0) return;
+        if (!_w.PlayerPosition(peer, out var at)) return;
+        var cls = Net.I.Players.TryGetValue(peer, out var info) ? info.Class : SoldierClass.Rifleman;
+        if (SquadLeader.Values.Count(l => l == peer) >= MaxSquads(cls)) return;
+        var members = ById.Values.Where(a => a.Squad == squad && !a.Dead).ToArray();
+        if (!members.Any(a => a.GlobalPosition.DistanceTo(at) < 12f)) return;
+        Net.I.BroadcastSquadState(squad, peer, members[0].Post, members.Select(a => a.Id).ToArray());
+    }
+
+    /// <summary>Escouade à son poste dont un membre est à moins de <paramref name="range"/> m (-1 sinon), et ce membre.</summary>
+    public int UnralliedNear(Vector3 pos, float range, out Ally nearest)
+    {
+        nearest = null;
+        var bd = range * range;
+        foreach (var a in ById.Values)
+        {
+            if (a.Dead || !SquadLeader.TryGetValue(a.Squad, out var l) || l != 0) continue;
+            var d = a.GlobalPosition.DistanceSquaredTo(pos);
+            if (d < bd) { bd = d; nearest = a; }
+        }
+        return nearest?.Squad ?? -1;
     }
 
     public void Spawn(int id, Vector3 pos, Vector3 formation)
@@ -209,6 +266,14 @@ public class AllyManager
     public void HostTick(float dt)
     {
         foreach (var a in ById.Values) a.HostTick(_w, dt);
+        // Chef parti (déconnexion) : l'escouade reprend un poste là où elle se trouve.
+        foreach (var (squad, leader) in SquadLeader.ToArray())
+        {
+            if (leader == 0 || Net.I.Players.ContainsKey(leader)) continue;
+            var members = ById.Values.Where(a => a.Squad == squad && !a.Dead).ToArray();
+            if (members.Length == 0) { SquadLeader[squad] = 0; continue; }
+            Net.I.BroadcastSquadState(squad, 0, members[0].GlobalPosition, members.Select(a => a.Id).ToArray());
+        }
         _snap -= dt;
         if (_snap > 0 || Net.I.IsSolo || ById.Count == 0) return;
         _snap = 0.1f;

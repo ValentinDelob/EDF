@@ -2,6 +2,7 @@
 
 ## Non publié
 
+- **Escouades à rallier** : les soldats PNJ tiennent leur poste et combattent sur place jusqu'à ce qu'un joueur les rallie (touche d'interaction à moins de 10 m, repère « Rallier [E] » à l'approche) ; ils suivent ensuite ce joueur. Le Fusilier commande jusqu'à 2 escouades, les autres classes une seule. Si le chef quitte la partie, l'escouade reprend un poste sur place. Synchronisé en LAN. L'étiquette « Soldat » géante au-dessus des PNJ disparaît (barre fine du HUD seulement).
 - **Accessibilité** (Options › Jeu) : caisses pour daltoniens (orange / bleu ciel / magenta), intensité des secousses de caméra réglable, éclairs d'explosion atténuables. La caisse de soin devient cylindrique : chaque type de caisse se reconnaît aussi à sa forme.
 - **Encyclopédie** dans le Guide : bestiaire (espèces abattues au moins une fois, points de vie, comportement, nombre d'éliminations ; les autres restent « ? ? ? »), armes obtenues par classe et par catégorie, opérations réussies par difficulté.
 
