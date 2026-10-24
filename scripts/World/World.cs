@@ -90,11 +90,11 @@ public partial class World : Node3D
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
         Decor = Destructibles.Begin(this);
-        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
         Decor.EndBuild();
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
-        foreach (var b in Buildings) Flow.SetBlockedRect(b.GlobalPosition, b.Size, true);
+        foreach (var b in Buildings) if (!b.Open) Flow.SetBlockedRect(b.GlobalPosition, b.Size, true);
         Flow.BlockOutside(CityBuilder.Half, CityBuilder.SeaStart);
 
         // Joueurs : ordre stable par identifiant.
@@ -139,6 +139,12 @@ public partial class World : Node3D
         // Char de combat et hélicoptère d'attaque garés près du point de départ (mêmes identifiants chez tous les pairs).
         AddVehicle(Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi));
         AddVehicle(Helicopter.Create(this, 2, new Vector3(-16, 0.3f, 24), Mathf.Pi));
+        // Véhicules supplémentaires de la carte (base militaire) : identifiants 3, 4… dans l'ordre du générateur.
+        for (var i = 0; i < City.Vehicles.Count; i++)
+        {
+            var (heli, at, yaw) = City.Vehicles[i];
+            AddVehicle(heli ? Helicopter.Create(this, 3 + i, at, yaw) : Tank.Create(this, 3 + i, at, yaw));
+        }
         Objective = MissionObjective.Create(this);
         if (Net.I.IsHost)
         {
@@ -186,6 +192,7 @@ public partial class World : Node3D
             ShadowBlur = 1.2f,
         };
         Grade.Apply(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
+        if (Mission.Map == MapId.Desert) DesertBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);
         AddChild(_sun);
@@ -208,6 +215,7 @@ public partial class World : Node3D
         env.SdfgiCascades = q >= 3 ? 6 : 4;
         env.VolumetricFogEnabled = q >= 2;
         env.VolumetricFogDensity = Mission.Time switch { TimeOfDay.Night => 0.012f, TimeOfDay.Dusk => 0.008f, _ => 0.005f };
+        if (Mission.Map == MapId.Desert) env.VolumetricFogDensity *= DesertBuilder.VolumetricFactor(Mission.Weather);
         env.VolumetricFogAlbedo = env.FogLightColor;
         _sun.DirectionalShadowMaxDistance = q switch { 0 => 80f, 1 => 140f, 2 => 220f, _ => 320f };
         _sun.ShadowEnabled = true;

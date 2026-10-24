@@ -468,6 +468,9 @@ public static partial class Props
         foreach (var y in new[] { 0.29f, 0.58f }) k.Cylinder(m, new Vector3(0, y, 0), 0.3f, 0.3f, 0.03f, 12, false);
     });
 
+    /// <summary>Teinte des sacs de sable (null : toile kaki sombre des villes ; la base du désert pose des sacs sable).</summary>
+    public static Color? SandbagTint;
+
     /// <summary>
     /// Mur de sacs de sable entre deux points (rangs décalés, sacs bombés, teintes variées).
     /// Renvoie la boîte de collision (centre, taille, lacet).
@@ -497,7 +500,7 @@ public static partial class Props
                 {
                     var p = a + basis * new Vector3((h - 0.5f) * 0.06f + depthOff, bagH * r, t);
                     var tone = 0.75f + 0.3f * H(seed, i + r * 40 + (depthOff < 0 ? 900 : 0), 62);
-                    k.Col = new Color(0.34f, 0.32f, 0.25f).Lerp(new Color(0.28f, 0.27f, 0.23f), h) * tone;
+                    k.Col = (SandbagTint is { } st ? st.Lerp(st * 0.84f, h) : new Color(0.34f, 0.32f, 0.25f).Lerp(new Color(0.28f, 0.27f, 0.23f), h)) * tone;
                     // Sac bombé : base large, dessus arrondi (tronc de pyramide + coussin).
                     k.Xf = keep * new Transform3D(bb, p);
                     k.Frustum(d, Vector3.Zero, new Vector2(bagW, bagL * 0.97f), new Vector2(bagW * 0.72f, bagL * 0.8f), bagH * 0.8f);

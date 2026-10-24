@@ -49,6 +49,8 @@ public partial class Building : StaticBody3D
     public bool Destroyed;
     public MeshInstance3D Visual;
     public Material FacadeMat;
+    /// <summary>Bâtiment ouvert (hangar, auvent) : pas de volume plein, emprise non bloquée dans le champ de flux.</summary>
+    public bool Open;
 
     /// <summary>Hauteur du socle commercial : un étage courant (3,2 m) + le demi-niveau bas (0,6 m), aligné sur la trame de façade.</summary>
     private const float ShopH = 3.8f;

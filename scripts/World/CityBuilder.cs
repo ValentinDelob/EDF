@@ -30,6 +30,8 @@ public static partial class CityBuilder
         public readonly Dictionary<string, Vector3> Zones = new();
         public readonly List<Vector3> NestSpots = new();
         public readonly List<Vector3> PlayerSpawns = new();
+        /// <summary>Véhicules pilotables en plus du char et de l'hélicoptère de départ (identifiants 3, 4… dans cet ordre).</summary>
+        public readonly List<(bool Heli, Vector3 Pos, float Yaw)> Vehicles = new();
     }
 
     /// <summary>Axes des rues nord-sud (x) et est-ouest (z) entre les pâtés.</summary>

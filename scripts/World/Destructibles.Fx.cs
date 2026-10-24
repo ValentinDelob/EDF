@@ -307,7 +307,7 @@ public partial class Destructibles
         Sfx.At("spit", hood, -2f, 0.45f, 80);
     }
 
-    private Mesh WreckMesh(PropEntry e) => e.Kind switch
+    private Mesh WreckMesh(PropEntry e) => Props.WreckOf(e.Mesh) ?? e.Kind switch
     {
         PropKind.Van => Props.WreckVan(e.Id % 2),
         PropKind.Truck => Props.WreckTruck(),

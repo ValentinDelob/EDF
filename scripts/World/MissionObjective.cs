@@ -503,9 +503,9 @@ public partial class MissionObjective : Node3D
         Effects.Explosion(W, g.GlobalPosition + Vector3.Up * 2f, g.Kind == GuardKind.Truck ? 7f : 10f, 0);
         Effects.Smoke(W, g.GlobalPosition + Vector3.Up * 2f, 4f, 6f);
         ObjectiveModels.Char(g.Model);
-        var tw = g.CreateTween();
         if (g.Kind == GuardKind.Truck)
         {
+            var tw = g.CreateTween();
             // L'épave est projetée sur le bas-côté (les camions suivants passent) et se couche à moitié.
             var side = new Vector3(Mathf.Cos(g.Yaw), 0, -Mathf.Sin(g.Yaw)) * 4.5f;
             tw.SetParallel();
@@ -514,6 +514,8 @@ public partial class MissionObjective : Node3D
         }
         else if (g.Model.GetNodeOrNull<Node3D>("Mast") is { } mast)
         {
+            // Pas de Tween sans mât (poste de commandement) : un Tween vide est une erreur moteur.
+            var tw = g.CreateTween();
             tw.TweenInterval(0.4f);
             tw.TweenProperty(mast, "rotation", new Vector3(1.45f, 0, 0.2f), 2.2f).SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
             tw.TweenCallback(Callable.From(() => Effects.Dust(W, g.GlobalPosition + new Vector3(0, 0, g.Height * 0.6f), new Vector3(6, 4, g.Height))));
