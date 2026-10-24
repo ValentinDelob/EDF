@@ -110,6 +110,7 @@ public partial class World : Node3D
                 AddChild(LocalPlayer);
                 LocalPlayer.GlobalPosition = spawn;
                 LocalPlayer.SetYaw(0);
+                PrewarmFade(LocalPlayer.Camera);
             }
             else if (Net.I.Players.TryGetValue(id, out var info))
             {
@@ -206,6 +207,23 @@ public partial class World : Node3D
         if (LocalPlayer?.Camera != null) LocalPlayer.Camera.Fov = Settings.I.Fov;
     }
 
+    /// <summary>
+    /// Compile d'avance (pendant l'écran de déploiement) les variantes translucides des insectes (Enemy.CameraFade) :
+    /// sans cela, le premier insecte traversé par la caméra provoque une saccade. Modèles minuscules devant la caméra, retirés ensuite.
+    /// </summary>
+    private void PrewarmFade(Camera3D cam)
+    {
+        var root = new Node3D { Name = "FadePrewarm", Position = new Vector3(0, 0, -4f), Scale = Vector3.One * 0.02f };
+        cam.AddChild(root);
+        foreach (var t in new[] { EnemyType.BlackAnt, EnemyType.Wasp, EnemyType.Drone })
+        {
+            var m = BugModel.Create(t);
+            root.AddChild(m);
+            m.SetFade(0.7f);
+        }
+        GetTree().CreateTimer(1.5f).Timeout += () => { if (IsInstanceValid(root)) root.QueueFree(); };
+    }
+
     // ------------------------------------------------------------------ Boucle
 
     public override void _Process(double delta)
@@ -219,6 +237,14 @@ public partial class World : Node3D
         {
             foreach (var e in EnemiesById.Values) e.ClientTick(dt);
             Allies.ClientTick(dt);
+        }
+        // Insectes géants : celui dans lequel entre la caméra devient translucide (le soldat et la visée restent lisibles).
+        if (GetViewport().GetCamera3D() is { } cam)
+        {
+            var cp = cam.GlobalPosition;
+            // Point suivi : le soldat (ou son véhicule), sinon un point devant la caméra.
+            var focus = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.GlobalPosition + Vector3.Up * 1.3f : cp - cam.GlobalBasis.Z * 3f;
+            foreach (var e in EnemiesById.Values) e.CameraFade(cp, focus);
         }
 
         if (LocalPlayer != null && !LocalPlayer.Downed) LocalPickupCheck();
@@ -533,7 +559,7 @@ public partial class World : Node3D
     // ------------------------------------------------------------------ Ennemis (hôte)
 
     private readonly Dictionary<long, List<Enemy>> _hash = new();
-    private const float HashCell = 6f;
+    private const float HashCell = 10f; // ≥ rayon de séparation des grandes fourmis (≈ 3,2 × taille + voisin)
 
     private static long HashKey(Vector3 p) => ((long)Mathf.FloorToInt(p.X / HashCell) << 32) ^ (uint)Mathf.FloorToInt(p.Z / HashCell);
 
@@ -660,7 +686,7 @@ public partial class World : Node3D
         {
             if (e.State == EnemyState.Dead) continue;
             var d = e.BodyDistance(pos) - e.Def.Size * 1.2f;
-            if (e.Def.Type == EnemyType.Nest) d = e.GlobalPosition.DistanceTo(pos) - 6f;
+            if (e.Def.Type == EnemyType.Nest) d = e.GlobalPosition.DistanceTo(pos) - 6f * e.Def.Size;
             if (d > radius) continue;
             var f = Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
             var amount = dmg * f;
@@ -780,7 +806,7 @@ public partial class World : Node3D
             case 2: Sfx.At("screech", e.GlobalPosition, 8f, 0.6f); break;
             case 3:
                 var drone = e.Def.Type == EnemyType.Drone;
-                Projectile.Spawn(this, drone ? ProjectileKind.Laser : ProjectileKind.Stinger, e.GlobalPosition + Vector3.Down * 0.8f, (target + Vector3.Up - e.GlobalPosition).Normalized() * (drone ? 90f : 60f), false, 0, 0);
+                Projectile.Spawn(this, drone ? ProjectileKind.Laser : ProjectileKind.Stinger, e.GlobalPosition + Vector3.Down * (0.8f * e.Def.Size), (target + Vector3.Up - e.GlobalPosition).Normalized() * (drone ? 90f : 60f), false, 0, 0);
                 Sfx.At("buzz", e.GlobalPosition, 0f);
                 break;
         }

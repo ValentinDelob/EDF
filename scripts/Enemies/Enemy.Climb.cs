@@ -100,11 +100,11 @@ public partial class Enemy
 
         var n = _surfN;
         var step = dir * dist;
-        // Sondes espacées selon la distance parcourue : ~0,6 m au sol, ~0,3 m sur les parois et les toits
-        // (les sondes portent assez loin pour couvrir le chemin fait sans sonder).
+        // Sondes espacées selon la distance parcourue : ~0,6 m au sol, ~0,3 m sur les parois et les toits, × taille de l'insecte
+        // (les sondes portent assez loin, en multiples de la taille, pour couvrir le chemin fait sans sonder).
         _probeDist += dist;
         var flat = n.Y > 0.97f && _up.Y > 0.97f && p.Y < 0.6f;
-        if (_probeDist < (flat ? 0.6f : 0.3f) && dist > 0)
+        if (_probeDist < (flat ? 0.6f : 0.3f) * Mathf.Max(Def.Size, 1f) && dist > 0)
         {
             GlobalPosition = p + step;
             return;

@@ -77,8 +77,8 @@ public partial class Enemy : CharacterBody3D
         var s = def.Size;
         if (type == EnemyType.Nest)
         {
-            e.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 6f, Height = 4.5f }, Position = new Vector3(0, 2.2f, 0) });
-            e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 2.2f }, Position = new Vector3(0, 4.3f, 0) });
+            e.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 6f * s, Height = 4.5f * s }, Position = new Vector3(0, 2.2f, 0) * s });
+            e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 2.2f * s }, Position = new Vector3(0, 4.3f, 0) * s });
         }
         else if (type == EnemyType.Fortress)
         {
@@ -253,10 +253,10 @@ public partial class Enemy : CharacterBody3D
         var dist = hasTarget ? p.DistanceTo(target) : 0f;
         // Loin de la cible seulement : près du joueur, une fourmi bloquée par la foule n'est pas « coincée ».
         var far = hasTarget && dist > Mathf.Max(30f, Def.AttackRange * 1.5f + 8f);
-        if (moved < 1.2f && far && _attackAnim <= 0f) _stuckT += 3f;
+        if (moved < 1.2f * Def.Size && far && _attackAnim <= 0f) _stuckT += 3f;
         else _stuckT = 0;
         // Tourne en rond sans jamais se rapprocher (poche dans le décor, sous un pont…) : 25 s sans gagner 3 m.
-        if (!far || dist < 45f || dist < _bestDist - 3f) { _bestDist = dist; _noProgressT = 0; }
+        if (!far || dist < 45f || dist < _bestDist - 3f * Def.Size) { _bestDist = dist; _noProgressT = 0; }
         else _noProgressT += 3f;
         return _stuckT >= 15f || _noProgressT >= 25f;
     }
@@ -301,17 +301,17 @@ public partial class Enemy : CharacterBody3D
             {
                 _leapT += dt / 0.9f;
                 var k = Mathf.Min(_leapT, 1f);
-                var p = _leapFrom.Lerp(_leapTo, k) + Vector3.Up * (Mathf.Sin(k * Mathf.Pi) * 9f);
+                var p = _leapFrom.Lerp(_leapTo, k) + Vector3.Up * (Mathf.Sin(k * Mathf.Pi) * (6f + 2f * Def.Size));
                 GlobalPosition = p;
                 _speedNow = 0;
                 OrientOnSurface(toGoal, dt);
                 if (_leapT >= 1f) { _leapT = -1f; GlobalPosition = _leapTo; _probeDist = 1f; Sfx.At("hit", _leapTo, -2f, 0.6f); }
                 return;
             }
-            if (_specialCd <= 0 && dist > 8f && dist < 60f && _up.Y > 0.7f && !_falling)
+            if (_specialCd <= 0 && dist > 6f + 3f * Def.Size && dist < 60f && _up.Y > 0.7f && !_falling)
             {
                 _specialCd = (float)GD.RandRange(4, 7);
-                var land = pos + toGoal.Normalized() * Mathf.Min(dist - 5f, 28f);
+                var land = pos + toGoal.Normalized() * Mathf.Min(dist - 3f * Def.Size, 28f);
                 var top = new Vector3(land.X, Mathf.Max(pos.Y, goal.Y) + 30f, land.Z);
                 if (Ray(top, top + Vector3.Down * 80f, out var lp, out var ln) && ln.Y > 0.7f)
                 {
@@ -330,7 +330,7 @@ public partial class Enemy : CharacterBody3D
 
         if (!attacking)
         {
-            if (dist < 14f || Def.Boss) desired = (climbs ? toGoal3 : toGoal) / Mathf.Max(climbs ? reachDist : dist, 0.01f);
+            if (dist < 10f + 3f * Def.Size || Def.Boss) desired = (climbs ? toGoal3 : toGoal) / Mathf.Max(climbs ? reachDist : dist, 0.01f);
             else
             {
                 // Les grimpeurs passent par-dessus les immeubles quand c'est plus court (champ pondéré).
@@ -408,7 +408,7 @@ public partial class Enemy : CharacterBody3D
             for (var i = -3; i <= 3; i++)
             {
                 var side = Basis.X * i * 5f;
-                _world.HostEnemyProjectile(this, 0, Center + Basis.Z * 4f + Vector3.Up * 2f, target + side, 1);
+                _world.HostEnemyProjectile(this, 0, Center + Basis.Z * (1.05f * Def.Size) + Vector3.Up * (0.5f * Def.Size), target + side, 1);
             }
             Net.I.BroadcastEnemyAttack(Id, 2, target);
             Sfx.At("screech", pos, 8f, 0.6f);
@@ -423,11 +423,11 @@ public partial class Enemy : CharacterBody3D
         var ring = new Vector3(Mathf.Cos(_orbit), 0, Mathf.Sin(_orbit)) * 20f;
         var goal = target + ring + Vector3.Up * _altitude;
         var to = goal - pos;
-        var sep = _world.Separation(this, 3f);
+        var sep = _world.Separation(this, 3f * Def.Size);
         var desired = (to.LengthSquared() > 1 ? to.Normalized() : Vector3.Zero) + sep;
         _velocity = _velocity.Lerp(desired * Def.Speed, Mathf.Clamp(dt * 2f, 0, 1));
         var next = pos + _velocity * dt;
-        next.Y = Mathf.Max(next.Y, 4f);
+        next.Y = Mathf.Max(next.Y, 2.5f + 2f * Def.Size);
         GlobalPosition = next;
         _speedNow = _velocity.Length();
         var look = target - next;
@@ -442,9 +442,9 @@ public partial class Enemy : CharacterBody3D
             if (ally != null)
             {
                 _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * DamageScale);
-                Projectile.Spawn(_world, ProjectileKind.Stinger, pos + Vector3.Down * 0.8f, (target + Vector3.Up - pos).Normalized() * 60f, false, 0, 0);
+                Projectile.Spawn(_world, ProjectileKind.Stinger, pos + Vector3.Down * (0.8f * Def.Size), (target + Vector3.Up - pos).Normalized() * 60f, false, 0, 0);
             }
-            else _world.HostEnemyProjectile(this, Def.Type == EnemyType.Drone ? 3 : 1, pos + Vector3.Down * 0.8f, target + Vector3.Up * 1f, 1);
+            else _world.HostEnemyProjectile(this, Def.Type == EnemyType.Drone ? 3 : 1, pos + Vector3.Down * (0.8f * Def.Size), target + Vector3.Up * 1f, 1);
             Net.I.BroadcastEnemyAttack(Id, 3, target);
         }
         State = EnemyState.Moving;
@@ -544,6 +544,68 @@ public partial class Enemy : CharacterBody3D
         tw.TweenInterval(Def.Boss ? 10f : 3.5f);
         tw.TweenProperty(Model, "position:y", -3f * Def.Size, 1.5f);
         tw.TweenCallback(Callable.From(QueueFree));
+    }
+
+    private bool _camFaded;
+
+    /// <summary>
+    /// Translucide quand la caméra est dans le volume du corps (pattes comprises) ou que le corps cache le soldat suivi :
+    /// avec des insectes de 10 m, celui qui passe entre la caméra et le soldat masquerait tout l'écran.
+    /// </summary>
+    public void CameraFade(Vector3 cam, Vector3 focus)
+    {
+        if (IsFortress || Def.Static) return;
+        var s = Def.Size;
+        bool fade;
+        if (State == EnemyState.Dead) fade = false;
+        else if (_segShapes != null)
+        {
+            fade = false;
+            foreach (var sh in _segShapes)
+                if (SegmentDistance(sh.GlobalPosition, cam, focus) < 0.75f * s) { fade = true; break; }
+        }
+        else if (Def.Flying) fade = SegmentDistance(GlobalPosition, cam, focus) < 1.4f * s || GlobalPosition.DistanceTo(cam) < 2.6f * s;
+        else
+        {
+            var inv = GlobalTransform.AffineInverse();
+            var a = inv * cam;
+            var b = inv * focus;
+            // Caméra dans l'emprise des pattes, ou corps (thorax, gastre, tête) entre la caméra et le soldat.
+            fade = Mathf.Abs(a.X) < 2.4f * s && a.Y > -0.5f * s && a.Y < 2.6f * s && a.Z > -3.3f * s && a.Z < 2.5f * s
+                || SegmentHitsBox(a, b, new Vector3(-1.1f, 0.4f, -3.1f) * s, new Vector3(1.1f, 2.2f, 2.3f) * s);
+        }
+        if (fade == _camFaded) return;
+        _camFaded = fade;
+        Model.SetFade(fade ? 0.7f : 0f);
+    }
+
+    private static float SegmentDistance(Vector3 p, Vector3 a, Vector3 b)
+    {
+        var ab = b - a;
+        var t = Mathf.Clamp((p - a).Dot(ab) / Mathf.Max(ab.LengthSquared(), 1e-6f), 0f, 1f);
+        return p.DistanceTo(a + ab * t);
+    }
+
+    /// <summary>Le segment [a, b] traverse-t-il la boîte alignée [min, max] (méthode des tranches) ?</summary>
+    private static bool SegmentHitsBox(Vector3 a, Vector3 b, Vector3 min, Vector3 max)
+    {
+        var d = b - a;
+        float t0 = 0f, t1 = 1f;
+        for (var i = 0; i < 3; i++)
+        {
+            if (Mathf.Abs(d[i]) < 1e-6f)
+            {
+                if (a[i] < min[i] || a[i] > max[i]) return false;
+                continue;
+            }
+            var u = (min[i] - a[i]) / d[i];
+            var v = (max[i] - a[i]) / d[i];
+            if (u > v) (u, v) = (v, u);
+            t0 = Mathf.Max(t0, u);
+            t1 = Mathf.Min(t1, v);
+            if (t0 > t1) return false;
+        }
+        return true;
     }
 
     public void FlashHit()

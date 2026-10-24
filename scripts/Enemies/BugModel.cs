@@ -44,8 +44,14 @@ public partial class BugModel : Node3D
             case EnemyType.Fortress: m.BuildFortress(); break;
             case EnemyType.Centipede: m.BuildCentipede(); break;
         }
+        // Gigantisme : tout le modèle (et donc la foulée, voir Animate) suit EnemyDef.Giant.
+        m.Scale *= Enemies.Get(type).Giant;
+        m._baseScale = m.Scale.X;
         return m;
     }
+
+    /// <summary>Échelle du modèle à la construction (gigantisme compris), avant variante élite et animation.</summary>
+    private float _baseScale = 1f;
 
     // ---------------- Matériaux et cache de maillages ----------------
 
@@ -133,6 +139,21 @@ public partial class BugModel : Node3D
             }
         }
         return n;
+    }
+
+    /// <summary>Boîte englobante des maillages dans le repère du parent (l'ennemi) : longueur, envergure, hauteur (diagnostic).</summary>
+    public Aabb Bounds()
+    {
+        var inv = GetParent<Node3D>().GlobalTransform.AffineInverse();
+        Aabb? box = null;
+        foreach (var node in FindChildren("*", "MeshInstance3D", true, false))
+        {
+            var mi = (MeshInstance3D)node;
+            if (mi.Mesh == null || !mi.IsVisibleInTree()) continue;
+            var b = (inv * mi.GlobalTransform) * mi.GetAabb();
+            box = box?.Merge(b) ?? b;
+        }
+        return box ?? new Aabb();
     }
 
     public override void _Ready()
@@ -262,6 +283,17 @@ public partial class BugModel : Node3D
         _flashT = 0.05f;
     }
 
+    /// <summary>Transparence de tout le modèle (0 = opaque) : insecte géant traversé par la caméra.</summary>
+    public void SetFade(float transparency)
+    {
+        if (_meshes == null)
+        {
+            _meshes = new List<GeometryInstance3D>();
+            foreach (var n in FindChildren("*", "MeshInstance3D", true, false)) _meshes.Add((GeometryInstance3D)n);
+        }
+        foreach (var m in _meshes) m.Transparency = transparency;
+    }
+
     /// <summary>Anime la démarche (vitesse en m/s), l'attaque (0..1) et le vol.</summary>
     public void Animate(float dt, float speed, float attack)
     {
@@ -276,7 +308,7 @@ public partial class BugModel : Node3D
         if (Type == EnemyType.Centipede) { AnimateCentipede(dt, speed, attack); return; }
         if (Type == EnemyType.Nest)
         {
-            Scale = Vector3.One * (1f + Mathf.Sin(_t * 1.5f) * 0.015f);
+            Scale = Vector3.One * _baseScale * (1f + Mathf.Sin(_t * 1.5f) * 0.015f);
             return;
         }
         if (_drone)
@@ -298,8 +330,10 @@ public partial class BugModel : Node3D
             if (_head != null) _head.RotationDegrees = new Vector3(Mathf.Sin(_t * 2.3f) * 4f, Mathf.Sin(_t * 1.3f) * 8f, 0);
             return;
         }
-        var amp = Mathf.Clamp(speed, 0f, 6f) / 6f;
-        _gait += dt * speed * 2.4f / Mathf.Max(Scale.X, 0.5f);
+        // Foulée proportionnelle à la taille : un grand insecte fait des pas plus longs, plus lents (pas de pieds qui glissent).
+        var sc = Mathf.Max(Scale.X, 0.5f);
+        var amp = Mathf.Clamp(speed / (4f * sc), 0f, 1f);
+        _gait += dt * speed * 2.4f / sc;
         if (_bodyPivot != null)
         {
             // Léger tangage à chaque appui, roulis alterné, bond vers l'avant pendant la morsure.

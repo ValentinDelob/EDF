@@ -43,7 +43,7 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 
 Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni nid, ni boss) marchent sur toute surface solide (voir `Enemy.Climb.cs`) :
 
-- **Suivi de surface** (hôte) par rayons contre la couche monde : sonde avant à mi-hauteur (angle rentrant sol → mur, mur → plafond ; un obstacle étroit comme un poteau est contourné), sonde d'accroche vers la surface (marches, pentes), sonde de contournement sous l'arête (angle saillant mur → toit → façade opposée), sinon chute. Les sondes sont espacées selon la distance parcourue (0,6 m au sol, 0,3 m sur les parois). Le corps est orienté sur la normale lissée (pattes posées sur le mur) ; le cadavre tombe sur la surface en dessous, où apparaît le butin.
+- **Suivi de surface** (hôte) par rayons contre la couche monde : sonde avant à mi-hauteur (angle rentrant sol → mur, mur → plafond ; un obstacle étroit comme un poteau est contourné), sonde d'accroche vers la surface (marches, pentes), sonde de contournement sous l'arête (angle saillant mur → toit → façade opposée), sinon chute. Les sondes sont espacées selon la distance parcourue (0,6 m au sol, 0,3 m sur les parois, multipliés par la taille de l'insecte). Le corps est orienté sur la normale lissée (pattes posées sur le mur) ; le cadavre tombe sur la surface en dessous, où apparaît le butin.
 - **Direction** : sur une paroi, vouloir la traverser fait monter, vouloir s'en éloigner fait descendre. Le champ de flux a un second calcul pondéré (`FlowField.ClimbDirection`, Dijkstra) où les immeubles sont franchissables avec un coût selon leur hauteur : les insectes passent par-dessus quand c'est plus court et rejoignent les joueurs sur les toits. La portée d'attaque des grimpeurs est mesurée en 3D.
 - **Réseau** : instantané ennemi de 18 octets (id, position 3 × 16 bits au 1/64 m, normale et regard en projection octaédrique sur 2 octets chacun, état, PV, attaque, vitesse) ; les clients interpolent position et orientation (quaternion).
 
@@ -84,6 +84,7 @@ Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni 
 
 - **Une arme** : une ligne dans `Weapons.All` (`scripts/Data/GameData.cs`). Le comportement dépend de `WeaponKind` et de la catégorie (modèle tenu, projectile, son).
 - **Un ennemi** : une valeur de `EnemyType` (toujours à la fin, l'entier circule sur le réseau), une ligne dans `Enemies.All`, un modèle dans `BugModel.Create`.
+- **Taille des ennemis** : `EnemyDef.Size` = `BaseSize` (rapport entre types, échelle propre du modèle) × `Giant` (gigantisme façon EDF : 2 pour une fourmi noire ≈ 11 m). `BugModel.Create` multiplie le modèle par `Giant` ; tout ce qui dépend du corps est exprimé en multiples de `Size` (formes de collision et point faible, centre, sondes d'escalade et leur espacement, séparation, portées de mêlée, sorties de projectiles, sortie de terre, butin, détection de blocage, zones d'apparition dégagées). La foulée des pattes suit l'échelle du modèle. Une caméra entrée dans un corps le rend translucide (`Enemy.CameraFade`). `--showcase` journalise les dimensions réelles (« [taille] »).
 - **Une mission** : une entrée dans `Missions.All` (phases, vagues, zones d'apparition, météo).
 
 ## Tests automatisés
@@ -101,7 +102,7 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--stress=N` `--novsync` `--fps` | Test de charge et journal d'images par seconde (avec le nombre d'insectes sur les murs et en hauteur). |
 | `--god` / `--holdfire` | Le soldat ne subit aucun dégât / le bot vise sans tirer (mesures et captures stables). |
 | `--roof[=N]` | Le soldat (bot immobile) est posé sur le toit plat le plus proche du départ, N insectes (30) apparaissent autour et l'escaladent. Avec `--autohost`, test de l'escalade vue du client. |
-| `--showcase[=big]` | Vitrine des ennemis, IA figée. |
+| `--showcase[=big\|face]` | Vitrine des ennemis, IA figée, dimensions dans le journal ; `face` : fourmi noire juste devant le soldat (comparaison d'échelle). |
 | `--end-after=N` | Termine la mission avec du butin fictif (test du bilan : armes tirées + une arme nouvelle, une arme de départ améliorée et un doublon sans amélioration). |
 | `--menu-shots` | Captures de tous les menus (dont la fenêtre « Difficulté »). |
 | `--menu-shots=arsenal` | Profil de test garni d'armes de toutes les classes (avec migration et fusion de doublons), puis captures de l'arsenal (navigation, équipement, changement de classe). |
