@@ -47,6 +47,10 @@ Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni 
 - **Direction** : sur une paroi, vouloir la traverser fait monter, vouloir s'en éloigner fait descendre. Le champ de flux a un second calcul pondéré (`FlowField.ClimbDirection`, Dijkstra) où les immeubles sont franchissables avec un coût selon leur hauteur : les insectes passent par-dessus quand c'est plus court et rejoignent les joueurs sur les toits. La portée d'attaque des grimpeurs est mesurée en 3D.
 - **Réseau** : instantané ennemi de 18 octets (id, position 3 × 16 bits au 1/64 m, normale et regard en projection octaédrique sur 2 octets chacun, état, PV, attaque, vitesse) ; les clients interpolent position et orientation (quaternion).
 
+## Explosions
+
+`Effects.Explosion(world, pos, rayon, kind)` (kind 0 explosif, 2 plasma, 4 acide ; le kind 3 du réseau reste une gerbe d'étincelles) délègue à `ExplosionFx` (`scripts/Fx/Explosions.cs`), un nœud par mission créé au chargement. Il ne crée aucun nœud par explosion : quatre `GPUParticles3D` permanents (nuages, étincelles, éclairs, éclats) sont alimentés par `EmitParticle`, avec un shader de simulation commun (type de particule et durée de vie codés dans `CUSTOM.w`) ; lumières (6), distorsions de l'onde de choc (4) et traces de brûlure (28, 22 s) sont des réserves recyclées. Les nuages (boule de feu qui refroidit en suie, fumée noire, anneau de poussière, gerbes de terre, plasma, gaz acide) partagent un émetteur trié en profondeur, un éclairage simplifié (soleil et ambiance recopiés de la mission chaque seconde) et un fondu contre le décor. Le niveau de détail baisse avec la distance et la cadence (au-delà de 5 explosions/s lissées : moins de particules, fumée plus brève, ni lumière lointaine ni distorsion). Textures (bruit, brûlure) générées une fois ; tous les shaders servent au chargement (pas d'à-coup à la première explosion). Les matériaux passent en priorité de rendu haute : sinon le tri des transparents (émetteurs centrés sur la carte) ferait dessiner certaines façades par-dessus le feu.
+
 ## Véhicules
 
 `Vehicle` (classe de base abstraite) porte l'état commun : identifiant, conducteur, blindage, épave, diffusion d'état à 20 Hz par le conducteur (`Net.SendVehicleState`), interpolation chez les autres pairs, textes du HUD et réglages de caméra. `Tank` et `Helicopter` en héritent. L'hôte attribue les places (`VehicleSeatRequest` → `VehicleDriver`). `World.Vehicles` : char 1, hélicoptère 2.
@@ -95,6 +99,8 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--menu-shots` | Captures de tous les menus (dont la fenêtre « Difficulté »). |
 | `--menu-shots=arsenal` | Profil de test garni d'armes de toutes les classes (avec migration et fusion de doublons), puis captures de l'arsenal (navigation, équipement, changement de classe). |
 | `--pause-at=N` | Ouvre le menu pause après N s (captures). |
+| `--boom=N` | N explosions par seconde (effets seuls, mélange explosif / plasma / acide, 10 à 55 m devant le joueur) à partir de 5 s ; journal `[boom]` toutes les 2 s : images par seconde, moyenne depuis 6 s de mission, pire image, charge et réserves. `--boom=0` donne la référence sans explosion. Avec `--novsync`, la limite d'images est levée. `--boom-skip=billows,sparks,chunks,lights,haze,decals` masque des familles d'effets pour mesurer leur coût. |
+| `--boom-at=T1,T2 --boom-kind=K1,K2 --boom-radius=R1,R2 --boom-dist=D` | Une explosion à D m (20) devant la caméra à chaque instant, avec captures à +0,05 / 0,2 / 0,6 / 1,5 / 4 s (`boom_k<kind>_r<rayon>_t<instant>_<délai>_f<image>.png`) ; le bot reste immobile et ne tire pas. Exemple : `--autostart=0 --bot --god --nohud --shots=build/fx --boom-at=15,20 --boom-kind=0,2 --boom-radius=6,16`. |
 
 Les lancements de test utilisent un profil séparé (`profile_test.json`). Le script `tools/shots.sh` enchaîne compilation et captures dans `build/shots`.
 
