@@ -195,6 +195,7 @@ public partial class Enemy : CharacterBody3D
             return;
         }
         if (Def.Static) { AnimateModel(dt, 0, 0); return; }
+        if (!Def.Boss && HostStuck(dt)) { _world.HostRespawnStuck(this); return; }
 
         _attackCd -= dt;
         _specialCd -= dt;
@@ -226,6 +227,38 @@ public partial class Enemy : CharacterBody3D
         if (Def.Flying) TickFlying(dt, peer, target, ally);
         else TickGround(dt, peer, target, ally);
         AnimateModel(dt, _speedNow, _attackAnim);
+    }
+
+    private float _stuckT, _progressT, _noProgressT, _bestDist = float.MaxValue;
+    private Vector3 _progressPos;
+
+    /// <summary>
+    /// Détection de blocage (hôte) : sous la carte ou hors limites → réapparition rapide ;
+    /// presque immobile pendant 15 s, ou sans se rapprocher de sa cible pendant 25 s, alors qu'elle est loin → réapparition aussi.
+    /// </summary>
+    private bool HostStuck(float dt)
+    {
+        var p = GlobalPosition;
+        if (p.Y < -3f || Mathf.Abs(p.X) > 450f || Mathf.Abs(p.Z) > 450f || !p.IsFinite())
+        {
+            _stuckT += dt;
+            return _stuckT > 1.5f;
+        }
+        _progressT += dt;
+        if (_progressT < 3f) return false;
+        _progressT = 0;
+        var moved = p.DistanceTo(_progressPos);
+        _progressPos = p;
+        var hasTarget = _world.NearestPlayer(p, out _, out var target);
+        var dist = hasTarget ? p.DistanceTo(target) : 0f;
+        // Loin de la cible seulement : près du joueur, une fourmi bloquée par la foule n'est pas « coincée ».
+        var far = hasTarget && dist > Mathf.Max(30f, Def.AttackRange * 1.5f + 8f);
+        if (moved < 1.2f && far && _attackAnim <= 0f) _stuckT += 3f;
+        else _stuckT = 0;
+        // Tourne en rond sans jamais se rapprocher (poche dans le décor, sous un pont…) : 25 s sans gagner 3 m.
+        if (!far || dist < 45f || dist < _bestDist - 3f) { _bestDist = dist; _noProgressT = 0; }
+        else _noProgressT += 3f;
+        return _stuckT >= 15f || _noProgressT >= 25f;
     }
 
     private void TickGround(float dt, long peer, Vector3 target, Ally ally)

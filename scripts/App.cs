@@ -425,6 +425,28 @@ public static class AutoTest
                     w.HostSpawnEnemy(i % 7 == 0 ? EnemyType.RedAnt : EnemyType.BlackAnt, new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r - 40));
                 }
             };
+        // --bury=N : envoie N ennemis sous la carte (test de la réapparition des ennemis coincés, journal avec --fps).
+        if (Screenshot.CmdArg("bury") is { } bu && int.TryParse(bu, out var buryN))
+            app.GetTree().CreateTimer(8f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w == null) return;
+                // Moitié sous la carte, moitié emmurés au cœur d'un immeuble.
+                var blds = w.Buildings.Where(b => !b.Destroyed).ToList();
+                var k = 0;
+                foreach (var e in w.EnemiesById.Values.Where(e => !e.IsStatic && !e.Def.Boss).Take(buryN).ToList())
+                {
+                    e.GlobalPosition = k % 2 == 0 || blds.Count == 0
+                        ? new Vector3(e.GlobalPosition.X, -20f, e.GlobalPosition.Z)
+                        : blds[k % blds.Count].GlobalPosition + Vector3.Up * 1.5f;
+                    k++;
+                }
+                GD.Print($"[test] {buryN} ennemis enterrés ou emmurés");
+                var ids = w.EnemiesById.Values.Where(e => !e.IsStatic && !e.Def.Boss).Take(buryN).Select(e => e.Id).ToList();
+                for (var t = 3; t <= 24; t += 3)
+                    app.GetTree().CreateTimer(t).Timeout += () =>
+                        GD.Print("[test] " + string.Join(" | ", ids.Select(i => w.EnemiesById.TryGetValue(i, out var x) ? $"{i}:{x.State} {x.GlobalPosition.Snapped(Vector3.One * 0.1f)}" : $"{i}:retiré")));
+            };
         // --showcase : un spécimen de chaque ennemi, figé, aligné devant le joueur.
         if (Screenshot.CmdArg("showcase") != null)
             app.GetTree().CreateTimer(3f).Timeout += () =>

@@ -448,6 +448,12 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void EnemyDeath(int id, Vector3 pos) => W?.OnEnemyDeath(id, pos);
 
+    /// <summary>Retrait silencieux d'un ennemi bloqué (ni butin, ni élimination comptée) : il réapparaît ailleurs.</summary>
+    public void BroadcastEnemyDespawn(int id) => ToOthers(MethodName.EnemyDespawn, id);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void EnemyDespawn(int id) => W?.OnEnemyDespawn(id);
+
     public void BroadcastEnemyAttack(int id, int kind, Vector3 target) => ToOthers(MethodName.EnemyAttack, id, kind, target);
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

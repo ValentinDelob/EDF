@@ -718,6 +718,29 @@ public partial class World : Node3D
         }
     }
 
+    /// <summary>
+    /// Hôte : un ennemi coincé (sous la carte, hors limites ou immobile trop longtemps) est retiré sans butin
+    /// ni élimination, puis remplacé par un ennemi du même type à la zone d'apparition la plus proche.
+    /// </summary>
+    public void HostRespawnStuck(Enemy e)
+    {
+        if (e.State == EnemyState.Dead || !EnemiesById.ContainsKey(e.Id)) return;
+        var from = new Vector3(e.GlobalPosition.X, 0, e.GlobalPosition.Z);
+        var type = e.Def.Type;
+        EnemiesById.Remove(e.Id);
+        Net.I.BroadcastEnemyDespawn(e.Id);
+        e.QueueFree();
+        var zone = City.Zones.Count > 0 ? City.Zones.Values.OrderBy(z => z.DistanceSquaredTo(from)).First() : Vector3.Zero;
+        HostSpawnEnemy(type, zone + new Vector3(Rng.RandfRange(-6, 6), 0, Rng.RandfRange(-6, 6)));
+        if (Screenshot.CmdArg("fps") != null) GD.Print($"[ennemi] {type} bloqué en {from} : réapparition en {zone}");
+    }
+
+    public void OnEnemyDespawn(int id)
+    {
+        if (!EnemiesById.Remove(id, out var e)) return;
+        e.QueueFree();
+    }
+
     public void OnEnemyDeath(int id, Vector3 pos)
     {
         if (!EnemiesById.TryGetValue(id, out var e)) return;
