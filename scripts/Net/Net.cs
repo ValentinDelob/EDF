@@ -476,19 +476,20 @@ public partial class Net : Node
     // ---------- Véhicules ----------
 
     /// <summary>
-    /// État d'un véhicule, diffusé par son conducteur. <paramref name="a"/> et <paramref name="b"/> dépendent du type
-    /// (char : tourelle et canon ; hélicoptère : régime du rotor et tourelle de nez).
+    /// État d'un véhicule, diffusé par son conducteur. <paramref name="a"/>, <paramref name="b"/> et <paramref name="c"/>
+    /// dépendent du type (char : tourelle et canon ; hélicoptère : régime du rotor, lacet et site de la tourelle de nez).
+    /// <paramref name="ammo"/> : munitions totales des deux armes de bord (16 bits chacune).
     /// </summary>
-    public void SendVehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float hp, float speed)
+    public void SendVehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float c, float hp, float speed, int ammo)
     {
         if (IsSolo) return;
         foreach (var pid in Players.Keys)
-            if (pid != MyId) RpcId(pid, MethodName.VehicleState, id, pos, rot, a, b, hp, speed);
+            if (pid != MyId) RpcId(pid, MethodName.VehicleState, id, pos, rot, a, b, c, hp, speed, ammo);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 6)]
-    private void VehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float hp, float speed) =>
-        W?.OnVehicleState(id, pos, rot, a, b, hp, speed);
+    private void VehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float c, float hp, float speed, int ammo) =>
+        W?.OnVehicleState(id, pos, rot, a, b, c, hp, speed, ammo);
 
     public void RequestVehicleSeat(int id, bool enter) => ToHost(MethodName.VehicleSeatRequest, id, enter);
 

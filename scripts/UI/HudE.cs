@@ -26,6 +26,8 @@ public static class HudE
     public static readonly Color NameText = new("E8F5EA");
     public static readonly Color Enemy = new("FF3A2A");
     public static readonly Color Ally = new("5FD0FF");
+    /// <summary>Véhicules sur le radar (jaune).</summary>
+    public static readonly Color Vehicle = new("FFD43A");
     public static readonly Color Downed = new("FF6E5A");
     public static readonly Color DownedText = new("FF8C7A");
     public static readonly Color DownedLine = new("E8432E");
@@ -285,7 +287,8 @@ public partial class HudArmor : HudBlock
 /// <summary>
 /// Radar (haut droite) : anneau segmenté épais, couronne de graduations, cercles, croix, cône de vision
 /// (le radar tourne avec la caméra : haut = devant), ennemis rouges (hors portée : triangles sur le bord),
-/// alliés bleus (joueurs et escouades PNJ), allié à terre cerclé, flèche du joueur, repère « N ».
+/// alliés bleus (joueurs et escouades PNJ), allié à terre cerclé, véhicules jaunes (hélicoptère = losange à rotor,
+/// char = carré ; plein = libre, contour = piloté par un coéquipier, hors portée : triangle jaune), flèche du joueur, repère « N ».
 /// </summary>
 public partial class HudRadar : HudBlock
 {
@@ -357,6 +360,35 @@ public partial class HudRadar : HudBlock
         _tri[1] = C + dir * (RimR - 3) + perp * 4.2f;
         _tri[2] = C + dir * (RimR - 3) - perp * 4.2f;
         DrawColoredPolygon(_tri, c);
+    }
+
+    private readonly Vector2[] _quad = new Vector2[4];
+    private readonly Vector2[] _quadLine = new Vector2[5];
+
+    private void DrawVehicleMark(Vector2 q, bool heli, bool occupied)
+    {
+        var r = heli ? 7f : 5.5f;
+        if (heli)
+        {
+            _quad[0] = q + new Vector2(0, -r); _quad[1] = q + new Vector2(r, 0); _quad[2] = q + new Vector2(0, r); _quad[3] = q + new Vector2(-r, 0);
+        }
+        else
+        {
+            _quad[0] = q + new Vector2(-r, -r); _quad[1] = q + new Vector2(r, -r); _quad[2] = q + new Vector2(r, r); _quad[3] = q + new Vector2(-r, r);
+        }
+        for (var i = 0; i < 4; i++) _quadLine[i] = _quad[i];
+        _quadLine[4] = _quad[0];
+        if (!occupied) DrawColoredPolygon(_quad, HudE.Vehicle);
+        DrawPolyline(_quadLine, occupied ? HudE.Vehicle : HudE.Ink, occupied ? 2f : 1.2f, true);
+        var lineCol = occupied ? HudE.Vehicle : HudE.Ink;
+        if (heli)
+        {
+            // Rotor : croix en X.
+            var d = r * 0.55f;
+            DrawLine(q + new Vector2(-d, -d), q + new Vector2(d, d), lineCol, 1.4f, true);
+            DrawLine(q + new Vector2(-d, d), q + new Vector2(d, -d), lineCol, 1.4f, true);
+        }
+        else DrawCircle(q, 2f, lineCol); // tourelle
     }
 
     public override void _Draw()
@@ -447,6 +479,17 @@ public partial class HudRadar : HudBlock
                 DrawCircle(q, 4f, HudE.Ally);
                 DrawArc(q, 4f, 0, Mathf.Tau, 16, HudE.Ink, 1f, true);
             }
+        }
+
+        // Véhicules (jaune) : hélicoptère = losange barré d'un rotor, char = carré avec canon. Plein = libre,
+        // contour seul = piloté par un coéquipier, absent = le nôtre (flèche du joueur) ou épave ; hors portée : triangle jaune.
+        foreach (var veh in World.Vehicles.Values)
+        {
+            if (veh.Wrecked || veh == p.Vehicle) continue;
+            var v = Rel(p, yaw, veh.GlobalPosition);
+            var len = v.Length();
+            if (len > Range) { if (len > 0.01f) OffTri(v / len, HudE.Vehicle); continue; }
+            DrawVehicleMark(C + v * k, veh is Helicopter, veh.Driver != 0);
         }
 
         // Signalements (losanges).

@@ -21,6 +21,19 @@ public partial class Projectile : Node3D
     private World _world;
     private GpuParticles3D _trail;
     private Node3D _homingTarget;
+    /// <summary>Corps ignorés par le rayon de collision (véhicule tireur : la roquette ne lui explose jamais dessus).</summary>
+    private Godot.Collections.Array<Rid> _exclude;
+
+    /// <summary>Appelé à l'impact (position, objet touché ou null) — tests automatisés.</summary>
+    public event System.Action<Vector3, GodotObject> Impacted;
+
+    /// <summary>Le projectile traverse ce corps (le véhicule qui l'a tiré).</summary>
+    public void IgnoreBody(CollisionObject3D body)
+    {
+        if (body == null) return;
+        _exclude ??= new Godot.Collections.Array<Rid>();
+        _exclude.Add(body.GetRid());
+    }
 
     /// <summary>Gravité des missiles en cloche de la forteresse (trajectoire calculée par le tireur).</summary>
     public const float BombGravity = 16f;
@@ -136,6 +149,7 @@ public partial class Projectile : Node3D
         // Les tirs ennemis touchent le décor et les joueurs ; ceux des joueurs le décor et les ennemis.
         uint mask = enemyShot ? 1u : (1u | (1u << 2));
         var q = PhysicsRayQueryParameters3D.Create(from, to2, mask);
+        if (_exclude != null) q.Exclude = _exclude;
         var hit = GetWorld3D().DirectSpaceState.IntersectRay(q);
         if (hit.Count > 0)
         {
@@ -154,6 +168,7 @@ public partial class Projectile : Node3D
     {
         if (_done) return;
         _done = true;
+        Impacted?.Invoke(pos, collider);
         var enemyShot = (int)Kind >= 10;
         if (enemyShot)
         {

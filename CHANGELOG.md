@@ -7,6 +7,9 @@
 - **Un exemplaire par arme** : retrouver une arme déjà possédée l'améliore (niveau le plus haut, meilleur nombre d'étoiles par caractéristique). Au bilan, une arme nouvelle porte l'étiquette « NEW » ; une arme améliorée liste ses améliorations en dessous (« Niveau 12 → 18 », « Dégâts ☆2 → ☆3 (+10) ») ; une arme possédée sans amélioration est assombrie.
 - **Bilan** : plus de jauge d'armure, de crédits ni d'XP ; une simple ligne « Armure 250 → 264 (+14) ».
 - **Sauvegardes** : les doublons d'armes existants sont fusionnés automatiquement (armes équipées conservées).
+- **Hélicoptère** : les balles partent de la tourelle de menton (qui s'oriente vers la cible, jusqu'à la verticale) et les roquettes des paniers ; viser sous l'appareil tire vers le sol (les roquettes n'explosent plus sur l'hélicoptère). Les chocs contre les murs, toits et le sol (rotor compris) abîment l'appareil selon la vitesse ; un choc violent le détruit. Sons réalistes : battement des pales, turbine, montée et descente en régime, minigun, départ de roquettes, alarmes du cockpit, Doppler pour l'appareil d'un coéquipier.
+- **Munitions limitées pour les véhicules** : minigun, roquettes, canon et mitrailleuse du char ont un chargeur et une réserve par sortie, affichés dans la pile d'armes ; réarmement à l'arrêt au point de départ. Le char s'abîme légèrement en percutant un mur à pleine vitesse.
+- **Radar** : char et hélicoptère affichés en jaune (losange à rotor, carré), triangle jaune sur le bord quand ils sont loin.
 - Petits bonus d'étoile affichés avec une décimale (« +9,6 » au lieu de « +10 », plus de « +0 »).
 
 ## v0.6.0 — Nouvelles interfaces

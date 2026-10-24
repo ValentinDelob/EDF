@@ -348,6 +348,8 @@ public static class AutoTest
         // (le bot fait voler l'hélicoptère).
         if (Screenshot.CmdArg("tank") != null) BoardWhenReady(app, 1, new Vector3(14, 1, 17));
         if (Screenshot.CmdArg("heli") != null) BoardWhenReady(app, 2, new Vector3(-16, 1, 19));
+        // --heli-test=down|ram : le bot vise sous l'appareil et tire (roquettes et minigun), ou fonce dans un immeuble.
+        Helicopter.Test = Screenshot.CmdArg("heli-test");
         // --board=N : affiche le tableau des scores (Tab) à partir de N secondes.
         if (Screenshot.CmdArg("board") is { } bd && float.TryParse(bd, NumberStyles.Float, CultureInfo.InvariantCulture, out var boardAt))
             app.GetTree().CreateTimer(boardAt).Timeout += () => Input.ActionPress("scoreboard");

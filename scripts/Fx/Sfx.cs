@@ -17,6 +17,8 @@ public partial class Sfx : Node
     private readonly Dictionary<string, AudioStreamWav> _sounds = new();
     // Variantes tirées au hasard à chaque lecture (cris, morts d'insectes...)
     private readonly Dictionary<string, AudioStreamWav[]> _variants = new();
+    // Boucles sans couture (moteurs de véhicules), lues par des lecteurs propres à chaque véhicule.
+    private readonly Dictionary<string, AudioStreamWav> _loops = new();
     private readonly List<AudioStreamPlayer3D> _pool3D = new();
     private readonly List<AudioStreamPlayer> _pool2D = new();
     private int _next3D, _next2D;
@@ -54,9 +56,11 @@ public partial class Sfx : Node
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 var snd = new Dictionary<string, byte[]>();
                 var vars = new Dictionary<string, byte[][]>();
+                var loops = new Dictionary<string, byte[]>();
                 Build(snd, vars);
+                BuildVehicles(snd, loops);
                 var ms = sw.ElapsedMilliseconds;
-                Callable.From(() => OnBuilt(snd, vars, ms)).CallDeferred();
+                Callable.From(() => OnBuilt(snd, vars, loops, ms)).CallDeferred();
             }
             catch (Exception e)
             {
@@ -65,10 +69,18 @@ public partial class Sfx : Node
         });
     }
 
-    private void OnBuilt(Dictionary<string, byte[]> snd, Dictionary<string, byte[][]> vars, long ms)
+    private void OnBuilt(Dictionary<string, byte[]> snd, Dictionary<string, byte[][]> vars, Dictionary<string, byte[]> loops, long ms)
     {
         if (!IsInstanceValid(this)) return;
         foreach (var (n, d) in snd) _sounds[n] = Wav(d);
+        foreach (var (n, d) in loops)
+        {
+            var w = Wav(d);
+            w.LoopMode = AudioStreamWav.LoopModeEnum.Forward;
+            w.LoopBegin = 0;
+            w.LoopEnd = d.Length / 2;
+            _loops[n] = w;
+        }
         foreach (var (n, v) in vars)
         {
             _variants[n] = v.Select(Wav).ToArray();
@@ -152,6 +164,9 @@ public partial class Sfx : Node
         p.Play();
     }
 
+    /// <summary>Boucle sans couture (null tant que la synthèse n'est pas terminée).</summary>
+    public static AudioStreamWav Loop(string name) => I != null && I._loops.TryGetValue(name, out var s) ? s : null;
+
     private AudioStreamWav Pick(string name)
     {
         if (_variants.TryGetValue(name, out var v)) return v[(int)(GD.Randi() % (uint)v.Length)];
@@ -161,6 +176,7 @@ public partial class Sfx : Node
     /// <summary>Tous les sons (variantes comprises), pour l'export de débogage --dump-audio.</summary>
     internal IEnumerable<(string, AudioStreamWav)> AllSounds()
     {
+        foreach (var (n, s) in _loops) yield return ("loop_" + n, s);
         foreach (var (n, s) in _sounds) if (!_variants.ContainsKey(n)) yield return (n, s);
         foreach (var (n, v) in _variants) for (var i = 0; i < v.Length; i++) yield return ($"{n}_{i}", v[i]);
     }

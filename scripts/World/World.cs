@@ -343,9 +343,9 @@ public partial class World : Node3D
     /// <summary>Rayon d'impact supplémentaire d'un joueur à bord d'un véhicule (plus gros qu'un soldat).</summary>
     private float VehicleHitBonus(long peer) => VehicleOf(peer)?.HitRadius ?? 0f;
 
-    public void OnVehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float hp, float speed)
+    public void OnVehicleState(int id, Vector3 pos, Vector3 rot, float a, float b, float c, float hp, float speed, int ammo)
     {
-        if (Vehicles.TryGetValue(id, out var v) && !v.IsLocalDriver) v.ApplyState(pos, rot, a, b, hp, speed);
+        if (Vehicles.TryGetValue(id, out var v) && !v.IsLocalDriver) v.ApplyState(pos, rot, a, b, c, hp, speed, ammo);
     }
 
     public void OnVehicleDriver(int id, long driver)
@@ -505,12 +505,23 @@ public partial class World : Node3D
             case 7:
                 Sfx.At("hammer", a, 0f);
                 break;
+            case 8:
+                // Arme de bord d'un véhicule (minigun, mitrailleuse coaxiale) : le son en boucle est porté par le véhicule.
+                Effects.Tracer(FxRoot, a, b, new Color(1f, 0.75f, 0.35f), 0.05f);
+                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.35f);
+                if (VehicleOf(from) is { } fv) fv.OnRemoteFire();
+                else Sfx.At("minigun", a, -2f);
+                break;
             default:
                 if (kind >= 10)
                 {
                     var pk = (ProjectileKind)(kind - 10);
-                    Projectile.Spawn(this, pk, a, b - a, false, 0, 0);
-                    Sfx.At(pk == ProjectileKind.Plasma ? "plasma" : "rocket", a, 0f);
+                    var shooter = VehicleOf(from);
+                    var pr = Projectile.Spawn(this, pk, a, b - a, false, 0, 0);
+                    // Roquettes et obus d'un véhicule : ne jamais exploser sur le véhicule tireur.
+                    if (shooter != null) pr.IgnoreBody(shooter);
+                    var snd = pk == ProjectileKind.Plasma ? "plasma" : shooter is Helicopter ? "heli_rocket" : "rocket";
+                    Sfx.At(snd, a, 0f);
                 }
                 break;
         }

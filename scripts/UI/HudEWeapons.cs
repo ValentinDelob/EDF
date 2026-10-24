@@ -258,39 +258,50 @@ public partial class HudWeapons : HudBlock
         };
     }
 
+    /// <summary>
+    /// Arme de bord : comme une arme d'infanterie, grand chiffre = coups dans le chargeur (bande, panier),
+    /// petit chiffre = réserve restante de la sortie (munitions limitées) ; « Réarmement » sur l'aire de départ.
+    /// </summary>
+    private static void FromVehicleWeapon(Entry e, VehicleWeapon w, Vehicle v, bool small)
+    {
+        if (!ReferenceEquals(e.Source, w))
+        {
+            e.Source = w;
+            e.Icon = w.Icon;
+            e.Ammo = w.AmmoName;
+            e.Name = small ? $"{w.Name} ({w.AmmoName})" : w.Name;
+            e.Key = int.MinValue;
+        }
+        e.Reloading = w.Reloading;
+        e.SetCur(w.Mag);
+        e.SetMax(w.Reserve);
+        e.Bar = w.Reloading ? w.ReloadProgress : w.MagSize > 0 ? (float)w.Mag / w.MagSize : 0;
+        e.Empty = w.Mag <= 0;
+        if (!small) return;
+        var key = w.Reloading ? -1 : w.Empty ? -3 : v.Rearming ? -4 : w.Mag * 100000 + w.Reserve;
+        if (key == e.Key) return;
+        e.Key = key;
+        e.Status = key switch
+        {
+            -1 => "Recharge",
+            -3 => "Vide",
+            -4 => "Réarmement",
+            _ => $"{w.Mag} / {w.Reserve}",
+        };
+    }
+
     private void FromVehicle(Vehicle v)
     {
-        var heli = v is Helicopter;
-        var icon = heli ? HudWeaponIcon.Heli : v is Tank ? HudWeaponIcon.Tank : HudWeaponIcon.Siege;
-        if (!ReferenceEquals(_main.Source, v))
-        {
-            _main.Source = v;
-            _main.Icon = icon;
-            _main.Ammo = HudWeaponArt.AmmoName(icon);
-            _main.Name = heli ? "Roquettes air-sol" : v is Tank ? "Canon principal" : v.DisplayName;
-            var o = _others[0];
-            o.Source = v;
-            o.Icon = HudWeaponIcon.Gatling;
-            o.Ammo = "Balles";
-            o.Name = heli ? "Minigun (Mitrailleuse rotative)" : "Mitrailleuse coaxiale (Mitrailleuse)";
-            o.Status = "Prête";
-            o.Reloading = false;
-            o.Key = int.MinValue;
-        }
-        var ready = Mathf.Clamp(v.HudReady, 0, 1);
-        var max = heli ? 4 : 1;
-        int cur;
-        if (ready >= 1) cur = max;
-        else if (heli && v.HudMag == "SALVE" && int.TryParse(v.HudAmmo, out var left)) cur = left;
-        else cur = 0;
-        _main.SetCur(cur);
-        _main.SetMax(max);
-        _main.Reloading = ready < 1 && cur == 0;
-        _main.Bar = _main.Reloading ? ready : (float)cur / max;
-        _main.Empty = false;
+        _otherCount = 0;
+        if (v.Arms.Length == 0) return;
+        FromVehicleWeapon(_main, v.Arms[0], v, false);
         _main.SetSlot(0);
-        _others[0].SetSlot(1);
-        _otherCount = 1;
+        for (var i = 1; i < v.Arms.Length && _otherCount < _others.Length; i++)
+        {
+            var e = _others[_otherCount++];
+            FromVehicleWeapon(e, v.Arms[i], v, true);
+            e.SetSlot(i);
+        }
     }
 
     public override void _Process(double delta)

@@ -11,16 +11,22 @@ public partial class Tank : Vehicle
     private Node3D[] _wheels = new Node3D[6];
     private float _turretYaw, _barrelPitch;
     private float _speed;
-    private float _fireCd, _mgCd;
+    private float _mgCd;
     private float _treads;
 
     public const float CannonDamage = 380f;
     public const float CannonRadius = 10f;
 
+    // Dotation par sortie (réarmement au point de départ, à l'arrêt) :
+    // canon 30 obus (1 chargé, 1,6 s de chargement), mitrailleuse coaxiale 5 bandes de 250.
+    public readonly VehicleWeapon Cannon = new("Canon principal", "Obus", HudWeaponIcon.Tank, 1, 30, 1.6f);
+    public readonly VehicleWeapon Coax = new("Mitrailleuse coaxiale", "Balles", HudWeaponIcon.Gatling, 250, 1250, 4f);
+
     public static Tank Create(World w, int id, Vector3 pos, float yaw)
     {
         var t = new Tank { Name = $"Tank{id}" };
         t.InitCommon(w, id, pos, yaw, 1600);
+        t.Arms = new[] { t.Cannon, t.Coax };
         t.Build();
         return t;
     }
@@ -66,17 +72,13 @@ public partial class Tank : Vehicle
         CastShadows();
     }
 
-    public float CannonReady => Mathf.Clamp(1f - _fireCd / 1.6f, 0, 1);
     public Vector3 MuzzlePosition => _muzzle.GlobalPosition;
     public override Vector3 SeatPosition => GlobalPosition + Vector3.Up * 2.2f;
     public override string DisplayName => "Char de combat";
     public override string PromptText => "Monter dans le char";
-    public override string EnterHint => "Char de combat : clic gauche canon, clic droit mitrailleuse, E pour descendre.";
+    public override string EnterHint =>
+        $"Char de combat : clic gauche canon, clic droit mitrailleuse, [{UiKit.KeyName("reload")}] recharger. Munitions limitées : arrêtez-vous au point de départ pour réarmer.";
     public override string WreckedHint => "Char détruit ! Évacuation.";
-    public override string HudAmmo => CannonReady >= 1 ? "PRÊT" : $"{Mathf.RoundToInt(CannonReady * 100)}";
-    public override string HudMag => "CANON";
-    public override float HudReady => CannonReady;
-    public override string HudOther => "Clic droit : mitrailleuse";
 
     /// <summary>Simulation par le conducteur local : déplacement, tourelle, tir.</summary>
     public override void DriveTick(Player p, float dt, float camYaw, float camPitch)
@@ -93,6 +95,9 @@ public partial class Tank : Vehicle
         v.Y = IsOnFloor() ? -1f : Velocity.Y - 24f * dt;
         Velocity = v;
         MoveAndSlide();
+        // Éperonnage : un choc contre un mur à pleine vitesse abîme légèrement le char (seuil 8 m/s) et le freine.
+        if (CollisionDamage(p, v, 8f, 12f, 18f, 0.4f, dt) > 0) _speed *= 0.25f;
+        CheckWrecked();
         // Écrase les petits insectes sur son passage.
         if (Mathf.Abs(_speed) > 4f) _world.TankCrush(this, GlobalPosition + fwd * 3.6f * Mathf.Sign(_speed), 3f, Mathf.Abs(_speed) * 6f * dt * 10f);
 
@@ -102,12 +107,21 @@ public partial class Tank : Vehicle
         _barrelPitch = Mathf.Lerp(_barrelPitch, Mathf.Clamp(camPitch + 0.08f, -0.15f, 0.55f), Mathf.Clamp(dt * 4f, 0, 1));
         ApplyPose(dt);
 
-        _fireCd -= dt;
         _mgCd -= dt;
-        if (!_world.Paused && Input.IsActionPressed("fire") && _fireCd <= 0) FireCannon(p);
-        if (!_world.Paused && Input.IsActionPressed("aim") && _mgCd <= 0) FireMg(p);
+        AmmoTick(dt);
+        if (!_world.Paused && Input.IsActionJustPressed("reload")) ManualReload();
+        if (!_world.Paused && Input.IsActionPressed("fire"))
+        {
+            if (Cannon.TryFire()) FireCannon(p);
+            else if (Cannon.Empty && Input.IsActionJustPressed("fire")) Sfx.Ui("empty");
+        }
+        if (!_world.Paused && Input.IsActionPressed("aim") && _mgCd <= 0)
+        {
+            if (Coax.TryFire()) FireMg(p);
+            else if (Coax.Empty && Input.IsActionJustPressed("aim")) Sfx.Ui("empty");
+        }
 
-        BroadcastState(dt, Rotation, _turretYaw, _barrelPitch, _speed);
+        BroadcastState(dt, Rotation, _turretYaw, _barrelPitch, 0f, _speed);
     }
 
     private void ApplyPose(float dt)
@@ -121,10 +135,10 @@ public partial class Tank : Vehicle
 
     private void FireCannon(Player p)
     {
-        _fireCd = 1.6f;
         var dir = _muzzle.GlobalBasis.Z;
         var from = _muzzle.GlobalPosition;
-        Projectile.Spawn(_world, ProjectileKind.Shell, from, dir * 140f, true, CannonDamage * p.DamageMul * (1f + 0.25f * (int)_world.Difficulty), CannonRadius);
+        Projectile.Spawn(_world, ProjectileKind.Shell, from, dir * 140f, true, CannonDamage * p.DamageMul * (1f + 0.25f * (int)_world.Difficulty), CannonRadius)
+            .IgnoreBody(this);
         Net.I.SendShotFx(10 + (int)ProjectileKind.Shell, from, from + dir * 140f);
         Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.6f, 0.2f), 1.6f);
         Effects.Smoke(_world, from, 2f, 1.5f);

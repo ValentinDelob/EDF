@@ -445,8 +445,11 @@ public partial class Player : CharacterBody3D
         var dir = -Camera.GlobalBasis.Z;
         var to = from + dir * range;
         var q = PhysicsRayQueryParameters3D.Create(from, to, 1u | (1u << 2));
-        q.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
-        if (Vehicle != null) q.Exclude.Add(Vehicle.GetRid()); // la caméra regarde à travers son propre véhicule
+        // La caméra regarde à travers son propre véhicule. Attention : q.Exclude renvoie une copie,
+        // il faut affecter le tableau complet (un Add sur la propriété serait perdu).
+        var exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        if (Vehicle != null) exclude.Add(Vehicle.GetRid());
+        q.Exclude = exclude;
         var hit = GetWorld3D().DirectSpaceState.IntersectRay(q);
         collider = null;
         if (hit.Count == 0) return to;
@@ -854,6 +857,8 @@ public partial class Player : CharacterBody3D
     /// <summary>Bot en hélicoptère : tient ~25 m d'altitude, avance vers les ennemis lointains, tire des roquettes.</summary>
     private void BotFly(Helicopter h)
     {
+        if (Helicopter.Test == "down") { BotHeliDown(h); return; }
+        if (Helicopter.Test == "ram") { BotHeliRam(h); return; }
         if (h.Altitude < 23f) Input.ActionPress("jump"); else Input.ActionRelease("jump");
         if (h.Altitude > 28f) Input.ActionPress("sprint"); else Input.ActionRelease("sprint");
         var e = World.NearestEnemy(GlobalPosition, 400f);
@@ -866,8 +871,47 @@ public partial class Player : CharacterBody3D
             _pitch = Mathf.Lerp(_pitch, -0.25f, 0.05f);
         }
         if (far && h.Altitude > 15f) Input.ActionPress("move_forward"); else Input.ActionRelease("move_forward");
-        if (_botFire && h.RocketsReady >= 1f) Input.ActionPress("aim"); else Input.ActionRelease("aim");
+        if (_botFire && h.RocketsAvailable) Input.ActionPress("aim"); else Input.ActionRelease("aim");
     }
+
+    /// <summary>Test --heli-test=down : vol stationnaire à ~20 m, regard à la verticale, minigun et roquettes en continu.</summary>
+    private void BotHeliDown(Helicopter h)
+    {
+        if (h.Altitude < 18f) Input.ActionPress("jump"); else Input.ActionRelease("jump");
+        if (h.Altitude > 24f) Input.ActionPress("sprint"); else Input.ActionRelease("sprint");
+        Input.ActionRelease("move_forward");
+        _pitch = -1.35f;
+        var go = h.Altitude > 14f;
+        if (go) Input.ActionPress("fire"); else Input.ActionRelease("fire");
+        if (go && h.RocketsAvailable) Input.ActionPress("aim"); else Input.ActionRelease("aim");
+    }
+
+    /// <summary>Test --heli-test=ram : fonce à ~7 m d'altitude vers l'immeuble le plus proche (dégâts de collision).</summary>
+    private void BotHeliRam(Helicopter h)
+    {
+        Building best = null;
+        var bestD = float.MaxValue;
+        foreach (var b in World.Buildings)
+        {
+            if (b.Destroyed) continue;
+            var d = b.GlobalPosition.DistanceTo(h.GlobalPosition);
+            if (d > 25f && d < bestD) { bestD = d; best = b; }
+        }
+        _ramTarget ??= best;
+        if (h.Altitude < 6f) Input.ActionPress("jump"); else Input.ActionRelease("jump");
+        if (h.Altitude > 9f) Input.ActionPress("sprint"); else Input.ActionRelease("sprint");
+        Input.ActionRelease("fire");
+        Input.ActionRelease("aim");
+        if (_ramTarget == null) return;
+        var to = _ramTarget.GlobalPosition - GlobalPosition;
+        _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(-to.X, -to.Z), 0.1f);
+        _pitch = -0.1f;
+        if (Engine.GetPhysicsFrames() % 60 == 0)
+            GD.Print($"[heli] éperonnage : appareil {h.GlobalPosition.Snapped(Vector3.One * 0.1f)} vitesse {h.Velocity.Length():0.0} m/s alt {h.Altitude:0.0}, cible {_ramTarget.Name} {_ramTarget.GlobalPosition.Snapped(Vector3.One)} taille {_ramTarget.Size}, blindage {h.Health:0}");
+        if (h.Altitude > 4f) Input.ActionPress("move_forward"); else Input.ActionRelease("move_forward");
+    }
+
+    private Building _ramTarget;
 
     public void AddShake(float amount) => _shake = Mathf.Min(1.2f, _shake + amount);
     public void ApplyRally() => RallyTime = 15f;

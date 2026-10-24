@@ -49,7 +49,13 @@ Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni 
 
 ## Véhicules
 
-`Vehicle` (classe de base abstraite) porte l'état commun : identifiant, conducteur, blindage, épave, diffusion d'état à 20 Hz par le conducteur (`Net.SendVehicleState`), interpolation chez les autres pairs, textes du HUD et réglages de caméra. `Tank` et `Helicopter` en héritent. L'hôte attribue les places (`VehicleSeatRequest` → `VehicleDriver`). `World.Vehicles` : char 1, hélicoptère 2.
+`Vehicle` (classe de base abstraite) porte l'état commun : identifiant, conducteur, blindage, épave, diffusion d'état à 20 Hz par le conducteur (`Net.SendVehicleState` : position, rotation, trois valeurs propres au type, blindage, vitesse, munitions totales des deux armes de bord sur 16 bits chacune), interpolation chez les autres pairs, armes de bord et réglages de caméra. `Tank` et `Helicopter` en héritent. L'hôte attribue les places (`VehicleSeatRequest` → `VehicleDriver`). `World.Vehicles` : char 1, hélicoptère 2.
+
+- **Armes de bord** (`VehicleWeapon`, `Vehicle.Arms` : [0] clic gauche, [1] clic droit) : chargeur + réserve limitée par sortie, rechargement automatique (ou touche de rechargement). Le véhicule arrêté à son point de départ (char) ou posé sur son aire (hélicoptère) se réarme : 1/16 de la dotation toutes les 0,5 s. Dotations : minigun 6 × 300 (5 s), roquettes 3 × 16 (paniers 2 × 8, 7 s, salves de 4 espacées de 0,8 s) ; canon 30 obus (1,6 s), coaxiale 5 × 250 (4 s). La pile d'armes du HUD affiche chargeur / réserve.
+- **Chocs** (`Vehicle.CollisionDamage`, calcul par le conducteur) : vitesse d'impact = composante de la vitesse d'avant le `MoveAndSlide` contre la normale touchée ; dégâts = excès × k + excès² × q au-delà d'un seuil. Hélicoptère : seuils 5 m/s (mur) / 6 m/s (sol), 30 + 0,6 (≈ 165 à 10 m/s, 585 à 20 m/s, destruction au-delà de ~30 m/s de face) ; le disque du rotor a sa propre forme de collision (un rotor qui touche un mur compte). Char : seuil 8 m/s, 18 + 0,4, le char est freiné. Étincelles, secousse, son `vehicle_crash`, alarme du cockpit.
+- **Visée de l'hélicoptère** : la tourelle de menton (lacet ±90°, site −80° / +15°) et les paniers (lacet ±28°, site −75° / +10°) visent le point visé par la caméra (`Player.AimPoint`, qui ignore le véhicule du joueur) ; hors débattement, l'axe borné le plus proche (`Helicopter.SolveMount`). Les balles partent de la bouche du minigun, les roquettes des paniers et ignorent l'appareil tireur (`Projectile.IgnoreBody`, aussi chez les autres pairs via `World.OnShotFx`).
+- **Sons** (`Sfx.Vehicles.cs`, boucles sans couture `Sfx.Loop`) : rotor (passage de pale à 18 Hz : claquement + coup sourd + souffle + rotor de queue), turbine, minigun à ~3000 coups/min et son moteur ; hauteur et volume suivent le régime (montée en régime à l'embarquement, décélération à la descente), la charge, et un Doppler pour les appareils des autres joueurs (le pilote local entend le sien sans atténuation). Tir du minigun annoncé aux autres pairs par `ShotFx` type 8.
+- **Radar** : véhicules en jaune (hélicoptère = losange à rotor, char = carré) ; plein = libre, contour = piloté par un coéquipier, masqué = le nôtre ou une épave ; triangle jaune hors portée.
 
 ## Interface
 
@@ -87,6 +93,7 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--shots=dossier --shot-times=4,10` | Captures d'écran aux instants donnés. |
 | `--autohost=2` / `--autojoin=IP` | Test LAN à deux instances. |
 | `--tank` / `--heli` | Monte dans le char ou l'hélicoptère au début de la mission. |
+| `--heli-test=down` / `--heli-test=ram` | Avec `--bot --heli` : vise à la verticale et tire (journal des impacts de roquettes), ou fonce dans l'immeuble le plus proche (journal des chocs). |
 | `--stress=N` `--novsync` `--fps` | Test de charge et journal d'images par seconde (avec le nombre d'insectes sur les murs et en hauteur). |
 | `--god` / `--holdfire` | Le soldat ne subit aucun dégât / le bot vise sans tirer (mesures et captures stables). |
 | `--roof[=N]` | Le soldat (bot immobile) est posé sur le toit plat le plus proche du départ, N insectes (30) apparaissent autour et l'escaladent. Avec `--autohost`, test de l'escalade vue du client. |
