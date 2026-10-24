@@ -49,6 +49,8 @@ public partial class World : Node3D
     private MissionDirector _director;
     private WeatherFx _weather;
     public AllyManager Allies;
+    /// <summary>Objectif de mission (structure, convoi, minuteurs de survie et d'extraction), sur chaque pair.</summary>
+    public MissionObjective Objective;
     /// <summary>Véhicules pilotables par identifiant (char 1, hélicoptère 2 : identiques chez tous les pairs).</summary>
     public readonly Dictionary<int, Vehicle> Vehicles = new();
     private int _nextEnemyId = 1;
@@ -136,6 +138,7 @@ public partial class World : Node3D
         // Char de combat et hélicoptère d'attaque garés près du point de départ (mêmes identifiants chez tous les pairs).
         AddVehicle(Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi));
         AddVehicle(Helicopter.Create(this, 2, new Vector3(-16, 0.3f, 24), Mathf.Pi));
+        Objective = MissionObjective.Create(this);
         if (Net.I.IsHost)
         {
             _director = new MissionDirector(this);
@@ -263,7 +266,8 @@ public partial class World : Node3D
         if (_flowTimer <= 0)
         {
             _flowTimer = 0.5f;
-            Flow.Compute(AlivePlayerPositions());
+            // Les insectes convergent vers les soldats et vers l'objectif (structure défendue, camions du convoi).
+            Flow.Compute(Objective != null ? AlivePlayerPositions().Concat(Objective.FlowTargets()) : AlivePlayerPositions());
             RebuildSpatialHash();
         }
         else RebuildSpatialHash();
@@ -282,7 +286,8 @@ public partial class World : Node3D
             _objectiveTimer = 0.25f;
             Net.I.BroadcastObjective(ObjectiveText, EnemiesRemaining, BossHealth, BossName);
         }
-        if (!Ended && AllPlayersDown() && Elapsed > 3f) EndMission(false);
+        // Objectif rempli : l'escouade à terre pendant l'extraction ne fait plus échouer la mission.
+        if (!Ended && AllPlayersDown() && Elapsed > 3f && !(Objective?.Completed ?? false)) EndMission(false);
         _scoreTimer -= dt;
         if (_scoreTimer <= 0)
         {
@@ -780,6 +785,14 @@ public partial class World : Node3D
         var zone = City.Zones.Count > 0 ? City.Zones.Values.OrderBy(z => z.DistanceSquaredTo(from)).First() : Vector3.Zero;
         HostSpawnEnemy(type, zone + new Vector3(Rng.RandfRange(-6, 6), 0, Rng.RandfRange(-6, 6)));
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[ennemi] {type} bloqué en {from} : réapparition en {zone}");
+    }
+
+    /// <summary>Hôte : un insecte se replie (objectif rempli) : retiré sans butin ni élimination.</summary>
+    public void HostRetreatEnemy(Enemy e)
+    {
+        if (!EnemiesById.Remove(e.Id)) return;
+        Net.I.BroadcastEnemyDespawn(e.Id);
+        e.QueueFree();
     }
 
     public void OnEnemyDespawn(int id)

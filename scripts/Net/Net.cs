@@ -640,6 +640,20 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void MissionEnd(bool success, float elapsed) => W?.OnMissionEnd(success, elapsed);
 
+    // Objectifs (Défense, Escorte, Survie, extraction) : voir MissionObjective.
+
+    /// <summary>État de l'objectif (minuteurs, PV et avancée des éléments à protéger), 10 Hz.</summary>
+    public void BroadcastObjectiveState(byte[] data) => ToOthers(MethodName.ObjectiveState, data);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 4)]
+    private void ObjectiveState(byte[] data) => W?.Objective?.OnState(data);
+
+    /// <summary>Structure défendue ou camion du convoi détruit (décidé par l'hôte).</summary>
+    public void BroadcastGuardDestroyed(int id) => ToAll(MethodName.GuardDestroyed, id);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void GuardDestroyed(int id) => W?.Objective?.OnGuardDestroyed(id);
+
     public void SendLeftMission() => ToHost(MethodName.LeftMission);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
