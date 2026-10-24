@@ -71,7 +71,7 @@ public class MissionDirector
             if (near >= 10) continue;
             var type = _w.Rng.Randf() < 0.2f ? EnemyType.RedAnt : EnemyType.BlackAnt;
             var a = _w.Rng.Randf() * Mathf.Tau;
-            _w.HostSpawnEnemy(type, nest.GlobalPosition + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * 9f);
+            _w.HostSpawnEnemy(type, nest.GlobalPosition + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (9f * nest.Def.Size + 2f * Enemies.Get(type).Size));
             active++;
         }
 
@@ -119,10 +119,17 @@ public class MissionDirector
 
     private Vector3 PickSpawn(Vector3 zone, EnemyType type)
     {
+        var def = Enemies.Get(type);
+        // Les grands insectes sortent de terre là où leur corps tient (centre et quatre points à une demi-longueur).
+        var r = 2f * def.Size;
         for (var tries = 0; tries < 20; tries++)
         {
             var p = zone + new Vector3(_w.Rng.RandfRange(-28, 28), 0, _w.Rng.RandfRange(-22, 22));
-            if (Enemies.Get(type).Flying || !_w.Flow.IsBlocked(p)) return p;
+            if (def.Flying) return p;
+            if (_w.Flow.IsBlocked(p)) continue;
+            if (tries < 14 && (_w.Flow.IsBlocked(p + new Vector3(r, 0, 0)) || _w.Flow.IsBlocked(p - new Vector3(r, 0, 0))
+                || _w.Flow.IsBlocked(p + new Vector3(0, 0, r)) || _w.Flow.IsBlocked(p - new Vector3(0, 0, r)))) continue;
+            return p;
         }
         return zone;
     }

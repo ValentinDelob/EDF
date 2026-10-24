@@ -355,30 +355,42 @@ public record EnemyDef(
     float Damage,
     float AttackRange,
     float AttackCooldown,
-    float Size,
+    float BaseSize,
     float DropChance,
     bool Flying = false,
     bool Ranged = false,
     bool Static = false,
-    bool Boss = false);
+    bool Boss = false,
+    float Giant = 1f)
+{
+    /// <summary>
+    /// Échelle du corps dans le monde (1 = proportions d'origine du modèle) : BaseSize (rapport entre types) × Giant (gigantisme façon EDF).
+    /// Tout ce qui dépend du corps la suit : modèle, formes de collision, sondes d'escalade, séparation, centre, sorties de projectiles.
+    /// </summary>
+    public float Size => BaseSize * Giant;
+}
 
 public static class Enemies
 {
+    // Gigantisme (Giant) calé sur EDF (capture de référence : le soldat arrive sous la tête de la fourmi, les pattes passent au-dessus de lui) :
+    // fourmi noire ≈ 11 m de long et 4,3 m de haut, rouge ≈ 13 m, charognard ≈ 8 m, araignée ≈ 12 m d'envergure, guêpe ≈ 6 m, drone ≈ 5 m,
+    // mille-pattes ≈ 25 m, reine ≈ 34 m, nid ≈ 34 m (mesures : --showcase, journal « [taille] »). Portées de mêlée agrandies d'autant
+    // (la tête est loin du centre) ; vitesses à peine relevées (grandes foulées) ; points de vie inchangés.
     public static readonly EnemyDef[] All =
     {
-        new(EnemyType.BlackAnt, "Fourmi noire", 60, 9f, 6, 3.2f, 1.25f, 1f, 0.28f),
-        new(EnemyType.RedAnt, "Fourmi rouge", 150, 8f, 9, 3.4f, 1.3f, 1.15f, 0.45f),
-        new(EnemyType.AcidAnt, "Fourmi acide", 50, 7.5f, 6, 32f, 2.4f, 1f, 0.32f, Ranged: true),
-        new(EnemyType.Wasp, "Guêpe", 40, 13f, 4, 28f, 1.8f, 0.8f, 0.3f, Flying: true, Ranged: true),
-        new(EnemyType.Scavenger, "Charognard", 90, 12f, 5, 3f, 1.2f, 0.85f, 0.5f),
-        new(EnemyType.Nest, "Nid", 3000, 0, 0, 0, 0, 1f, 1f, Static: true),
-        new(EnemyType.Queen, "Reine", 40000, 5f, 40, 9f, 1.8f, 3.8f, 1f, Ranged: true, Boss: true),
-        new(EnemyType.Spider, "Araignée", 70, 11f, 7, 26f, 2.0f, 1f, 0.3f, Ranged: true),
-        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.3f, Flying: true, Ranged: true),
-        // Forteresse marcheuse : Damage = un tir laser (missiles, piétinement et canon en multiples).
+        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 6.4f, 1.25f, 1f, 0.28f, Giant: 2f),
+        new(EnemyType.RedAnt, "Fourmi rouge", 150, 8.8f, 9, 6.6f, 1.3f, 1.15f, 0.45f, Giant: 1.95f),
+        new(EnemyType.AcidAnt, "Fourmi acide", 50, 8.2f, 6, 32f, 2.4f, 1f, 0.32f, Ranged: true, Giant: 2f),
+        new(EnemyType.Wasp, "Guêpe", 40, 14f, 4, 28f, 1.8f, 0.8f, 0.3f, Flying: true, Ranged: true, Giant: 1.5f),
+        new(EnemyType.Scavenger, "Charognard", 90, 13f, 5, 5f, 1.2f, 0.85f, 0.5f, Giant: 1.65f),
+        new(EnemyType.Nest, "Nid", 3000, 0, 0, 0, 0, 1f, 1f, Static: true, Giant: 1.5f),
+        new(EnemyType.Queen, "Reine", 40000, 5.5f, 40, 12f, 1.8f, 3.8f, 1f, Ranged: true, Boss: true, Giant: 1.35f),
+        new(EnemyType.Spider, "Araignée", 70, 12f, 7, 26f, 2.0f, 1f, 0.3f, Ranged: true, Giant: 2f),
+        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.3f, Flying: true, Ranged: true, Giant: 1.25f),
+        // Forteresse marcheuse : Damage = un tir laser (missiles, piétinement et canon en multiples). Déjà colossale : pas de gigantisme.
         new(EnemyType.Fortress, "Forteresse marcheuse", 70000, 2.5f, 5, 170f, 4f, 12f, 1f, Ranged: true, Boss: true),
         // Mille-pattes : morsure au contact et courte giclée d'acide à mi-distance (Damage pour les deux).
-        new(EnemyType.Centipede, "Mille-pattes", 360, 7f, 10, 4.5f, 1.5f, 1.25f, 0.6f),
+        new(EnemyType.Centipede, "Mille-pattes", 360, 8f, 10, 9f, 1.5f, 1.25f, 0.6f, Giant: 2.3f),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];

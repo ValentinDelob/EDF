@@ -447,33 +447,85 @@ public static class AutoTest
                     app.GetTree().CreateTimer(t).Timeout += () =>
                         GD.Print("[test] " + string.Join(" | ", ids.Select(i => w.EnemiesById.TryGetValue(i, out var x) ? $"{i}:{x.State} {x.GlobalPosition.Snapped(Vector3.One * 0.1f)}" : $"{i}:retiré")));
             };
-        // --showcase : un spécimen de chaque ennemi, figé, aligné devant le joueur.
-        if (Screenshot.CmdArg("showcase") != null)
-            app.GetTree().CreateTimer(3f).Timeout += () =>
+        if (Screenshot.CmdArg("showcase") != null) Showcase(app);
+        ScheduleShots(app, dir, $"mission{mission}");
+    }
+
+    /// <summary>
+    /// --showcase[=big|face] : spécimens figés devant le soldat immobile, dimensions réelles dans le journal (« [taille] »).
+    /// Par défaut un de chaque insecte, big : nid et reine, face : une fourmi noire juste devant le soldat (comparaison d'échelle avec EDF).
+    /// </summary>
+    private static void Showcase(App app)
+    {
+        app.GetTree().CreateTimer(1f).Timeout += () =>
+        {
+            var w = app.CurrentWorld;
+            // Attend que la mission soit chargée (écran de déploiement) et le soldat en place.
+            if (w?.LocalPlayer == null || !GodotObject.IsInstanceValid(w.LocalPlayer) || w.Elapsed < 1f) { Showcase(app); return; }
+            Enemy.Frozen = true;
+            Player.BotHoldFire = true;
+            var mode = Screenshot.CmdArg("showcase");
+            var spawned = new System.Collections.Generic.List<Enemy>();
+            var pp = w.LocalPlayer.GlobalPosition;
+            Enemy Put(EnemyType t, Vector3 p, float yaw)
             {
-                var w = app.CurrentWorld;
-                if (w == null) return;
-                Enemy.Frozen = true;
-                var big = Screenshot.CmdArg("showcase") == "big";
-                var types = big ? new[] { EnemyType.Nest, EnemyType.Queen } : new[] { EnemyType.BlackAnt, EnemyType.Spider, EnemyType.AcidAnt, EnemyType.Drone, EnemyType.Wasp };
+                var e = w.HostSpawnEnemy(t, p);
+                e.GlobalPosition = p;
+                e.Rotation = new Vector3(0, yaw, 0);
+                e.MaxHealth = e.Health = 1e7f; // les alliés ne doivent pas abattre les spécimens
+                spawned.Add(e);
+                return e;
+            }
+            // Soldat immobile (le bot vise le spécimen le plus proche) ; les alliés qui l'entourent au départ masqueraient le cadrage.
+            Player.BotStill = true;
+            foreach (var act in new[] { "move_left", "move_right", "sprint" }) Input.ActionRelease(act);
+            foreach (var n in w.FindChildren("*", "Node3D", true, false))
+                if (n is Ally a) a.Visible = false;
+            if (mode == "face")
+            {
+                // Une fourmi noire juste devant le soldat, deux autres plus loin.
+                foreach (var (t, off, turn) in new[] { (EnemyType.BlackAnt, new Vector3(-1f, 0, -7.5f), 0.35f), (EnemyType.BlackAnt, new Vector3(22f, 0, -40f), -0.4f), (EnemyType.RedAnt, new Vector3(-26f, 0, -48f), 0.5f) })
+                {
+                    var p = new Vector3(pp.X + off.X, 0, pp.Z + off.Z);
+                    Put(t, p, Mathf.Atan2(pp.X - p.X, pp.Z - p.Z) + turn);
+                }
+            }
+            else if (mode == "big")
+            {
+                var nest = Enemies.Get(EnemyType.Nest).Size;
+                var queen = Enemies.Get(EnemyType.Queen).Size;
+                Put(EnemyType.Nest, new Vector3(pp.X - 14f * nest - 10f, 0, pp.Z - 16f - 16f * nest), 0.6f);
+                Put(EnemyType.Queen, new Vector3(pp.X + 2f * queen, 0, pp.Z - 10f - 5f * queen), 0.9f);
+            }
+            else
+            {
+                // Rangée devant le soldat, espacée selon la taille de chacun, reculée selon le plus grand.
+                var types = new[] { EnemyType.BlackAnt, EnemyType.Spider, EnemyType.AcidAnt, EnemyType.Drone, EnemyType.Wasp };
+                var widths = types.Select(t => 5.5f * Enemies.Get(t).Size).ToArray();
+                var x = pp.X - widths.Sum() / 2f;
+                var z = pp.Z - 12f - 8f * types.Max(t => Enemies.Get(t).Size);
                 for (var i = 0; i < types.Length; i++)
                 {
-                    var p = big ? new Vector3(-16 + i * 30, 0, -34) : new Vector3(-14 + i * 7, types[i] is EnemyType.Wasp or EnemyType.Drone ? 3.5f : 0, -16);
-                    var e = w.HostSpawnEnemy(types[i], p);
-                    e.GlobalPosition = p;
-                    e.Rotation = new Vector3(0, 0.6f, 0);
+                    x += widths[i] / 2f;
+                    var fly = types[i] is EnemyType.Wasp or EnemyType.Drone;
+                    Put(types[i], new Vector3(x, fly ? 3.5f * Enemies.Get(types[i]).Size : 0, z), 0.6f);
+                    x += widths[i] / 2f;
                 }
-                if (!big)
+                // Mille-pattes au premier plan (le plus proche : le bot le vise), de trois quarts, le corps en S pour montrer la trace.
+                var cs = Enemies.Get(EnemyType.Centipede).Size;
+                Put(EnemyType.Centipede, new Vector3(pp.X + 3f * cs, 0, pp.Z - 6f * cs), 1.4f).Model.SeedCentipedeTrail(0.45f);
+            }
+            // Dimensions réelles de chaque modèle (journal), une fois sortis de terre.
+            app.GetTree().CreateTimer(3f).Timeout += () =>
+            {
+                foreach (var e in spawned)
                 {
-                    // Mille-pattes au premier plan, de trois quarts, le corps en S pour montrer la trace.
-                    var p = new Vector3(6, 0, -2);
-                    var c = w.HostSpawnEnemy(EnemyType.Centipede, p);
-                    c.GlobalPosition = p;
-                    c.Rotation = new Vector3(0, 1.0f, 0);
-                    c.Model.SeedCentipedeTrail(0.45f);
+                    if (!GodotObject.IsInstanceValid(e)) continue;
+                    var b = e.Model.Bounds();
+                    GD.Print($"[taille] {e.Def.Type} : longueur {b.Size.Z:0.0} m, envergure {b.Size.X:0.0} m, hauteur {b.End.Y:0.0} m (Size {e.Def.Size:0.00})");
                 }
             };
-        ScheduleShots(app, dir, $"mission{mission}");
+        };
     }
 
     /// <summary>
