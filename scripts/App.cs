@@ -212,7 +212,7 @@ public partial class App : Node
 /// Pilotage automatique pour les tests et les captures : arguments après « -- » :
 /// --autostart=0 --class=0 --difficulty=1 --shots=chemin --shot-times=4,10 --quit-after=20 --menu-shots.
 /// </summary>
-public static class AutoTest
+public static partial class AutoTest
 {
     /// <summary>Attend que la mission soit chargée (durée variable, partie LAN), puis demande la place du véhicule.</summary>
     private static void BoardWhenReady(App app, int vehicleId, Vector3 near)
@@ -375,6 +375,7 @@ public static class AutoTest
                     Net.I.HostStartMission();
                 };
             };
+            WreckTest(app, dir); // --wreck=N : destructions décidées par l'hôte, vues du client
             ScheduleShots(app, dir, "host");
             return;
         }
@@ -476,6 +477,7 @@ public static class AutoTest
                 }
             };
         BoomTest(app, dir);
+        WreckTest(app, dir);
         ScheduleShots(app, dir, $"mission{mission}");
     }
 

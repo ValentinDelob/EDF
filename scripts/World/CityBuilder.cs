@@ -406,8 +406,20 @@ public static partial class CityBuilder
 
     private static void AddTree(Node3D root, StaticBody3D body, Vector3 p, float hgt, (float r, Vector3 off)[] blobs)
     {
-        root.AddChild(new MeshInstance3D { Mesh = RuinTree(p) ?? Props.Tree(hgt, blobs, p.X * 0.37f + p.Z * 0.11f), Position = p });
-        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.4f, Height = hgt }, Position = p + new Vector3(0, hgt / 2, 0) });
+        var mesh = RuinTree(p) ?? Props.Tree(hgt, blobs, p.X * 0.37f + p.Z * 0.11f);
+        var node = new MeshInstance3D { Mesh = mesh, Position = p };
+        root.AddChild(node);
+        AddTreeProp(body, node, mesh, p, 0.4f, hgt);
+    }
+
+    /// <summary>Arbre destructible (tombe d'un bloc) : nœud visuel et tronc solide rattachés à son identifiant.</summary>
+    private static void AddTreeProp(StaticBody3D body, Node3D node, Mesh mesh, Vector3 p, float radius, float hgt)
+    {
+        var cs = new CollisionShape3D { Shape = new CylinderShape3D { Radius = radius, Height = hgt }, Position = p + new Vector3(0, hgt / 2, 0) };
+        var id = Destructibles.Register(mesh, PropKind.Tree, node.Transform, null);
+        if (id < 0) { body.AddChild(cs); return; }
+        Destructibles.BindNode(id, node);
+        Destructibles.AddShape(id, cs);
     }
 
     private static void BuildPalm(Node3D root, StaticBody3D body, Vector3 p, RandomNumberGenerator rng)
@@ -415,8 +427,9 @@ public static partial class CityBuilder
         var hgt = rng.RandfRange(7, 10);
         var trunk = new Node3D { Position = p, RotationDegrees = new Vector3(rng.RandfRange(-6, 6), rng.RandfRange(0, 360), rng.RandfRange(-6, 6)) };
         root.AddChild(trunk);
-        trunk.AddChild(new MeshInstance3D { Mesh = RuinPalm(p, hgt) ?? Props.Palm(hgt, p.X * 0.71f) });
-        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.35f, Height = hgt }, Position = p + new Vector3(0, hgt / 2, 0) });
+        var mesh = RuinPalm(p, hgt) ?? Props.Palm(hgt, p.X * 0.71f);
+        trunk.AddChild(new MeshInstance3D { Mesh = mesh });
+        AddTreeProp(body, trunk, mesh, p, 0.35f, hgt);
     }
 
     private static readonly Color[] CarColors =
@@ -432,14 +445,25 @@ public static partial class CityBuilder
         if (RuinVehicle(root, p, yaw, type, ref paint, len)) return; // épave calcinée à la place (sinon carrosserie couverte de cendre)
         if (Props.Burnt(p)) paint = Mats.BurntPaint; // carrosserie brûlée (sans tirage aléatoire)
         var mesh = Props.Vehicle(type, paint, len);
-        root.AddChild(new MeshInstance3D
+        var node = new MeshInstance3D
         {
             Mesh = mesh,
             Position = p,
             Rotation = new Vector3(0, yaw, 0),
             VisibilityRangeEnd = 260f,
-        });
-        body.AddChild(VehicleShape(mesh, type, len, p, yaw));
+        };
+        root.AddChild(node);
+        AddVehicleProp(body, node, mesh, type, len, p, yaw, paint);
+    }
+
+    /// <summary>Véhicule garé destructible (identifiant dans l'ordre de pose) ; décor fixe hors mission.</summary>
+    public static void AddVehicleProp(StaticBody3D body, MeshInstance3D node, Mesh mesh, Props.VehicleType type, float len, Vector3 p, float yaw, Color paint)
+    {
+        var shape = VehicleShape(mesh, type, len, p, yaw);
+        var id = Destructibles.Register(mesh, Props.KindOf(mesh), new Transform3D(new Basis(Vector3.Up, yaw), p), paint);
+        if (id < 0) { body.AddChild(shape); return; }
+        Destructibles.BindNode(id, node);
+        Destructibles.AddShape(id, shape);
     }
 
     /// <summary>Collision exacte d'un véhicule garé (carrosserie, cabine, roues), partagée par les véhicules du même modèle.</summary>
@@ -459,13 +483,17 @@ public static partial class CityBuilder
     private static void BuildLamp(Node3D root, StaticBody3D body, PropScatter props, Vector3 p, float yaw, bool night)
     {
         if (RuinLamp(p, yaw, ref night)) return; // lampadaire abattu ; sinon, éteint la nuit s'il est hors service
-        props.Add(Props.StreetLamp(night), p, yaw, range: 260, shadows: true);
+        var id = props.Add(Props.StreetLamp(night), p, yaw, range: 260, shadows: true);
         if (night)
         {
             var head = p + new Basis(Vector3.Up, yaw) * new Vector3(0, 6.8f, 1.45f);
-            root.AddChild(new OmniLight3D { Position = head, LightColor = new Color(1f, 0.78f, 0.5f), LightEnergy = 3f, OmniRange = 20f, OmniAttenuation = 1.2f, ShadowEnabled = false });
+            var light = new OmniLight3D { Position = head, LightColor = new Color(1f, 0.78f, 0.5f), LightEnergy = 3f, OmniRange = 20f, OmniAttenuation = 1.2f, ShadowEnabled = false };
+            root.AddChild(light);
+            Destructibles.AddExtra(id, light); // s'éteint quand le lampadaire tombe
         }
-        body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.15f, Height = 7f }, Position = p + new Vector3(0, 3.5f, 0) });
+        var cs = new CollisionShape3D { Shape = new CylinderShape3D { Radius = 0.15f, Height = 7f }, Position = p + new Vector3(0, 3.5f, 0) };
+        if (id >= 0) Destructibles.AddShape(id, cs);
+        else body.AddChild(cs);
     }
 
     // ───────────────────────── Marquage au sol ─────────────────────────

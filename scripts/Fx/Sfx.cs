@@ -59,6 +59,7 @@ public partial class Sfx : Node
                 var loops = new Dictionary<string, byte[]>();
                 Build(snd, vars);
                 BuildVehicles(snd, loops);
+                BuildProps(snd);
                 var ms = sw.ElapsedMilliseconds;
                 Callable.From(() => OnBuilt(snd, vars, loops, ms)).CallDeferred();
             }

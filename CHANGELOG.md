@@ -2,6 +2,9 @@
 
 ## Non publié
 
+- **Mobilier et véhicules destructibles** : lampadaires, feux, panneaux et poteaux basculent et s'abattent (ils blessent les insectes dessous) ; arbres qui tombent ; bancs, poubelles, bornes, abribus, cabanes, séparateurs en béton éclatent en morceaux ; voitures, fourgons et camions fument, prennent feu puis explosent (souffle qui blesse les insectes, réactions en chaîne, épave calcinée) ; épaves aplaties par le char, les gros insectes et la forteresse ; conteneurs poussés par les explosions. Le couvert détruit disparaît.
+- **Immeubles** : dégâts progressifs (fissures, trous d'obus, éclats de façade, incendies aux étages touchés, fumée du toit), puis effondrement en plusieurs temps : façades qui se vident, enfoncement incliné, blocs projetés, énorme nuage de poussière qui roule dans les rues, tas de gravats praticable.
+
 - **Plus de crédits** : caisses jaunes supprimées (remplacées dans le tirage par des caisses d'arme et d'armure), compteur retiré du profil, du menu principal, du bilan, du tableau des scores et du guide.
 - **Plus d'expérience ni de niveau de classe** : ni bonus de dégâts ni PV par niveau, plus de « Niv. » dans les menus ; l'armure grandit uniquement avec les caisses d'armure.
 - **Un exemplaire par arme** : retrouver une arme déjà possédée l'améliore (niveau le plus haut, meilleur nombre d'étoiles par caractéristique). Au bilan, une arme nouvelle porte l'étiquette « NEW » ; une arme améliorée liste ses améliorations en dessous (« Niveau 12 → 18 », « Dégâts ☆2 → ☆3 (+10) ») ; une arme possédée sans amélioration est assombrie.

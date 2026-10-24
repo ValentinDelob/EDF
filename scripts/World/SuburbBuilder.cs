@@ -866,7 +866,8 @@ public static partial class SuburbBuilder
         if (RuinCar(c, p, yaw, type, ref paint, len)) return; // épave calcinée à la place
         if (Props.Burnt(p)) paint = Mats.BurntPaint; // carrosserie brûlée (sans tirage aléatoire)
         var mesh = Props.Vehicle(type, paint, len);
-        c.Root.AddChild(new MeshInstance3D { Mesh = mesh, Position = p, Rotation = new Vector3(0, yaw, 0), VisibilityRangeEnd = 260f });
-        c.Body.AddChild(CityBuilder.VehicleShape(mesh, type, len, p, yaw));
+        var node = new MeshInstance3D { Mesh = mesh, Position = p, Rotation = new Vector3(0, yaw, 0), VisibilityRangeEnd = 260f };
+        c.Root.AddChild(node);
+        CityBuilder.AddVehicleProp(c.Body, node, mesh, type, len, p, yaw, paint);
     }
 }

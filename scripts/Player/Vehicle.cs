@@ -303,6 +303,8 @@ public abstract partial class Vehicle : CharacterBody3D
             var n = c.GetNormal();
             var into = -before.Dot(n);
             if (into <= 0) continue;
+            // Contact franc avec un accessoire destructible : le véhicule le renverse ou l'écrase (hôte).
+            if (into > 1.5f) _world.Decor?.LocalContact(c.GetCollider(), c.GetColliderShapeIndex(), CrushStrength, GlobalPosition);
             var excess = into - (n.Y > 0.7f ? floorThreshold : wallThreshold);
             if (excess > bestExcess) { bestExcess = excess; bestPos = c.GetPosition(); bestN = n; }
         }
@@ -320,6 +322,9 @@ public abstract partial class Vehicle : CharacterBody3D
         OnCollisionImpact(bestExcess);
         return bestExcess;
     }
+
+    /// <summary>Force d'écrasement du décor (voir <see cref="Destructibles"/>) : 2 renverse le mobilier, 3 aplatit aussi les voitures.</summary>
+    protected virtual int CrushStrength => 2;
 
     /// <summary>Réaction propre au véhicule après un choc (alarme du cockpit…).</summary>
     protected virtual void OnCollisionImpact(float excess) { }

@@ -27,6 +27,8 @@ public partial class World : Node3D
     public readonly List<Building> Buildings = new();
     public FlowField Flow = new();
     public CityBuilder.Result City;
+    /// <summary>Mobilier et véhicules destructibles de la carte (identifiants dans l'ordre de génération).</summary>
+    public Destructibles Decor;
     public bool Paused;
     public bool Ended;
     public float Elapsed;
@@ -85,7 +87,9 @@ public partial class World : Node3D
         ExplosionFx.For(this); // émetteurs et textures prêts avant le premier tir (pas d'à-coup à la première explosion)
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
+        Decor = Destructibles.Begin(this);
         City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        Decor.EndBuild();
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
         foreach (var b in Buildings) Flow.SetBlockedRect(b.GlobalPosition, b.Size, true);
@@ -237,6 +241,7 @@ public partial class World : Node3D
         }
         else RebuildSpatialHash();
         _director?.Tick(dt);
+        Decor?.HostTick(dt);
 
         _snapshotTimer -= dt;
         if (_snapshotTimer <= 0 && !Net.I.IsSolo)
@@ -673,8 +678,9 @@ public partial class World : Node3D
                 if (b.Destroyed) continue;
                 var local = pos - b.GlobalPosition;
                 var closest = new Vector3(Mathf.Clamp(local.X, -b.Size.X / 2, b.Size.X / 2), Mathf.Clamp(local.Y, 0, b.Size.Y), Mathf.Clamp(local.Z, -b.Size.Z / 2, b.Size.Z / 2));
-                if (closest.DistanceTo(local) <= radius) HostBuildingDamage(b.Id, dmg * (kind == 3 ? 0.6f : 1f));
+                if (closest.DistanceTo(local) <= radius) HostBuildingDamage(b.Id, dmg * (kind == 3 ? 0.6f : 1f), pos);
             }
+        if (kind != 3 || radius > 3) Decor?.HostBlast(pos, radius, dmg * (kind == 3 ? 0.6f : 1f), by);
     }
 
     public void OnExplosionFx(Vector3 pos, float radius, int kind)
@@ -858,8 +864,9 @@ public partial class World : Node3D
             if (b.Destroyed) continue;
             var local = pos - b.GlobalPosition;
             var closest = new Vector3(Mathf.Clamp(local.X, -b.Size.X / 2, b.Size.X / 2), Mathf.Clamp(local.Y, 0, b.Size.Y), Mathf.Clamp(local.Z, -b.Size.Z / 2, b.Size.Z / 2));
-            if (closest.DistanceTo(local) <= radius) HostBuildingDamage(b.Id, dmg * 4f);
+            if (closest.DistanceTo(local) <= radius) HostBuildingDamage(b.Id, dmg * 4f, pos);
         }
+        Decor?.HostBlast(pos, radius, dmg * 4f, 0);
     }
 
     private IEnumerable<(long, Vector3)> PlayerTargets()
@@ -1004,13 +1011,23 @@ public partial class World : Node3D
 
     // ------------------------------------------------------------------ Décor
 
-    public void HostBuildingDamage(int id, float dmg)
+    /// <summary>Dégâts à un immeuble (hôte) : paliers d'endommagement (voir <see cref="Building.StageFor"/>), puis effondrement.</summary>
+    public void HostBuildingDamage(int id, float dmg, Vector3 at = default)
     {
         if (id < 0 || id >= Buildings.Count) return;
         var b = Buildings[id];
         if (b.Destroyed) return;
         b.Health -= dmg;
-        if (b.Health <= 0) Net.I.BroadcastBuildingDestroyed(id);
+        if (b.Health <= 0) { Net.I.BroadcastBuildingDestroyed(id); return; }
+        var stage = b.StageFor(b.Health / b.MaxHealth);
+        if (stage <= b.HostStage) return;
+        b.HostStage = stage;
+        Net.I.BroadcastBuildingStage(id, stage, at);
+    }
+
+    public void OnBuildingStage(int id, int stage, Vector3 at)
+    {
+        if (id >= 0 && id < Buildings.Count) Buildings[id].ShowStage(this, stage, at);
     }
 
     public void OnBuildingDestroyed(int id)
@@ -1020,6 +1037,8 @@ public partial class World : Node3D
         if (b.Destroyed) return;
         b.Collapse(this);
         Flow.SetBlockedRect(b.GlobalPosition, b.Size, false);
+        // Ce qui se trouve au pied de l'immeuble est écrasé par l'effondrement.
+        if (Net.I.IsHost) Decor?.HostCrushArea(b.GlobalPosition, b.Size.X / 2 + 2.5f, b.Size.Z / 2 + 2.5f, 4);
     }
 
     public void ShakeCamera(Vector3 pos, float strength, float radius)
