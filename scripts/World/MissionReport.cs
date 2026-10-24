@@ -39,6 +39,7 @@ public class MissionReport
                 r.Crates[(int)c.Type]++;
                 r.AutoCollected++;
             }
+        if (r.AutoCollected > 0) GD.Print($"[bilan] {r.AutoCollected} caisse(s) restante(s) collectée(s) automatiquement");
 
         var profile = Profile.I;
         var cls = profile.Data.SelectedClass;

@@ -9,7 +9,7 @@ namespace Rempart;
 /// Les blocs (scripts/UI/HudE*.cs) dessinent eux-mêmes leurs formes (_Draw) en coordonnées de maquette 1280×720.
 /// Les anciens panneaux (objectif, escouade, butin, radio, boss, capacité, aide des commandes) sont supprimés :
 /// les points d'entrée (Briefing, Radio, Toast, PickupPopup) restent appelables mais n'affichent rien ;
-/// l'objectif est consultable dans le menu pause.
+/// l'objectif est consultable dans le menu pause. Repères d'objectif (structure, camions, minuteurs) : <see cref="HudObjectiveMarkers"/>.
 /// </summary>
 public partial class Hud : CanvasLayer
 {
@@ -24,6 +24,7 @@ public partial class Hud : CanvasLayer
     private HudRadar _radar;
     private HudWeapons _weapons;
     private HudWorldMarkers _markers;
+    private HudObjectiveMarkers _objective;
     private HudReticle _reticle;
     private Vector2 _layoutSize;
     private float _layoutScale;
@@ -42,6 +43,8 @@ public partial class Hud : CanvasLayer
 
         _markers = new HudWorldMarkers { World = World };
         _root.AddChild(_markers);
+        _objective = new HudObjectiveMarkers { World = World };
+        _root.AddChild(_objective);
         _reticle = new HudReticle { World = World };
         _reticle.SetAnchorsPreset(Control.LayoutPreset.Center);
         _root.AddChild(_reticle);
@@ -127,7 +130,7 @@ void fragment() {
             _armor.Layout(s, screen);
             _radar.Layout(s, screen);
             _weapons.Layout(s, screen);
-            _markers.S = _reticle.S = s;
+            _markers.S = _reticle.S = _objective.S = s;
             _damageArc.Scale = new Vector2(s, s);
         }
         if (p == null) return;

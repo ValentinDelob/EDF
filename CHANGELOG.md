@@ -11,6 +11,15 @@
 - **Tours debout** : une tour de 20 étages et plus ne s'effondre jamais ; chaque impact arrache des panneaux de façade (vitres qui pleuvent, plaques qui tombent, cavité noircie, parfois un incendie d'étage). Les immeubles plus bas s'effondrent comme en ville.
 - Quartier envahi : tours éventrées et en feu, panaches noirs, terrains dévastés où la colonie a creusé ses nids, épaves dans les voies, carambolage, bus encastré, barrages militaires abandonnés avec mâts d'éclairage, cratères, verre et débris, toiles entre les tours. Mobilier et véhicules destructibles comme sur les autres cartes.
 - **Deux missions** : « Tours de verre » (jour : guêpes entre les tours, fourmis qui escaladent les façades) et « Panne générale » (nuit sous la pluie, réseau électrique coupé : détruire les nids au pied des tours).
+- **Trois nouveaux types de mission** (déblocage à la suite des huit premières) :
+  - **09. Le relais** (port, défense) : protégez une antenne relais de campagne (dalle, sacs de sable, abri technique, pylône de 24 m) pendant quatre vagues ; si elle tombe, son mât s'abat et la mission échoue.
+  - **10. Convoi** (ville, escorte) : trois camions militaires traversent le centre-ville sur 670 m. Ils s'arrêtent quand un insecte barre la route ou quand aucun soldat n'est à moins de 40 m ; un camion détruit est projeté sur le bas-côté, la mission échoue si les trois tombent. Les vagues surgissent devant et derrière le convoi ; les camions écrasent les voitures garées sur leur passage.
+  - **11. Dernier carré** (banlieue, nuit d'orage, survie) : tenez dix minutes face à des vagues sans fin, de plus en plus nombreuses et rapprochées.
+- Les insectes s'en prennent aussi à la structure défendue et aux camions (s'ils ne sont guère plus loin qu'un soldat) ; tout est synchronisé en LAN.
+- **HUD minimal** : barre de vie fine et nom au-dessus de l'antenne et des camions (comme les alliés), petit losange jaune, rappel sur le bord de l'écran quand ils sont hors champ, « À L'ARRÊT » sous le camion de tête sans escorte, losange du point d'arrivée. En haut au centre, en petit : compte à rebours de survie, puis d'extraction.
+- **Fin de mission** : une fois l'objectif rempli, 15 s d'extraction affichées pour ramasser les caisses ; la mission ne peut plus échouer pendant ce temps (même si toute l'escouade est à terre). En Facile et Normal, les caisses restantes sont collectées automatiquement au bilan.
+- **Nombre d'insectes selon l'escouade** : × 1 en solo, × 1,4 à deux, × 1,7 à trois, × 2 à quatre (auparavant × 1,8 et × 2,2 à trois et quatre).
+- Tests : `--survive-time`, `--obj-hp`, `--convoy-speed`, `--objlog`, `--timescale` ; `tools/smoke.ps1` vérifie l'issue de chaque nouvel objectif.
 
 ## v0.7.4 — Jetpack discret
 

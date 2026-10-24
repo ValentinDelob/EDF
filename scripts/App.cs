@@ -368,6 +368,7 @@ public static partial class AutoTest
         Player.BotHoldFire = Screenshot.CmdArg("holdfire") != null;
         RoofTest(app);
         GrabTest(app);
+        ObjectiveArgs(app); // --survive-time, --obj-hp, --convoy-speed, --objlog, --timescale (AutoTest.Objectives.cs)
         if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
         if (Screenshot.CmdArg("class") is { } cc && int.TryParse(cc, out var ccls)) Profile.I.Data.SelectedClass = (SoldierClass)ccls;
         var mission0 = int.TryParse(Screenshot.CmdArg("mission") ?? "0", out var mm) ? mm : 0;

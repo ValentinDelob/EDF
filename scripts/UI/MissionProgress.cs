@@ -32,6 +32,9 @@ public static class MissionProgress
     {
         MissionGoal.Exterminate => "extermination",
         MissionGoal.DestroyNests => "destruction de nids",
+        MissionGoal.Defense => "défense",
+        MissionGoal.Escort => "escorte de convoi",
+        MissionGoal.Survival => "survie",
         _ => "élimination du boss",
     };
 

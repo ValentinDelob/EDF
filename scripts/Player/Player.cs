@@ -74,7 +74,7 @@ public partial class Player : CharacterBody3D
 
     public static Player Create(World world, SoldierClass cls, List<WeaponInstance> loadout, float maxArmor)
     {
-        var p = new Player { World = world, Def = Classes.Get(cls), Name = "LocalPlayer", CollisionLayer = 1 << 1, CollisionMask = 1 };
+        var p = new Player { World = world, Def = Classes.Get(cls), Name = "LocalPlayer", CollisionLayer = 1 << 1, CollisionMask = 1 | 1 << 5 }; // couche 6 : camions du convoi (MissionObjective)
         p.MaxHealth = p.Health = maxArmor;
         foreach (var w in loadout) p.Weapons.Add(new WeaponState(w));
         p.AddChild(new CollisionShape3D

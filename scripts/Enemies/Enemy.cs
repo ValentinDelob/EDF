@@ -36,6 +36,8 @@ public partial class Enemy : CharacterBody3D
     private float _altitude;
     private float _orbit;
     private int _targetCrate = -1;
+    /// <summary>Élément de l'objectif visé ce tic (hôte), ou null : voir <see cref="MissionObjective.HostPickTarget"/>.</summary>
+    private Guard _guard;
     private float _leapT = -1f;
     private Vector3 _leapFrom, _leapTo;
     private float _specialCd;
@@ -232,6 +234,14 @@ public partial class Enemy : CharacterBody3D
                 target = a.GlobalPosition;
             }
         }
+        // Objectif de mission (structure défendue, camion du convoi) : cible s'il n'est guère plus loin que le soldat ou l'allié visé.
+        _guard = null;
+        if (!Def.Boss && _world.Objective != null && _world.Objective.HostPickTarget(this, target, out var guardPoint, out var guard))
+        {
+            _guard = guard;
+            ally = null;
+            target = guardPoint;
+        }
         if (Def.Flying) TickFlying(dt, peer, target, ally);
         else TickGround(dt, peer, target, ally);
         AnimateModel(dt, _speedNow, _attackAnim);
@@ -260,7 +270,8 @@ public partial class Enemy : CharacterBody3D
         var hasTarget = _world.NearestPlayer(p, out _, out var target);
         var dist = hasTarget ? p.DistanceTo(target) : 0f;
         // Loin de la cible seulement : près du joueur, une fourmi bloquée par la foule n'est pas « coincée ».
-        var far = hasTarget && dist > Mathf.Max(30f, Def.AttackRange * 1.5f + 8f);
+        // Un insecte qui assiège l'objectif (loin des soldats) n'est pas « coincé ».
+        var far = hasTarget && _guard == null && dist > Mathf.Max(30f, Def.AttackRange * 1.5f + 8f);
         if (moved < 1.2f * Def.Size && far && _attackAnim <= 0f) _stuckT += 3f;
         else _stuckT = 0;
         // Tourne en rond sans jamais se rapprocher (poche dans le décor, sous un pont…) : 25 s sans gagner 3 m.
@@ -379,7 +390,7 @@ public partial class Enemy : CharacterBody3D
         }
 
         // Mille-pattes : courte giclée d'acide sur une cible à mi-distance, entre deux morsures.
-        if (Def.Type == EnemyType.Centipede && ally == null && _specialCd <= 0 && dist > reach + 3f && dist < 24f)
+        if (Def.Type == EnemyType.Centipede && ally == null && _guard == null && _specialCd <= 0 && dist > reach + 3f && dist < 24f)
         {
             _specialCd = (float)GD.RandRange(4.5, 7.5);
             _attackAnim = 1f;
@@ -389,10 +400,18 @@ public partial class Enemy : CharacterBody3D
         if (attacking && _attackCd <= 0)
         {
             // Fourmi rouge : la morsure devient une saisie (la victime reste prise dans les mandibules).
-            if (CanGrab && HostTryGrab(peer, ally)) { State = EnemyState.Attacking; return; }
+            if (CanGrab && _guard == null && HostTryGrab(peer, ally)) { State = EnemyState.Attacking; return; }
             _attackCd = Def.AttackCooldown * (float)GD.RandRange(0.85, 1.15);
             _attackAnim = 1f;
-            if (ally != null)
+            if (_guard != null)
+            {
+                // Objectif : dégâts directs (projectile seulement visuel), comme pour un allié.
+                _world.Objective.HostDamage(_guard, Def.Damage * _world.DamageMul * DamageScale * (Def.Ranged ? 0.6f : 1f));
+                Net.I.BroadcastEnemyAttack(Id, Def.Ranged ? 1 : 0, target);
+                if (Def.Ranged) Projectile.Spawn(_world, ProjectileKind.Acid, Center + Basis.Z * 1.5f * Def.Size, World.BallisticVelocity(Center, target + Vector3.Up, 30f, 9f), false, 0, 0);
+                else Sfx.At("hit", pos, 0f, 0.7f);
+            }
+            else if (ally != null)
             {
                 _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * DamageScale * (Def.Ranged ? 0.6f : 1f));
                 Net.I.BroadcastEnemyAttack(Id, Def.Ranged ? 1 : 0, target);
@@ -449,7 +468,12 @@ public partial class Enemy : CharacterBody3D
         {
             _attackCd = Def.AttackCooldown * (float)GD.RandRange(0.8, 1.3);
             _attackAnim = 1;
-            if (ally != null)
+            if (_guard != null)
+            {
+                _world.Objective.HostDamage(_guard, Def.Damage * _world.DamageMul * DamageScale);
+                Projectile.Spawn(_world, Def.Type == EnemyType.Drone ? ProjectileKind.Laser : ProjectileKind.Stinger, pos + Vector3.Down * (0.8f * Def.Size), (target - pos).Normalized() * 60f, false, 0, 0);
+            }
+            else if (ally != null)
             {
                 _world.Allies.HostDamage(ally, Def.Damage * _world.DamageMul * DamageScale);
                 Projectile.Spawn(_world, ProjectileKind.Stinger, pos + Vector3.Down * (0.8f * Def.Size), (target + Vector3.Up - pos).Normalized() * 60f, false, 0, 0);

@@ -64,6 +64,32 @@ if (-not (Run-Godot "char de combat" @("--autostart=0", "--bot", "--tank", "--qu
 if (-not (Run-Godot "hélicoptère" @("--autostart=0", "--bot", "--heli", "--quit-after=$($Seconds + 8)"))) { $failures += "hélicoptère" }
 if (-not (Run-Godot "fin de mission + bilan" @("--autostart=0", "--end-after=4", "--quit-after=$($Seconds + 2)"))) { $failures += "bilan" }
 
+# Objectifs Défense / Escorte / Survie : l'issue attendue doit apparaître dans le journal (« [mission] victoire » / « échec »).
+function Run-Expect([string]$label, [string[]]$gameArgs, [string]$expect, [int]$timeoutSec) {
+    $out = Invoke-Timed (@("--headless", "--path", ".", "--") + $gameArgs) $timeoutSec
+    $bad = $out | Where-Object { $_ -match $pattern }
+    if ($bad -or -not ($out | Where-Object { $_ -match $expect })) {
+        Write-Host "ECHEC  $label" -ForegroundColor Red
+        if ($bad) { $bad | Select-Object -First 12 | ForEach-Object { Write-Host "   $_" } }
+        else { Write-Host "   issue attendue absente : $expect" }
+        return $false
+    }
+    Write-Host "OK     $label" -ForegroundColor Green
+    return $true
+}
+$missionIndex = @{}
+$i = 0
+foreach ($m in (Select-String -Path "scripts/Data/Missions.cs" -Pattern '^\s+MissionGoal\.(\w+),' )) { $missionIndex[$m.Matches[0].Groups[1].Value] = $i; $i++ }
+if ($missionIndex.ContainsKey("Survival")) {
+    if (-not (Run-Expect "survie : victoire + extraction" @("--autostart=$($missionIndex.Survival)", "--bot", "--god", "--survive-time=8", "--quit-after=60") '\[mission\] victoire' 90)) { $failures += "survie" }
+}
+if ($missionIndex.ContainsKey("Defense")) {
+    if (-not (Run-Expect "défense : structure détruite = échec" @("--autostart=$($missionIndex.Defense)", "--bot", "--god", "--holdfire", "--obj-hp=0.01", "--quit-after=70") '\[mission\] \S*chec' 100)) { $failures += "défense" }
+}
+if ($missionIndex.ContainsKey("Escort")) {
+    if (-not (Run-Expect "escorte : convoi arrivé" @("--autostart=$($missionIndex.Escort)", "--bot", "--god", "--convoy-speed=6", "--obj-hp=50", "--quit-after=110") '\[mission\] victoire' 140)) { $failures += "escorte" }
+}
+
 if (-not $SkipLan) {
     # Partie LAN locale : hôte en arrière-plan, client au premier plan.
     $hostLog = Join-Path $env:TEMP "rempart_smoke_host.log"

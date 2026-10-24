@@ -1,6 +1,7 @@
 namespace Rempart;
 
-public enum MissionGoal { Exterminate, DestroyNests, Boss }
+/// <summary>Type d'objectif (Defense, Escort, Survival : voir <see cref="ObjectiveDef"/> et <see cref="MissionObjective"/>).</summary>
+public enum MissionGoal { Exterminate, DestroyNests, Boss, Defense, Escort, Survival }
 
 public enum TimeOfDay { Day, Dusk, Night }
 
@@ -23,7 +24,8 @@ public record MissionDef(
     int NestCount,
     PhaseDef[] Phases,
     Weather Weather = Weather.Clear,
-    MapId Map = MapId.City);
+    MapId Map = MapId.City,
+    ObjectiveDef Objective = null);
 
 public enum MapId { City, Port, Suburb, Business }
 
@@ -144,7 +146,62 @@ public static class Missions
                     new WaveDef("north", 0, "Dernière vague : fourmis rouges en masse depuis la forêt, des spécimens d'élite repérés !", (EnemyType.RedAnt, 14), (EnemyType.BlackAnt, 10)),
                     new WaveDef("west", 5, null, (EnemyType.RedAnt, 8), (EnemyType.Spider, 6))),
             }, Weather.Clear, MapId.Suburb),
-        new(8, "Tours de verre",
+        new(8, "Le relais",
+            "Une antenne relais de campagne a été dressée sur la place du port pour coordonner l'évacuation par la mer. La colonie l'a repérée et va se jeter dessus. Tenez la place et protégez l'antenne jusqu'à la dernière vague : si elle tombe, la mission échoue.",
+            MissionGoal.Defense, TimeOfDay.Dusk, 0.007f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 3, "Contacts au nord, ils foncent droit sur l'antenne !", (EnemyType.BlackAnt, 16))),
+                new PhaseDef(6, 0,
+                    new WaveDef("east", 0, "Fourmis rouges à l'est, couvrez le relais !", (EnemyType.RedAnt, 6), (EnemyType.BlackAnt, 12)),
+                    new WaveDef("west", 6, "Fourmis acides à l'ouest, elles visent l'antenne de loin !", (EnemyType.AcidAnt, 8))),
+                new PhaseDef(6, 0,
+                    new WaveDef("south", 0, "Elles remontent des quais !", (EnemyType.BlackAnt, 14), (EnemyType.Scavenger, 4)),
+                    new WaveDef("north", 8, "Guêpes au-dessus des conteneurs !", (EnemyType.Wasp, 12))),
+                new PhaseDef(5, 0,
+                    new WaveDef("north", 0, "Dernière vague : toute la colonie converge sur l'antenne !", (EnemyType.RedAnt, 10), (EnemyType.BlackAnt, 14)),
+                    new WaveDef("east", 4, null, (EnemyType.AcidAnt, 8)),
+                    new WaveDef("west", 8, "Des araignées à l'ouest !", (EnemyType.Spider, 8))),
+            }, Weather.Rain, MapId.Port, new ObjectiveDef(StructureKind.RelayAntenna, 0f, -18f, 16000f)),
+        new(9, "Convoi",
+            "Trois camions de ravitaillement doivent traverser le centre-ville jusqu'au point de regroupement, au nord-est. Restez au contact : sans soldat à moins de 40 m, les chauffeurs s'arrêtent, et un insecte en travers de la route bloque tout le convoi. Si les trois camions sont détruits, la mission échoue.",
+            MissionGoal.Escort, TimeOfDay.Day, 0.004f, 0,
+            new[]
+            {
+                // Zones « ahead » / « behind » : devant ou derrière le convoi, le long de son trajet.
+                new PhaseDef(0, 0,
+                    new WaveDef("ahead", 8, "Fourmis devant le convoi ! Dégagez la route !", (EnemyType.BlackAnt, 12))),
+                new PhaseDef(0, 40,
+                    new WaveDef("ahead", 0, "Fourmis rouges sur l'itinéraire !", (EnemyType.RedAnt, 6), (EnemyType.BlackAnt, 8)),
+                    new WaveDef("behind", 6, "Ça vient aussi par l'arrière !", (EnemyType.BlackAnt, 8))),
+                new PhaseDef(0, 80,
+                    new WaveDef("ahead", 0, "Fourmis acides en embuscade, protégez les camions !", (EnemyType.AcidAnt, 10)),
+                    new WaveDef("ahead", 6, "Guêpes au-dessus des toits !", (EnemyType.Wasp, 10))),
+                new PhaseDef(0, 125,
+                    new WaveDef("ahead", 0, "Charognards et fourmis devant !", (EnemyType.BlackAnt, 14), (EnemyType.Scavenger, 4))),
+                new PhaseDef(0, 170,
+                    new WaveDef("ahead", 0, "Araignées sur les façades !", (EnemyType.Spider, 8), (EnemyType.BlackAnt, 8)),
+                    new WaveDef("behind", 6, null, (EnemyType.BlackAnt, 10))),
+                new PhaseDef(0, 220,
+                    new WaveDef("ahead", 0, "Dernier barrage avant le point de regroupement !", (EnemyType.RedAnt, 10), (EnemyType.AcidAnt, 8)),
+                    new WaveDef("ahead", 8, null, (EnemyType.Wasp, 10))),
+            }, Weather.Clear, MapId.City,
+            new ObjectiveDef(Route: new[] { -40f, 30f, 30f, 30f, 30f, -70f, -120f, -70f, -120f, -170f, 130f, -170f }, TruckSpeed: 4.5f)),
+        new(10, "Dernier carré",
+            "Le bourg est encerclé et l'évacuation des habitants n'est pas terminée. Tenez dix minutes face à des vagues sans fin, de plus en plus nombreuses, jusqu'au retour des hélicoptères de transport.",
+            MissionGoal.Survival, TimeOfDay.Night, 0.01f, 0,
+            new[]
+            {
+                // Survie : ces vagues tournent en boucle (une toutes les WaveInterval secondes), de plus en plus fournies.
+                new PhaseDef(0, 0, new WaveDef("north", 3, "Les voilà, à la lisière nord !", (EnemyType.BlackAnt, 12))),
+                new PhaseDef(0, 0, new WaveDef("west", 0, "Araignées dans les jardins à l'ouest !", (EnemyType.Spider, 5), (EnemyType.BlackAnt, 8))),
+                new PhaseDef(0, 0, new WaveDef("east", 0, "Guêpes au-dessus des toits !", (EnemyType.Wasp, 10))),
+                new PhaseDef(0, 0, new WaveDef("south", 0, "Elles traversent la rivière !", (EnemyType.BlackAnt, 10), (EnemyType.AcidAnt, 6))),
+                new PhaseDef(0, 0, new WaveDef("north", 0, "Fourmis rouges en masse au nord !", (EnemyType.RedAnt, 8), (EnemyType.Scavenger, 3))),
+                new PhaseDef(0, 0, new WaveDef("west", 0, "Mille-pattes à l'ouest !", (EnemyType.Centipede, 1), (EnemyType.BlackAnt, 10))),
+            }, Weather.Storm, MapId.Suburb, new ObjectiveDef(SurviveSeconds: 600f, WaveInterval: 30f, WaveGrowth: 0.12f)),
+        new(11, "Tours de verre",
             "Le quartier d'affaires est tombé. Des guêpes nichent entre les tours et les fourmis escaladent les façades pour déloger nos tireurs des toits. Tenez les hauteurs : le parking à étages, les escaliers de secours et le viaduc de l'autoroute dominent le parvis.",
             MissionGoal.Exterminate, TimeOfDay.Day, 0.0025f, 0,
             new[]
@@ -162,7 +219,7 @@ public static class Missions
                     new WaveDef("east", 0, "Dernière vague : guêpes et fourmis rouges en masse, ne lâchez pas les toits !", (EnemyType.Wasp, 18), (EnemyType.RedAnt, 10)),
                     new WaveDef("west", 6, null, (EnemyType.BlackAnt, 14), (EnemyType.Scavenger, 5))),
             }, Weather.Clear, MapId.Business),
-        new(9, "Panne générale",
+        new(12, "Panne générale",
             "Le réseau électrique a lâché : le quartier d'affaires est plongé dans le noir, sous la pluie. La colonie a creusé ses nids au pied des tours. Détruisez-les à la lueur des incendies et méfiez-vous des araignées qui guettent depuis les façades.",
             MissionGoal.DestroyNests, TimeOfDay.Night, 0.01f, 4,
             new[]
