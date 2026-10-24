@@ -50,6 +50,11 @@ public partial class Enemy : CharacterBody3D
     public static Enemy Create(World world, int id, EnemyType type, Vector3 pos, float yaw, float hpMul)
     {
         var def = Enemies.Get(type);
+        // Un cap décalé de +10 rad signale un largage (insecte lâché par la soute d'un vaisseau : il tombe, sans sortir de terre).
+        var airdrop = yaw > 8f;
+        if (airdrop) yaw -= 10f;
+        // Le vaisseau de largage arrive très haut (même altitude chez chaque pair).
+        if (type == EnemyType.DropShip) pos.Y = 78f;
         var e = new Enemy
         {
             Id = id,
@@ -77,7 +82,8 @@ public partial class Enemy : CharacterBody3D
             e.Model.Scale *= 1.12f;
         }
         var s = def.Size;
-        if (type == EnemyType.Nest)
+        if (e.IsMachine) e.CreateMachineShapes();
+        else if (type == EnemyType.Nest)
         {
             e.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 6f * s, Height = 4.5f * s }, Position = new Vector3(0, 2.2f, 0) * s });
             e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 2.2f * s }, Position = new Vector3(0, 4.3f, 0) * s });
@@ -132,11 +138,17 @@ public partial class Enemy : CharacterBody3D
         e._attackCd = (float)GD.RandRange(0.5, 1.5) * def.AttackCooldown;
         e._specialCd = 6f;
         if (def.Static) e.State = EnemyState.Moving;
+        if (airdrop)
+        {
+            e.State = EnemyState.Moving;
+            e._falling = !def.Flying;
+        }
         return e;
     }
 
     public override void _Ready()
     {
+        if (IsMachine) MachineReady();
         if (State == EnemyState.Emerging)
         {
             Model.Position = new Vector3(0, -2.5f * Def.Size, 0);
@@ -147,17 +159,25 @@ public partial class Enemy : CharacterBody3D
 
     /// <summary>Centre du corps (au-dessus des pattes, selon la normale de la surface pour les grimpeurs).</summary>
     public Vector3 Center => IsFortress ? GlobalPosition + Vector3.Up * BugModel.FortHullY
-        : GlobalPosition + (Def.Flying ? Vector3.Zero : Basis.Y * ((_segShapes != null ? 0.65f : 1.1f) * Def.Size));
+        : IsMachine ? MachineCenter
+        :GlobalPosition + (Def.Flying ? Vector3.Zero : Basis.Y * ((_segShapes != null ? 0.65f : 1.1f) * Def.Size));
 
     private bool IsFortress => Def.Type == EnemyType.Fortress;
     /// <summary>Zone visée par le canon principal pendant sa charge (hôte uniquement), sinon null.</summary>
-    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : null;
+    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : IsMachine ? MachineDangerZone : null;
 
     /// <summary>Formes de collision des segments du mille-pattes (le corps suit la trace de la tête).</summary>
     private CollisionShape3D[] _segShapes;
 
     private void AnimateModel(float dt, float speed, float attack)
     {
+        if (IsMachine)
+        {
+            Model.AnimateMachine(dt, speed, attack);
+            SyncMachineShapes();
+            if (IsShip) MachineAudio();
+            return;
+        }
         if (IsFortress) Model.AnimateFortress(dt, speed, attack);
         else Model.Animate(dt, speed, attack);
         if (_segShapes != null) SyncSegmentShapes();
@@ -177,6 +197,9 @@ public partial class Enemy : CharacterBody3D
         var d = Center.DistanceTo(p);
         if (_segShapes != null)
             foreach (var sh in _segShapes) d = Mathf.Min(d, sh.GlobalPosition.DistanceTo(p));
+        // Machines : la forme la plus proche (une roquette au pied d'un Marcheur le touche).
+        if (_mShapes != null && IsInsideTree())
+            foreach (var sh in _mShapes) d = Mathf.Min(d, sh.GlobalPosition.DistanceTo(p));
         return d;
     }
 
@@ -199,6 +222,7 @@ public partial class Enemy : CharacterBody3D
             return;
         }
         if (Def.Static) { AnimateModel(dt, 0, 0); return; }
+        if (IsMachine) { HostTickMachine(dt); return; }
         if (!Def.Boss && HostStuck(dt)) { _world.HostRespawnStuck(this); return; }
 
         _attackCd -= dt;
@@ -498,7 +522,8 @@ public partial class Enemy : CharacterBody3D
         w.Write((byte)State);
         w.Write((byte)Mathf.Clamp(Health / MaxHealth * 255f, 0, 255));
         w.Write((byte)Mathf.Clamp(_attackAnim * 255f, 0, 255));
-        w.Write((byte)Mathf.Clamp(_speedNow * 10f, 0, 255));
+        // Machines : vitesse signée (marche arrière), décalée de 12,8 m/s.
+        w.Write((byte)Mathf.Clamp(_speedNow * 10f + (IsMachine ? 128f : 0f), 0, 255));
     }
 
     // ---------------- Client ----------------
@@ -511,7 +536,7 @@ public partial class Enemy : CharacterBody3D
         if (State != EnemyState.Dead) State = state;
         Health = hpFrac * MaxHealth;
         _attackAnim = Mathf.Max(_attackAnim, attack);
-        _speedNow = speed;
+        _speedNow = IsMachine ? speed - 12.8f : speed;
     }
 
     public void ClientTick(float dt)
@@ -534,6 +559,7 @@ public partial class Enemy : CharacterBody3D
         _yaw = Mathf.Atan2(_fwd.X, _fwd.Z);
         _attackAnim = Mathf.Max(0, _attackAnim - dt * 3f);
         if (Grabbing) TickGrabFx(dt);
+        if (IsMachine) ClientTickMachine(dt);
         AnimateModel(dt, _speedNow, Grabbing ? 0f : _attackAnim);
     }
 
@@ -549,6 +575,7 @@ public partial class Enemy : CharacterBody3D
         State = EnemyState.Dead;
         CollisionLayer = 0;
         if (IsFortress) { FortressDie(); return; }
+        if (IsMachine) { MachineDie(); return; }
         var pos = Center;
         var color = Def.Type switch
         {
@@ -591,6 +618,7 @@ public partial class Enemy : CharacterBody3D
     /// </summary>
     public void CameraFade(Vector3 cam, Vector3 focus)
     {
+        if (IsMachine) { MachineCameraFade(cam); return; }
         if (IsFortress || Def.Static) return;
         var s = Def.Size;
         bool fade;
@@ -816,6 +844,7 @@ public partial class Enemy : CharacterBody3D
     /// <summary>Effets des attaques de la forteresse, joués chez tous les pairs (10 = charge, 11 = tir, 12 = drones, 2x = laser, 3x = missile).</summary>
     public void FortressFx(int kind, Vector3 target)
     {
+        if (IsMachine) { MachineFx(kind, target); return; }
         if (!IsFortress || State == EnemyState.Dead) return;
         switch (kind)
         {

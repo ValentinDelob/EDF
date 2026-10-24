@@ -432,8 +432,9 @@ public partial class Helicopter : Vehicle
             if (hit["collider"].AsGodotObject() is Enemy e && e.State != EnemyState.Dead)
             {
                 var dmg = 13f * DamageScale(p);
-                Net.I.SendDamageEnemy(e.Id, dmg, end, false);
-                _world.LocalHitFx(e, end, true, dmg);
+                var weak = e.IsMachine && e.IsWeakShape(hit["shape"].AsInt32()); // soute ouverte, noyau, genoux
+                Net.I.SendDamageEnemy(e.Id, dmg, end, weak);
+                _world.LocalHitFx(e, end, true, dmg, weak);
             }
             else
             {

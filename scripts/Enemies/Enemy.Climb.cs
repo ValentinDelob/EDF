@@ -29,8 +29,8 @@ public partial class Enemy
     /// <summary>Point de chute du cadavre (sol sous l'insecte) : position du butin.</summary>
     public Vector3 LandingPoint;
 
-    /// <summary>Insecte qui escalade les surfaces (pas les volants, ni le nid, ni les boss).</summary>
-    public bool Climbs => !Def.Flying && !Def.Static && !Def.Boss;
+    /// <summary>Insecte qui escalade les surfaces (pas les volants, ni le nid, ni les boss, ni les machines).</summary>
+    public bool Climbs => !Def.Flying && !Def.Static && !Def.Boss && !IsMachine;
 
     /// <summary>Hauteur des sondes au-dessus de la surface : en dessous, l'obstacle est enjambé ; au-dessus, c'est une paroi.</summary>
     private float ProbeH => 0.75f * Def.Size;

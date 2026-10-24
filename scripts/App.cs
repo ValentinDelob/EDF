@@ -461,7 +461,8 @@ public static partial class AutoTest
                     app.GetTree().CreateTimer(t).Timeout += () =>
                         GD.Print("[test] " + string.Join(" | ", ids.Select(i => w.EnemiesById.TryGetValue(i, out var x) ? $"{i}:{x.State} {x.GlobalPosition.Snapped(Vector3.One * 0.1f)}" : $"{i}:retiré")));
             };
-        if (Screenshot.CmdArg("showcase") != null) Showcase(app);
+        if (Screenshot.CmdArg("showcase") is { } sc && sc != "machines") Showcase(app);
+        MachineTest(app, dir);
         BoomTest(app, dir);
         WreckTest(app, dir);
         ScheduleShots(app, dir, $"mission{mission}");

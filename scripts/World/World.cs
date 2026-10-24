@@ -117,6 +117,7 @@ public partial class World : Node3D
                 LocalPlayer.GlobalPosition = spawn;
                 LocalPlayer.SetYaw(0);
                 PrewarmFade(LocalPlayer.Camera);
+                BugModel.PrewarmMachines(LocalPlayer.Camera, Mission);
             }
             else if (Net.I.Players.TryGetValue(id, out var info))
             {
@@ -623,11 +624,13 @@ public partial class World : Node3D
         return push;
     }
 
-    public Enemy HostSpawnEnemy(EnemyType type, Vector3 pos)
+    public Enemy HostSpawnEnemy(EnemyType type, Vector3 pos, bool airdrop = false)
     {
         var id = _nextEnemyId++;
         var yaw = Rng.RandfRange(-Mathf.Pi, Mathf.Pi);
-        if (Enemies.Get(type).Flying) pos.Y = Rng.RandfRange(25, 40);
+        if (Enemies.Get(type).Flying && !airdrop) pos.Y = Rng.RandfRange(25, 40);
+        // Largage par un vaisseau : signalé aux pairs par un cap décalé de +10 rad (voir Enemy.Create).
+        if (airdrop) yaw += 10f;
         var hpMul = HealthMul;
         var def = Enemies.Get(type);
         // Les grimpeurs apparaissent sur la surface la plus haute (jamais dans un immeuble ou une voiture : sur le toit).
@@ -680,6 +683,8 @@ public partial class World : Node3D
         if (e.Def.Type == EnemyType.Nest) dmg *= 0.35f;
         // Noyau de la forteresse : ×2,5 au total (le tireur a déjà appliqué ×1,5).
         if (weak && e.Def.Type == EnemyType.Fortress) dmg *= 2.5f / 1.5f;
+        // Machines : points faibles (genoux, noyau, soute ouverte) ; le vaisseau ignore le reste.
+        if (e.IsMachine && (dmg = e.HostAdjustDamage(dmg, weak)) <= 0f) return;
         e.Health -= dmg;
         if (by != Net.I.MyId) Net.I.BroadcastEnemyHit(id, at);
         if (e.Health <= 0)
@@ -693,6 +698,7 @@ public partial class World : Node3D
     public void HostExplosion(Vector3 pos, float radius, float dmg, int kind, long by)
     {
         Net.I.BroadcastExplosionFx(pos, radius, kind);
+        Enemy.BlastOrigin = pos;
         foreach (var e in EnemiesById.Values.ToList())
         {
             if (e.State == EnemyState.Dead) continue;
@@ -704,6 +710,7 @@ public partial class World : Node3D
             if (e.Def.Type == EnemyType.Nest) amount /= 0.35f; // annule la réduction de HostDamageEnemy
             HostDamageEnemy(e.Id, amount, e.Center, by, false);
         }
+        Enemy.BlastOrigin = null;
         if (kind != 3 || radius > 3)
             foreach (var b in Buildings)
             {
@@ -734,7 +741,9 @@ public partial class World : Node3D
 
     public void LocalHitFx(Enemy e, Vector3 at, bool sound = true, float damage = 0, bool weak = false)
     {
-        if (e.Def.Type == EnemyType.Fortress) Effects.Sparks(this, at, Vector3.Up);
+        if (e.Invulnerable(weak)) damage = 0; // blindage du vaisseau : ni chiffre ni dégât
+        if (e.IsMachine) e.HitSparks(at);
+        else if (e.Def.Type == EnemyType.Fortress) Effects.Sparks(this, at, Vector3.Up);
         else Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
         if (damage > 0 && Settings.I.DamageNumbers)

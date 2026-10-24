@@ -233,5 +233,34 @@ public static class Missions
                 new PhaseDef(0, 180,
                     new WaveDef("west", 0, "Mille-pattes et charognards à l'ouest, ils sortent du métro !", (EnemyType.Centipede, 2), (EnemyType.Scavenger, 6), (EnemyType.RedAnt, 8))),
             }, Weather.Rain, MapId.Business),
+        // Machines.
+        new(13, "Acier",
+            "Des marcheurs de combat extraterrestres avancent dans le centre-ville sous escorte de drones. Ils restent à distance et pilonnent au canon lourd : quittez la zone marquée en rouge dès qu'un canon se charge. Leur blindage est épais, mais les articulations des genoux cèdent vite.",
+            MissionGoal.Exterminate, TimeOfDay.Dusk, 0.006f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Contact au nord : deux marcheurs ! Visez les genoux.", (EnemyType.Walker, 2), (EnemyType.Drone, 8))),
+                new PhaseDef(3, 0,
+                    new WaveDef("east", 0, "D'autres marcheurs à l'est, avec des fourmis rouges !", (EnemyType.Walker, 2), (EnemyType.RedAnt, 10)),
+                    new WaveDef("west", 7, "Escadrille de drones à l'ouest !", (EnemyType.Drone, 10))),
+                new PhaseDef(4, 0,
+                    new WaveDef("south", 0, "Une colonne blindée remonte de la plage. Tenez la ligne !", (EnemyType.Walker, 3), (EnemyType.Drone, 12)),
+                    new WaveDef("north", 8, null, (EnemyType.AcidAnt, 10))),
+            }, Weather.Rain),
+        new(14, "Les tripodes",
+            "Des tripodes géants sortent de la forêt et réduisent le bourg en cendres avec leur rayon. Leur point faible est le noyau incandescent sous la coque. Des vaisseaux de largage déposent des fourmis : ils ne craignent rien tant que leur soute est fermée, visez l'intérieur quand elle s'ouvre.",
+            MissionGoal.Exterminate, TimeOfDay.Dusk, 0.008f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Un tripode à la lisière nord ! Visez le noyau sous la coque.", (EnemyType.Tripod, 1), (EnemyType.BlackAnt, 12))),
+                new PhaseDef(0, 45,
+                    new WaveDef("east", 0, "Vaisseau de largage en approche par l'est !", (EnemyType.DropShip, 1))),
+                new PhaseDef(6, 0,
+                    new WaveDef("west", 0, "Deux tripodes à l'ouest, et un second vaisseau !", (EnemyType.Tripod, 2), (EnemyType.DropShip, 1), (EnemyType.RedAnt, 8))),
+                new PhaseDef(5, 0,
+                    new WaveDef("south", 0, "Ils traversent la rivière avec des marcheurs. Dernier effort !", (EnemyType.Tripod, 1), (EnemyType.Walker, 2), (EnemyType.BlackAnt, 14))),
+            }, Weather.Storm, MapId.Suburb),
     };
 }

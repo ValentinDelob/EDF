@@ -589,7 +589,7 @@ public partial class Player : CharacterBody3D
                 var shape = hit["shape"].AsInt32();
                 if (col is Enemy e && e.State != EnemyState.Dead)
                 {
-                    var weak = shape == 1;
+                    var weak = e.IsWeakShape(shape);
                     var falloff = Mathf.Clamp(1.2f - muzzle.DistanceTo(end) / ws.W.Range, 0.5f, 1f);
                     var dmg = ws.W.Damage * falloff * (weak ? 1.5f : 1f) * DamageMul;
                     perEnemy.TryGetValue(e, out var acc);
@@ -664,8 +664,10 @@ public partial class Player : CharacterBody3D
             _beamDamage += ws.W.Damage * dt * DamageMul;
             if (_beamAccum >= 0.1f)
             {
-                Net.I.SendDamageEnemy(e.Id, _beamDamage, end, false);
-                World.LocalHitFx(e, end, true, _beamDamage);
+                // Machines : le rayon compte aussi les points faibles (soute ouverte du vaisseau, noyau, genoux).
+                var bweak = e.IsMachine && hit.Count > 0 && e.IsWeakShape(hit["shape"].AsInt32());
+                Net.I.SendDamageEnemy(e.Id, _beamDamage, end, bweak);
+                World.LocalHitFx(e, end, true, _beamDamage, bweak);
                 HitMarker = 1f;
                 _beamDamage = 0;
                 _beamAccum = 0;
