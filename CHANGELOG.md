@@ -1,5 +1,16 @@
 # Journal des versions
 
+## Non publié
+
+- **Nouvelle famille d'ennemis : les aliens** (spécification §10.1). Humanoïdes de 4 à 6 m en carapace d'armure sombre sur une chair grise et luisante, casque allongé à fente de capteurs violets, mandibules ; animation complète (marche à pieds posés, course, pas de côté et marche arrière, visée épaulée mains sur l'arme, mise à genou derrière un abri, sursaut à l'impact, recul du tir, chute de mort qui s'étale au sol en lâchant l'arme). Traits d'énergie violets bien visibles, sang d'ichor violet, sons synthétisés propres (tirs, téléportation, rugissement, cris de mort).
+  - **Fantassin alien** (400 PV) : se met à couvert derrière les immeubles, murs, conteneurs et camions, se relève ou se décale pour tirer en rafales de quatre traits, puis replonge ; change d'abri quand on le contourne. La tête encaisse double.
+  - **Garde alien** (1 200 PV) : bouclier de tour qui arrête les balles de face (étincelles et tintement, sans dégâts) et atténue les explosions de face ; blaster lourd, charge qui écrase le mobilier et coup de bouclier ; il abaisse son bouclier un instant après une charge. Sa cellule d'énergie dorsale est son point faible (×3).
+  - **Volant alien** (300 PV) : réacteurs dorsaux, tourne au-dessus des toits (il évite les immeubles), passes de mitraillage en rase-mottes.
+  - **Portail** (5 000 PV) : anneau de 18 m à membrane en vortex qui fait passer des escouades d'aliens, de drones et parfois un marcheur tant qu'il tient ; les balles l'égratignent, les explosifs le détruisent. Implosion et effondrement à sa destruction.
+  - Variantes élites (armure laquée rouge sang), butin des ennemis moyens (25 %, quatre caisses pour un portail), marqueurs radar (triangles), notes du bestiaire, synchronisation LAN (posture transmise dans l'instantané existant, effets par l'attaque existante, aucune RPC nouvelle). Les vaisseaux de largage déposent des fantassins dans les missions d'aliens.
+- **Deux missions** : « Débarquement » (crépuscule en ville : des soldats aliens prennent pied au centre, gardes à bouclier, vaisseau de largage et volants) et « Les portes » (quartier d'affaires : détruire quatre portails).
+- Tests : `--aliens=Type[*N],…` (combat réel, journal d'IA, `--aliens-only`, `--aliens-cam`, `--aliens-shots`, `--aliens-kill`, `--aliens-weak`), `--showcase=aliens` (vitrine figée, `--aliens-pose=aim|crouch|walk|run`), `--aliens-net` (synchronisation vue de l'hôte et du client).
+
 ## v0.9.1 — Performances (300 ennemis)
 
 - **Performances avec beaucoup d'insectes** (objectif : 300 ennemis à 60 images par seconde) : sur la ville avec 300 fourmis, de ~30 à ~55 images par seconde (150 fourmis : de ~50 à ~80), « Tours de verre » de ~30 à ~58 (150 : de ~53 à ~80), « Acier » (marcheurs et drones) de ~28 à ~50 (150 : de ~49 à ~74). Rendu, comportement et réseau inchangés.

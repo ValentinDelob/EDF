@@ -39,7 +39,8 @@ public partial class BugModel
 
     /// <summary>Insectes cuits (les machines, la forteresse et le nid gardent leurs pièces : lumières, formes recalées, peu nombreux).</summary>
     private static bool Bakes(EnemyType t) => t is EnemyType.BlackAnt or EnemyType.RedAnt or EnemyType.AcidAnt or EnemyType.Scavenger
-        or EnemyType.Queen or EnemyType.Wasp or EnemyType.Spider or EnemyType.Centipede or EnemyType.Drone;
+        or EnemyType.Queen or EnemyType.Wasp or EnemyType.Spider or EnemyType.Centipede or EnemyType.Drone
+        or EnemyType.AlienTrooper or EnemyType.AlienGuard or EnemyType.AlienFlyer;
 
     /// <summary>Racine (hors scène) de l'armature d'animation, ou null si le modèle n'est pas cuit.</summary>
     private Node3D _rig;

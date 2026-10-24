@@ -25,7 +25,8 @@ public record MissionDef(
     PhaseDef[] Phases,
     Weather Weather = Weather.Clear,
     MapId Map = MapId.City,
-    ObjectiveDef Objective = null);
+    ObjectiveDef Objective = null,
+    EnemyType NestType = EnemyType.Nest);
 
 public enum MapId { City, Port, Suburb, Business, Industrial }
 
@@ -296,5 +297,37 @@ public static class Missions
                     new WaveDef("beach", 0, "Un marcheur de combat sur l'autre rive du canal ! Ses obus font sauter les cuves, visez les genoux.", (EnemyType.Walker, 1), (EnemyType.Scavenger, 6)),
                     new WaveDef("west", 8, null, (EnemyType.RedAnt, 10), (EnemyType.Centipede, 1))),
             }, Weather.Storm, MapId.Industrial),
+        // Aliens.
+        new(17, "Débarquement",
+            "Des soldats extraterrestres ont pris pied en plein centre-ville. Ces humanoïdes de cinq mètres se mettent à couvert derrière les immeubles et les camions, puis se relèvent pour tirer en rafales : débusquez-les aux explosifs ou prenez-les à revers, et visez la tête. Les gardes avancent derrière un bouclier et chargent ; leur cellule dorsale est leur point faible.",
+            MissionGoal.Exterminate, TimeOfDay.Dusk, 0.006f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Contacts humanoïdes au nord ! Ils cherchent des abris, ne les laissez pas s'installer.", (EnemyType.AlienTrooper, 6))),
+                new PhaseDef(2, 0,
+                    new WaveDef("east", 0, "Des gardes à bouclier à l'est ! Contournez-les : la cellule dans leur dos est leur point faible.", (EnemyType.AlienGuard, 2), (EnemyType.AlienTrooper, 4)),
+                    new WaveDef("west", 7, "Drones en soutien à l'ouest !", (EnemyType.Drone, 6))),
+                new PhaseDef(3, 0,
+                    new WaveDef("east", 0, "Vaisseau de largage en approche : il dépose des fantassins. Visez la soute ouverte !", (EnemyType.DropShip, 1)),
+                    new WaveDef("north", 6, "Volants au-dessus des toits, au nord !", (EnemyType.AlienFlyer, 4))),
+                new PhaseDef(3, 0,
+                    new WaveDef("south", 0, "Dernière vague : ils remontent de la plage avec des volants. Tenez la ligne !", (EnemyType.AlienTrooper, 7), (EnemyType.AlienGuard, 2)),
+                    new WaveDef("west", 6, null, (EnemyType.AlienFlyer, 4))),
+            }, Weather.Clear, MapId.City),
+        new(18, "Les portes",
+            "Des portails extraterrestres se sont ouverts dans les terrains dévastés du quartier d'affaires. Tant qu'un portail tient debout, il laisse passer des escouades d'aliens et des machines. Détruisez-les tous : leur anneau résiste aux balles mais encaisse mal les explosifs.",
+            MissionGoal.DestroyNests, TimeOfDay.Dusk, 0.007f, 4,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("center", 3, "Portails repérés entre les tours. Détruisez-les aux explosifs !", (EnemyType.AlienTrooper, 5))),
+                new PhaseDef(0, 70,
+                    new WaveDef("east", 0, "Volants entre les tours à l'est !", (EnemyType.AlienFlyer, 5), (EnemyType.Drone, 6))),
+                new PhaseDef(0, 140,
+                    new WaveDef("west", 0, "Gardes à bouclier sur le parvis ouest !", (EnemyType.AlienGuard, 3), (EnemyType.AlienTrooper, 5))),
+                new PhaseDef(0, 210,
+                    new WaveDef("north", 0, "Un marcheur escorte une colonne sur l'avenue nord !", (EnemyType.Walker, 1), (EnemyType.AlienTrooper, 6))),
+            }, Weather.Clear, MapId.Business, null, EnemyType.Portal),
     };
 }

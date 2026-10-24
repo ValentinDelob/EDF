@@ -132,6 +132,7 @@ public partial class Enemy
         EnemyType.Walker => shape is 1 or 2,
         EnemyType.Tripod => shape == 1,
         EnemyType.DropShip => shape == 1 && HatchOpen,
+        EnemyType.Portal => false,
         _ => shape == 1,
     };
 
@@ -596,6 +597,7 @@ public partial class Enemy
         if (active >= 125) return;
         var type = CargoType();
         if (type == EnemyType.BlackAnt && GD.Randf() < 0.3f) type = EnemyType.RedAnt;
+        else if (type == EnemyType.AlienTrooper && GD.Randf() < 0.2f) type = EnemyType.AlienGuard;
         var p = Model.ShipBay + Basis * new Vector3((float)GD.RandRange(-1.5, 1.5), -1.5f, (float)GD.RandRange(-6, 6));
         var cargo = _world.HostSpawnEnemy(type, p, airdrop: true);
         Log($"largage {type} n°{cargo.Id} depuis {p.Snapped(Vector3.One)}");
@@ -609,7 +611,10 @@ public partial class Enemy
     {
         if (_cargo is { } c) return c;
         var types = _world.Mission.Phases.SelectMany(ph => ph.Waves).SelectMany(w => w.Groups).Select(g => g.type).ToList();
-        _cargo = types.Any(t => t is EnemyType.BlackAnt or EnemyType.RedAnt or EnemyType.AcidAnt) || !types.Contains(EnemyType.Drone) ? EnemyType.BlackAnt : EnemyType.Drone;
+        _cargo = types.Any(t => t is EnemyType.BlackAnt or EnemyType.RedAnt or EnemyType.AcidAnt) ? EnemyType.BlackAnt
+            // Mission d'aliens : le vaisseau dépose des fantassins (et parfois un garde).
+            : types.Contains(EnemyType.AlienTrooper) ? EnemyType.AlienTrooper
+            : !types.Contains(EnemyType.Drone) ? EnemyType.BlackAnt : EnemyType.Drone;
         return _cargo.Value;
     }
 

@@ -32,7 +32,8 @@ public class MissionDirector
         {
             for (var i = 0; i < _m.NestCount && i < w.City.NestSpots.Count; i++)
             {
-                var n = w.HostSpawnEnemy(EnemyType.Nest, w.City.NestSpots[i]);
+                // Nids d'insectes, ou portails extraterrestres (MissionDef.NestType) : mêmes emplacements, même objectif.
+                var n = w.HostSpawnEnemy(_m.NestType, w.City.NestSpots[i]);
                 _nests.Add(n);
                 _nestTimers[n] = 2f + i;
             }
@@ -49,6 +50,9 @@ public class MissionDirector
     private float PlayerScale => ScaleForPlayers(Net.I.Players.Count);
 
     private MissionObjective Obj => _w.Objective;
+
+    /// <summary>Mission de destruction de portails (au lieu de nids).</summary>
+    private bool Portals => _m.NestType == EnemyType.Portal;
 
     public void Tick(float dt)
     {
@@ -72,7 +76,8 @@ public class MissionDirector
         // Nids : génèrent des fourmis en continu.
         foreach (var nest in _nests)
         {
-            if (nest.State == EnemyState.Dead) continue;
+            // Un portail fait passer ses groupes lui-même (Enemy.HostTickPortal).
+            if (nest.State == EnemyState.Dead || nest.IsPortal) continue;
             _nestTimers[nest] -= dt;
             if (_nestTimers[nest] > 0) continue;
             _nestTimers[nest] = 3.2f / PlayerScale;
@@ -204,7 +209,7 @@ public class MissionDirector
                 break;
             case MissionGoal.DestroyNests:
                 var alive = _nests.Count(n => n.State != EnemyState.Dead);
-                _w.ObjectiveText = alive > 0 ? $"Détruire les nids · {alive} restant(s)" : "Éliminer les derniers ennemis";
+                _w.ObjectiveText = alive > 0 ? $"Détruire les {(Portals ? "portails" : "nids")} · {alive} restant(s)" : "Éliminer les derniers ennemis";
                 break;
             case MissionGoal.Boss:
                 _w.ObjectiveText = _bossKilled ? "Éliminer les derniers ennemis"
@@ -236,7 +241,7 @@ public class MissionDirector
         else if (_m.Goal == MissionGoal.DestroyNests && _nests.Any(n => n.State != EnemyState.Dead))
         {
             _w.BossHealth = _nests.Where(n => n.State != EnemyState.Dead).Sum(n => n.Health / n.MaxHealth) / _nests.Count;
-            _w.BossName = "Nids";
+            _w.BossName = Portals ? "Portails" : "Nids";
         }
         else _w.BossHealth = -1;
     }
@@ -249,10 +254,11 @@ public class MissionDirector
             _queue.Clear();
             Net.I.BroadcastMessage(e.Def.Type == EnemyType.Fortress ? "La forteresse s'effondre ! Nettoyez la zone." : "La reine est morte ! Nettoyez la zone.", 1);
         }
-        if (e.Def.Type == EnemyType.Nest)
+        if (e.Def.Type == EnemyType.Nest || e.IsPortal)
         {
             var alive = _nests.Count(n => n.State != EnemyState.Dead && n != e);
-            Net.I.BroadcastMessage(alive > 0 ? $"Nid détruit ! Encore {alive}." : "Tous les nids sont détruits ! Éliminez les survivants.", 1);
+            if (e.IsPortal) Net.I.BroadcastMessage(alive > 0 ? $"Portail détruit ! Encore {alive}." : "Tous les portails sont détruits ! Éliminez les survivants.", 1);
+            else Net.I.BroadcastMessage(alive > 0 ? $"Nid détruit ! Encore {alive}." : "Tous les nids sont détruits ! Éliminez les survivants.", 1);
             if (alive == 0)
             {
                 _queue.Clear();
