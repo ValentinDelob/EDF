@@ -345,13 +345,10 @@ public partial class ArsenalMenu : Control
         // Bandeau de titre.
         p.HexBand(260, 34, 760, 44, 20, (0f, new Color("B9EECF")), (0.48f, new Color("7ED5A2")), (0.52f, new Color("5CB681")), (1f, new Color("85D8A8")));
         p.HexBand(272, 40, 736, 32, 14, (0f, new Color("255137")), (1f, new Color("163021")));
-        var sub = "Choix des armes";
-        var subW = p.Measure(EStyle.CondBold, sub, 24);
+        // Titre seul, centré dans le bandeau (« Choix des armes » retiré à la demande).
         var title = ClassTitle(_cls);
         var titleW = p.Measure(EStyle.CondBold, title, 24);
-        var right = 990f;
-        p.Text(EStyle.CondBold, right - subW, 40, 32, sub, 24, EStyle.Text, outline: true);
-        p.Text(EStyle.CondBold, right - subW - 28 - titleW, 40, 32, title, 24, EStyle.White, outline: true);
+        p.Text(EStyle.CondBold, 640 - titleW / 2, 40, 32, title, 24, EStyle.White, outline: true);
 
         // Cadre du tableau.
         p.Poly(Pen.Chamfer(126, 94, 796, 206, 12), new Color(13 / 255f, 31 / 255f, 21 / 255f, 0.72f));
