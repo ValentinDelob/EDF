@@ -5,8 +5,9 @@ namespace Rempart;
 /// <summary>Effets visuels éphémères (traçantes, explosions, poussière, débris, impacts).</summary>
 public static class Effects
 {
+    public static string Stats => ExplosionFx.Stats;
     private static GradientTexture2D _soft;
-    private static StandardMaterial3D _smokeMat, _fireMat, _sparkMat, _dustMat;
+    private static StandardMaterial3D _smokeMat, _sparkMat, _dustMat;
 
     private static GradientTexture2D Soft
     {
@@ -44,7 +45,6 @@ public static class Effects
 
     private static StandardMaterial3D SmokeMat => _smokeMat ??= Billboard(new Color(0.35f, 0.33f, 0.31f, 0.8f), false, false);
     private static StandardMaterial3D DustMat => _dustMat ??= Billboard(new Color(0.55f, 0.52f, 0.47f, 0.75f), false, false);
-    private static StandardMaterial3D FireMat => _fireMat ??= Billboard(new Color(1f, 0.55f, 0.15f, 1f), true, true);
     private static StandardMaterial3D SparkMat => _sparkMat ??= Billboard(new Color(1f, 0.8f, 0.4f, 1f), true, true);
 
     private static void AutoFree(Node n, float seconds)
@@ -149,58 +149,21 @@ public static class Effects
         tw.TweenCallback(Callable.From(() => { m.QueueFree(); light.QueueFree(); }));
     }
 
+    /// <summary>
+    /// Explosion (effets seuls, appelée sur chaque pair) : kind 0 explosif, 2 plasma, 4 acide. Voir <see cref="ExplosionFx"/>.
+    /// </summary>
     public static void Explosion(World world, Vector3 pos, float radius, int kind)
     {
-        var root = world.FxRoot;
+        ExplosionFx.For(world).Spawn(pos, radius, kind);
         var big = radius > 6;
-        var color = kind == 2 ? new Color(0.4f, 0.7f, 1f) : new Color(1f, 0.55f, 0.18f);
-        // Boule de feu
-        var ball = new MeshInstance3D
+        if (kind == ExplosionFx.Acid)
         {
-            Mesh = new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 16, Rings = 8 },
-            MaterialOverride = Mats.Glow(color, 7f),
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        };
-        root.AddChild(ball);
-        ball.GlobalPosition = pos;
-        ball.Scale = Vector3.One * radius * 0.2f;
-        var tw = ball.CreateTween();
-        tw.TweenProperty(ball, "scale", Vector3.One * radius * 0.8f, 0.12f).SetEase(Tween.EaseType.Out);
-        tw.TweenProperty(ball, "scale", Vector3.One * 0.01f, 0.25f);
-        tw.TweenCallback(Callable.From(ball.QueueFree));
-
-        var light = new OmniLight3D { LightColor = color, LightEnergy = 12f, OmniRange = radius * 4f, ShadowEnabled = false };
-        root.AddChild(light);
-        light.GlobalPosition = pos + Vector3.Up;
-        var lt = light.CreateTween();
-        lt.TweenProperty(light, "light_energy", 0f, 0.5f);
-        lt.TweenCallback(Callable.From(light.QueueFree));
-
-        Burst(root, pos, big ? 24 : 12, 0.6f, FireMat, radius * 0.5f, Vector3.Up, 90, radius * 1.5f, radius * 3f, 2f,
-            Grad(new Color(1, 0.9f, 0.6f, 1), new Color(1, 0.4f, 0.1f, 0.8f), new Color(0.2f, 0.1f, 0.05f, 0)), 2.2f, 4f);
-        Burst(root, pos, big ? 28 : 14, big ? 4.5f : 3f, SmokeMat, radius * 0.7f, Vector3.Up, 70, radius * 0.4f, radius * 1.2f, 1.2f,
-            Grad(new Color(0.25f, 0.23f, 0.21f, 0.9f), new Color(0.4f, 0.38f, 0.36f, 0.6f), new Color(0.5f, 0.5f, 0.5f, 0)), 3.2f, 1.2f);
-        Burst(root, pos, 30, 1.2f, SparkMat, 0.25f, Vector3.Up, 80, radius * 2f, radius * 5f, -14f,
-            Grad(new Color(1, 0.9f, 0.5f, 1), new Color(1, 0.4f, 0.1f, 0)), 0.3f, 0.5f);
-        // Marque au sol
-        if (pos.Y < 1.5f)
-        {
-            var decal = new Decal
-            {
-                Size = new Vector3(radius * 1.4f, 2f, radius * 1.4f),
-                TextureAlbedo = Soft,
-                Modulate = new Color(0.05f, 0.04f, 0.03f, 0.85f),
-                CullMask = 1,
-            };
-            root.AddChild(decal);
-            decal.GlobalPosition = new Vector3(pos.X, 0.2f, pos.Z);
-            var dt = decal.CreateTween();
-            dt.TweenInterval(20f);
-            dt.TweenProperty(decal, "modulate:a", 0f, 4f);
-            dt.TweenCallback(Callable.From(decal.QueueFree));
+            Sfx.At("spit", pos, 2f, 0.6f, 40);
+            world.ShakeCamera(pos, 0.12f, radius * 5f);
+            return;
         }
         Sfx.At(big ? "explosion" : "explosion_small", pos, big ? 6f : 2f, (float)GD.RandRange(0.9, 1.1), 40);
-        world.ShakeCamera(pos, big ? 0.6f : 0.3f, radius * 8f);
+        world.ShakeCamera(pos, Mathf.Clamp(0.2f + radius * 0.03f, 0.25f, 0.8f), radius * 8f);
     }
 
     public static void Dust(World world, Vector3 pos, Vector3 size)

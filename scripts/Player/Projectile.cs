@@ -175,6 +175,8 @@ public partial class Projectile : Node3D
             if (Kind == ProjectileKind.Laser) Effects.Sparks(_world, pos, normal);
             else if (Kind == ProjectileKind.Bomb) Effects.Explosion(_world, pos + normal * 0.3f, Radius * 0.8f, 0);
             else Effects.Goo(_world, pos, Kind == ProjectileKind.Web ? new Color(0.9f, 0.9f, 0.85f) : new Color(0.7f, 0.95f, 0.15f), Kind == ProjectileKind.AcidBig ? 2f : 0.8f, 8);
+            // Gros jet d'acide : éclaboussure et gaz toxique (effet seul, sans feu).
+            if (Kind == ProjectileKind.AcidBig) Effects.Explosion(_world, pos + normal * 0.2f, 3.5f, ExplosionFx.Acid);
             if (Authoritative) _world.HostEnemyProjectileImpact(this, pos);
         }
         else if (Authoritative)

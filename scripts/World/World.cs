@@ -57,6 +57,8 @@ public partial class World : Node3D
     private readonly Dictionary<long, bool> _downed = new();
     private PauseMenu _pause;
     private WorldEnvironment _env;
+    public Godot.Environment Env => _env?.Environment;
+    public DirectionalLight3D Sun => _sun;
     private DirectionalLight3D _sun;
 
     public event Action<bool> Finished;
@@ -80,6 +82,7 @@ public partial class World : Node3D
     {
         FxRoot = new Node3D { Name = "Fx" };
         AddChild(FxRoot);
+        ExplosionFx.For(this); // émetteurs et textures prêts avant le premier tir (pas d'à-coup à la première explosion)
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
         City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };

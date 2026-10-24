@@ -475,7 +475,110 @@ public static class AutoTest
                     c.Model.SeedCentipedeTrail(0.45f);
                 }
             };
+        BoomTest(app, dir);
         ScheduleShots(app, dir, $"mission{mission}");
+    }
+
+    private static float[] FloatList(string s) => (s ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(x => float.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var f) ? f : 0f).ToArray();
+
+    /// <summary>
+    /// Tests des explosions (effets seuls, aucun dégât) :
+    /// --boom=N : N explosions par seconde autour du joueur à partir de 5 s (salves de roquettes, mesure avec --fps) ;
+    /// --boom-at=T1,T2 [--boom-kind=K1,K2] [--boom-radius=R1,R2] [--boom-dist=D] : une explosion à D m (20) devant la caméra
+    /// à chaque instant, avec captures à +0,05 / 0,2 / 0,6 / 1,5 / 4 s (le bot reste immobile et ne tire pas).
+    /// </summary>
+    private static void BoomTest(App app, string dir)
+    {
+        var tree = app.GetTree();
+        // --boom=0 : même mesure sans explosion (référence).
+        if (Screenshot.CmdArg("boom") is { } bs && float.TryParse(bs, NumberStyles.Float, CultureInfo.InvariantCulture, out var perSec) && perSec >= 0)
+        {
+            var rng = new RandomNumberGenerator { Seed = 7 };
+            var count = 0;
+            void Tick()
+            {
+                if (Screenshot.CmdArg("novsync") != null && (Engine.MaxFps != 0 || DisplayServer.WindowGetVsyncMode() != DisplayServer.VSyncMode.Disabled))
+                {
+                    // Les réglages vidéo du profil sont réappliqués au lancement de la mission : mesure sans plafond.
+                    DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+                    Engine.MaxFps = 0;
+                }
+                var w = app.CurrentWorld;
+                if (perSec <= 0) { tree.CreateTimer(1f, false).Timeout += Tick; return; }
+                if (w?.LocalPlayer != null && GodotObject.IsInstanceValid(w.LocalPlayer))
+                {
+                    var cam = w.GetViewport().GetCamera3D();
+                    var fwd = cam != null ? -cam.GlobalBasis.Z : Vector3.Forward;
+                    var yaw = Mathf.Atan2(fwd.X, fwd.Z) + rng.RandfRange(-1.1f, 1.1f);
+                    var d = rng.RandfRange(10f, 55f);
+                    var p = w.LocalPlayer.GlobalPosition + new Vector3(Mathf.Sin(yaw), 0, Mathf.Cos(yaw)) * d;
+                    p.Y = rng.Randf() < 0.8f ? 0.4f : rng.RandfRange(2f, 12f);
+                    var roll = rng.Randf();
+                    int kind = roll < 0.12f ? 2 : roll < 0.17f ? 4 : 0;
+                    var radius = roll > 0.9f ? rng.RandfRange(12f, 22f) : rng.RandfRange(4f, 10f);
+                    if (kind == 4) Effects.Explosion(w, p, radius * 0.6f, 4); else w.OnExplosionFx(p, radius, kind);
+                    count++;
+                }
+                tree.CreateTimer(1f / perSec, false).Timeout += Tick;
+            }
+            tree.CreateTimer(5f, false).Timeout += Tick;
+            // Moyenne d'images par seconde depuis 10 s (chargement et premières explosions exclus) et pire image.
+            ulong startFrame = 0, startMs = 0;
+            var worst = 0.0;
+            void Report()
+            {
+                var now = Time.GetTicksMsec();
+                if (startMs == 0 && app.CurrentWorld != null && app.CurrentWorld.Elapsed > 6f) { startMs = now; startFrame = Engine.GetProcessFrames(); worst = 0; }
+                var avg = startMs > 0 && now > startMs ? (Engine.GetProcessFrames() - startFrame) * 1000.0 / (now - startMs) : 0;
+                GD.Print($"[boom] {count} explosions, {Engine.GetFramesPerSecond()} i/s (moyenne {avg:0}, pire image {worst * 1000:0} ms), {Effects.Stats}");
+                tree.CreateTimer(2f, true, false, true).Timeout += Report;
+            }
+            void Worst()
+            {
+                if (startMs > 0) worst = Mathf.Max(worst, app.GetProcessDeltaTime());
+                tree.CreateTimer(0, true, false, true).Timeout += Worst;
+            }
+            tree.CreateTimer(6f, true, false, true).Timeout += Report;
+            tree.CreateTimer(6f, true, false, true).Timeout += Worst;
+        }
+
+        if (Screenshot.CmdArg("boom-at") is not { } ba) return;
+        var times = FloatList(ba);
+        var kinds = FloatList(Screenshot.CmdArg("boom-kind") ?? "0");
+        var radii = FloatList(Screenshot.CmdArg("boom-radius") ?? "6");
+        var dist = float.TryParse(Screenshot.CmdArg("boom-dist") ?? "20", NumberStyles.Float, CultureInfo.InvariantCulture, out var dd) ? dd : 20f;
+        Player.BotStill = true;
+        Player.BotHoldFire = true;
+        for (var i = 0; i < times.Length; i++)
+        {
+            var kind = (int)kinds[Mathf.Min(i, kinds.Length - 1)];
+            var radius = radii[Mathf.Min(i, radii.Length - 1)];
+            var at = times[i];
+            tree.CreateTimer(at, true, false, true).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                var cam = w?.GetViewport().GetCamera3D();
+                if (cam == null) return;
+                var fwd = -cam.GlobalBasis.Z;
+                fwd.Y = 0;
+                var p = cam.GlobalPosition + fwd.Normalized() * dist;
+                p.Y = 0.4f;
+                if (kind == 4) Effects.Explosion(w, p, radius, 4); else w.OnExplosionFx(p, radius, kind);
+            };
+            if (dir == null) continue;
+            foreach (var dt in new[] { 0.05f, 0.2f, 0.6f, 1.5f, 4f })
+            {
+                var name = $"boom_k{kind}_r{radius:0}_t{at:0}_{dt.ToString("0.00", CultureInfo.InvariantCulture)}";
+                tree.CreateTimer(at + dt, true, false, true).Timeout += () =>
+                {
+                    // Enregistrement PNG hors du fil principal : les captures suivantes restent à l'heure.
+                    var img = app.GetViewport().GetTexture().GetImage();
+                    var path = $"{dir}/{name}_f{Engine.GetFramesDrawn()}.png";
+                    System.Threading.Tasks.Task.Run(() => img.SavePng(path));
+                };
+            }
+        }
     }
 
     /// <summary>
