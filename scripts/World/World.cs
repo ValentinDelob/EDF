@@ -76,9 +76,28 @@ public partial class World : Node3D
 
     public override void _EnterTree() => Current = this;
 
+    /// <summary>Carte souterraine (réseau de tunnels) : pas de ciel, pas d'appui aérien.</summary>
+    public bool Underground => Mission.Map == MapId.Underground;
+
+    /// <summary>Frappes, barrage d'artillerie et véhicules (de départ ou appelés) possibles sur cette carte.</summary>
+    public bool AirSupport => !Underground;
+
+    /// <summary>
+    /// Départ d'un rayon vertical vers le bas au-dessus de (x, z) : <paramref name="fallback"/> à ciel ouvert ; sous terre,
+    /// juste sous la voûte au-dessus de <paramref name="from"/> (sinon le rayon touche le dessus de la coque).
+    /// </summary>
+    public float ProbeTop(Vector3 from, float fallback)
+    {
+        if (!Underground) return fallback;
+        var start = new Vector3(from.X, Mathf.Max(from.Y, 0f) + 0.3f, from.Z);
+        var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(start, new Vector3(from.X, Mathf.Max(fallback, start.Y + 0.1f), from.Z), 1));
+        return hit.Count > 0 ? Mathf.Max(((Vector3)hit["position"]).Y - 0.25f, start.Y) : fallback;
+    }
+
     public override void _ExitTree()
     {
         if (Current == this) Current = null;
+        if (Underground) GetViewport().UseOcclusionCulling = false;
         Input.MouseMode = Input.MouseModeEnum.Visible;
     }
 
@@ -90,7 +109,7 @@ public partial class World : Node3D
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
         Decor = Destructibles.Begin(this);
-        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), MapId.Underground => UndergroundBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
         Decor.EndBuild();
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
@@ -116,6 +135,7 @@ public partial class World : Node3D
                 AddChild(LocalPlayer);
                 LocalPlayer.GlobalPosition = spawn;
                 LocalPlayer.SetYaw(0);
+                if (Underground) UndergroundBuilder.AttachTorch(LocalPlayer.Camera, true);
                 PrewarmFade(LocalPlayer.Camera);
                 BugModel.PrewarmMachines(LocalPlayer.Camera, Mission);
                 BugModel.PrewarmTitan(LocalPlayer.Camera, Mission);
@@ -125,6 +145,7 @@ public partial class World : Node3D
             {
                 var r = RemotePlayer.Create(info, spawn);
                 AddChild(r);
+                if (Underground) UndergroundBuilder.AttachTorch(r.Model, false);
                 Remotes[id] = r;
             }
         }
@@ -138,9 +159,13 @@ public partial class World : Node3D
         Input.MouseMode = Input.MouseModeEnum.Captured;
 
         Allies = new AllyManager(this);
-        // Char de combat et hélicoptère d'attaque garés près du point de départ (mêmes identifiants chez tous les pairs).
-        AddVehicle(Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi));
-        AddVehicle(Helicopter.Create(this, 2, new Vector3(-16, 0.3f, 24), Mathf.Pi));
+        // Char de combat et hélicoptère d'attaque garés près du point de départ (mêmes identifiants chez tous les pairs),
+        // sauf sur une carte sans appui aérien (réseau souterrain).
+        if (AirSupport)
+        {
+            AddVehicle(Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi));
+            AddVehicle(Helicopter.Create(this, 2, new Vector3(-16, 0.3f, 24), Mathf.Pi));
+        }
         // Véhicules supplémentaires de la carte (base militaire) : identifiants 3, 4… dans l'ordre du générateur.
         for (var i = 0; i < City.Vehicles.Count; i++)
         {
@@ -195,6 +220,7 @@ public partial class World : Node3D
         };
         Grade.Apply(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         if (Mission.Map == MapId.Desert) DesertBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
+        if (Underground) UndergroundBuilder.ApplyGrade(env, _sun);
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);
         AddChild(_sun);
@@ -222,6 +248,7 @@ public partial class World : Node3D
         _sun.DirectionalShadowMaxDistance = q switch { 0 => 80f, 1 => 140f, 2 => 220f, _ => 320f };
         _sun.ShadowEnabled = true;
         RenderingServer.DirectionalSoftShadowFilterSetQuality(q >= 2 ? RenderingServer.ShadowQuality.SoftHigh : RenderingServer.ShadowQuality.SoftLow);
+        if (Underground) UndergroundBuilder.ApplyGraphics(env, _sun, q);
         if (LocalPlayer?.Camera != null) LocalPlayer.Camera.Fov = Settings.I.Fov;
     }
 
@@ -702,9 +729,11 @@ public partial class World : Node3D
         var hpMul = HealthMul;
         var def = Enemies.Get(type);
         // Les grimpeurs apparaissent sur la surface la plus haute (jamais dans un immeuble ou une voiture : sur le toit).
+        // Sous terre, un point d'apparition dans la roche est ramené dans la galerie praticable la plus proche.
+        if (Underground && !def.Flying && Flow.IsBlocked(pos)) pos = Flow.NearestFree(pos, 12) ?? pos;
         if (!def.Flying && !def.Static && !def.Boss)
         {
-            var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(new Vector3(pos.X, 200f, pos.Z), new Vector3(pos.X, -5f, pos.Z), 1));
+            var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(new Vector3(pos.X, ProbeTop(pos, 200f), pos.Z), new Vector3(pos.X, -5f, pos.Z), 1));
             if (hit.Count > 0) pos.Y = Mathf.Max(pos.Y, ((Vector3)hit["position"]).Y);
         }
         if (!def.Static && !def.Boss && !Enemy.Frozen && Rng.Randf() < 0.06f) hpMul = -hpMul; // élite
@@ -1054,6 +1083,12 @@ public partial class World : Node3D
     {
         if (CratesById.ContainsKey(id)) return;
         var c = Crate.Create(id, type, pos);
+        // Sous terre : la caisse se pose sur le quai, l'éboulis ou la dalle où elle tombe (pas dans le volume).
+        if (Underground)
+        {
+            var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(pos + Vector3.Up * 1.5f, pos + Vector3.Down * 3f, 1));
+            if (hit.Count > 0) c.Floor = Mathf.Max(0.45f, ((Vector3)hit["position"]).Y + 0.45f);
+        }
         AddChild(c);
         CratesById[id] = c;
     }
@@ -1183,6 +1218,7 @@ public partial class World : Node3D
 
     public void OnAirstrike(long from, Vector3 target, Vector3 dir, float dmg, int count, float radius)
     {
+        if (!AirSupport) return; // sous terre : aucune frappe ne passe (le tireur l'a déjà refusée)
         // Marqueur fumigène rouge sur la cible.
         var marker = new MeshInstance3D
         {

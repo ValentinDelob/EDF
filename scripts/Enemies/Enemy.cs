@@ -41,6 +41,8 @@ public partial class Enemy : StaticBody3D
     /// <summary>Élément de l'objectif visé ce tic (hôte), ou null : voir <see cref="MissionObjective.HostPickTarget"/>.</summary>
     private Guard _guard;
     private float _leapT = -1f;
+    /// <summary>Hauteur de la parabole du bond (abaissée sous une voûte basse).</summary>
+    private float _leapArc;
     private Vector3 _leapFrom, _leapTo;
     private float _specialCd;
 
@@ -370,6 +372,28 @@ public partial class Enemy : StaticBody3D
     private Vector3 _progressPos;
 
     /// <summary>
+    /// Pas d'un boss limité à <paramref name="area"/> (et, sous terre, aux cellules praticables devant son corps) :
+    /// sinon il glisse sur un seul axe, ou reste sur place.
+    /// </summary>
+    private Vector3 HoldInside(Rect2 area, Vector3 pos, Vector3 next)
+    {
+        bool Ok(Vector3 p)
+        {
+            if (!area.HasPoint(new Vector2(p.X, p.Z))) return false;
+            if (!_world.Underground) return true;
+            var d = p - pos;
+            d.Y = 0;
+            var ahead = d.LengthSquared() > 1e-6f ? p + d.Normalized() * (2.5f * Def.Size) : p;
+            return !_world.Flow.IsBlocked(p) && !_world.Flow.IsBlocked(ahead);
+        }
+        if (Ok(next)) return next;
+        var sx = new Vector3(next.X, pos.Y, pos.Z);
+        if (Ok(sx)) return sx;
+        var sz = new Vector3(pos.X, pos.Y, next.Z);
+        return Ok(sz) ? sz : pos;
+    }
+
+    /// <summary>
     /// Détection de blocage (hôte) : sous la carte ou hors limites → réapparition rapide ;
     /// presque immobile pendant 15 s, ou sans se rapprocher de sa cible pendant 25 s, alors qu'elle est loin → réapparition aussi.
     /// </summary>
@@ -439,7 +463,7 @@ public partial class Enemy : StaticBody3D
             {
                 _leapT += dt / 0.9f;
                 var k = Mathf.Min(_leapT, 1f);
-                var p = _leapFrom.Lerp(_leapTo, k) + Vector3.Up * (Mathf.Sin(k * Mathf.Pi) * (6f + 2f * Def.Size));
+                var p = _leapFrom.Lerp(_leapTo, k) + Vector3.Up * (Mathf.Sin(k * Mathf.Pi) * _leapArc);
                 GlobalPosition = p;
                 _speedNow = 0;
                 OrientOnSurface(toGoal, dt);
@@ -450,9 +474,17 @@ public partial class Enemy : StaticBody3D
             {
                 _specialCd = (float)GD.RandRange(4, 7);
                 var land = pos + toGoal.Normalized() * Mathf.Min(dist - 3f * Def.Size, 28f);
-                var top = new Vector3(land.X, Mathf.Max(pos.Y, goal.Y) + 30f, land.Z);
-                if (Ray(top, top + Vector3.Down * 80f, out var lp, out var ln) && ln.Y > 0.7f)
+                var top = new Vector3(land.X, _world.ProbeTop(new Vector3(land.X, Mathf.Max(pos.Y, goal.Y), land.Z), Mathf.Max(pos.Y, goal.Y) + 30f), land.Z);
+                // Sous terre : jamais dans la roche, et la parabole reste sous la voûte.
+                var underRock = _world.Underground && _world.Flow.IsBlocked(land);
+                if (!underRock && Ray(top, top + Vector3.Down * 80f, out var lp, out var ln) && ln.Y > 0.7f)
                 {
+                    _leapArc = 6f + 2f * Def.Size;
+                    if (_world.Underground)
+                    {
+                        var mid = (pos + lp) / 2;
+                        _leapArc = Mathf.Clamp(_world.ProbeTop(mid, mid.Y + _leapArc + 2f * Def.Size) - mid.Y - 2f * Def.Size, 0.5f, _leapArc);
+                    }
                     _leapFrom = pos;
                     _leapTo = lp;
                     _surfN = ln;
@@ -498,6 +530,8 @@ public partial class Enemy : StaticBody3D
             var step = _moveDir * speed * dt;
             var next = pos + step;
             if (!Def.Boss && _world.Flow.IsBlocked(next) && !_world.Flow.IsBlocked(pos)) next = pos; // ne traverse pas les immeubles
+            // Boss tenu dans son emprise (la reine reste dans sa caverne) : il glisse le long du bord.
+            if (Def.Boss && _world.City?.BossArea is { } area) next = HoldInside(area, pos, next);
             next.Y = 0;
             _speedNow = (next - pos).Length() / Mathf.Max(dt, 0.0001f);
             GlobalPosition = next;

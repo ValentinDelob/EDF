@@ -26,7 +26,7 @@ public static class MissionProgress
 
     public static string Label(MissionDef m) => $"{m.Index + 1:00}. {m.Name}";
 
-    public static string Zone(MissionDef m) => m.Map switch { MapId.Port => "port", MapId.Suburb => "banlieue", MapId.Business => "affaires", MapId.Industrial => "industrielle", MapId.Desert => "désert", _ => "ville" };
+    public static string Zone(MissionDef m) => m.Map switch { MapId.Port => "port", MapId.Suburb => "banlieue", MapId.Business => "affaires", MapId.Industrial => "industrielle", MapId.Desert => "désert", MapId.Underground => "souterraine", _ => "ville" };
 
     public static string Goal(MissionDef m) => m.Goal switch
     {
@@ -38,7 +38,7 @@ public static class MissionProgress
         _ => "élimination du boss",
     };
 
-    public static string Time(MissionDef m) => m.Time switch { TimeOfDay.Day => "jour", TimeOfDay.Dusk => "crépuscule", _ => "nuit" };
+    public static string Time(MissionDef m) => m.Map == MapId.Underground ? "sous terre, obscurité" : m.Time switch { TimeOfDay.Day => "jour", TimeOfDay.Dusk => "crépuscule", _ => "nuit" };
 
     /// <summary>Vignette de mission (capture en jeu, assets/missions/mission_N.jpg), ou null.</summary>
     public static Texture2D Thumbnail(int mission)

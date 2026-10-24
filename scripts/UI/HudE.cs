@@ -322,7 +322,9 @@ public partial class HudArmor : HudBlock
     {
         var cost = CallIns.Costs[p.CallChoice];
         var busy = p.CalledVehicleBusy;
-        var state = busy ? 2 : p.CallCredits >= cost ? 1 : 0;
+        // Sans appui aérien (réseau souterrain) : plaque éteinte, « hors liaison ».
+        var noLink = !p.World.AirSupport;
+        var state = noLink ? 3 : busy ? 2 : p.CallCredits >= cost ? 1 : 0;
         var credits = Mathf.FloorToInt(p.CallCredits);
         if (credits != _credInt) { _credInt = credits; _cred = credits.ToString(); }
         if (p.CallChoice != _credChoice || state != _credState)
@@ -330,7 +332,7 @@ public partial class HudArmor : HudBlock
             _credChoice = p.CallChoice;
             _credState = state;
             var name = CallIns.Names[p.CallChoice];
-            _credLabel = busy ? $"{name} engagé" : $"{name} {cost:0}";
+            _credLabel = noLink ? "hors liaison" : busy ? $"{name} engagé" : $"{name} {cost:0}";
         }
         var ready = state == 1;
         Plate(VehShape, HudE.Plate, ready ? HudE.Frame : HudE.Line, 1.4f);

@@ -36,6 +36,7 @@ uniform float puddles = 0.0;    // flaques sur les surfaces horizontales
 uniform float macro_var = 1.0;  // variation de teinte à grande échelle
 uniform float desat = 0.0;      // désaturation de l'albédo
 uniform float rust = 0.0;       // rouille (métaux peints)
+uniform float emission_patch = 0.0; // émission limitée à des plaques (échelle du masque monde ; 0 : partout)
 
 varying vec3 v_wpos;
 varying vec3 v_wnrm;
@@ -78,6 +79,7 @@ void fragment() {
 		a = tri(albedo_tex);
 		nm = tri(normal_tex).rgb;
 		r = tri(rough_tex).r;
+		if (emission_energy > 0.0) em = tri(emission_tex).rgb;
 	}
 	vec3 col = albedo.rgb * a.rgb;
 	if (vertex_color) col *= COLOR.rgb;
@@ -128,6 +130,8 @@ void fragment() {
 	SPECULAR = specular;
 	NORMAL_MAP = nm;
 	NORMAL_MAP_DEPTH = normal_depth;
+	// Lueur par plaques (paroi de ruche) : masque de variation lente en coordonnées monde (0 : partout).
+	if (emission_patch > 0.0) em *= smoothstep(0.5, 0.72, texture(grime_tex, wp * emission_patch + vec2(0.41, 0.17)).b);
 	EMISSION = em * emission_energy;
 }
 ";

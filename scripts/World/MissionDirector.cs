@@ -86,7 +86,13 @@ public class MissionDirector
             if (near >= 10) continue;
             var type = _w.Rng.Randf() < 0.2f ? EnemyType.RedAnt : EnemyType.BlackAnt;
             var a = _w.Rng.Randf() * Mathf.Tau;
-            _w.HostSpawnEnemy(type, nest.GlobalPosition + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (9f * nest.Def.Size + 2f * Enemies.Get(type).Size));
+            var ring = 9f * nest.Def.Size + 2f * Enemies.Get(type).Size;
+            var at = nest.GlobalPosition + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * ring;
+            // Sous terre : la couronne passe dans la roche, on cherche un angle dans la galerie (sinon plus près du nid).
+            if (_w.Underground)
+                for (var k = 1; k < 8 && _w.Flow.IsBlocked(at); k++)
+                    at = nest.GlobalPosition + new Vector3(Mathf.Cos(a + k * 0.785f), 0, Mathf.Sin(a + k * 0.785f)) * (k < 6 ? ring : ring * 0.6f);
+            _w.HostSpawnEnemy(type, at);
             active++;
         }
 
