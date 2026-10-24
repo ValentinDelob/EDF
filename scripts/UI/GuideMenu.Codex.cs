@@ -33,6 +33,7 @@ public partial class GuideMenu
         EnemyType.AlienGuard => "Colosse cuirassé derrière un bouclier de tour qui arrête les balles. Charge et frappe au bouclier, qu'il abaisse un instant après la charge. Contournez-le : la cellule d'énergie dans son dos est son point faible.",
         EnemyType.AlienFlyer => "Alien à réacteurs dorsaux. Tourne au-dessus des toits, passe en rase-mottes pour mitrailler au laser. Fragile : abattez-le pendant ses passes.",
         EnemyType.Portal => "Anneau extraterrestre qui fait passer des escouades d'aliens et des machines tant qu'il tient. Les balles l'égratignent à peine : employez les explosifs.",
+        EnemyType.Mothership => "Vaisseau de commandement de plusieurs centaines de mètres, en vol stationnaire au-dessus de la ville. Ses soutes lâchent drones, volants et vaisseaux de largage ; son canon principal dévaste une zone entière, annoncée par un disque au sol. Sa coque est invulnérable : visez le cœur et les trappes quand le canon s'ouvre, et abattez ses tourelles.",
         _ => "Données en cours d'analyse.",
     };
 

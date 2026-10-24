@@ -135,6 +135,8 @@ public partial class Enemy
         // Titan : la tête, et la chair à vif des plaques brisées (formes 16 à 23).
         EnemyType.Titan => shape == 1 || shape >= 16 && shape < 16 + BugModel.TitanPlateCount && TitanPlateBroken(shape - 16),
         EnemyType.Portal => false,
+        // Vaisseau-mère : le cœur du canon, seulement ouvert.
+        EnemyType.Mothership => shape == 1 && _msOpen,
         _ => shape == 1,
     };
 

@@ -374,7 +374,7 @@ public class WeaponInstance
 }
 
 public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede, Walker, Tripod, DropShip, Titan,
-    AlienTrooper, AlienGuard, AlienFlyer, Portal }
+    AlienTrooper, AlienGuard, AlienFlyer, Portal, Mothership }
 
 public record EnemyDef(
     EnemyType Type,
@@ -437,6 +437,10 @@ public static class Enemies
         new(EnemyType.AlienGuard, "Garde alien", 1200, 4.4f, 30, 6.5f, 2.4f, 1.5f, 0.25f),
         new(EnemyType.AlienFlyer, "Volant alien", 300, 13f, 5, 65f, 2.8f, 1.2f, 0.25f, Flying: true, Ranged: true),
         new(EnemyType.Portal, "Portail", 5000, 0, 0, 0, 0, 4f, 1f, Static: true),
+        // Vaisseau-mère (boss final, spécification §10.2) : coque de plusieurs centaines de mètres en vol stationnaire au-dessus
+        // de la capitale, construite en mètres (pas de gigantisme). Damage = un tic de 0,1 s du canon principal au centre de
+        // la colonne (tourelles et retombées en fractions) ; vulnérable seulement par le canon ouvert (voir Enemy.Mothership.cs).
+        new(EnemyType.Mothership, "Vaisseau-mère", 500000, 2.4f, 14, 420f, 2f, 10f, 1f, Flying: true, Ranged: true, Boss: true),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];

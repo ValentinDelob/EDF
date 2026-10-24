@@ -512,6 +512,15 @@ public partial class HudRadar : HudBlock
                     DrawColoredPolygon(pts, HudE.Enemy);
                     DrawPolyline(new[] { pts[0], pts[1], pts[2], pts[3], pts[0] }, HudE.Ink, 1f, true);
                 }
+                else if (e.IsMothership)
+                {
+                    // Vaisseau-mère : grand hexagone cerclé ; pendant la charge et le tir, zone visée par le canon (anneau pulsé).
+                    var hex = new Vector2[7];
+                    for (var hi = 0; hi < 7; hi++) hex[hi] = q + new Vector2(Mathf.Cos(hi * Mathf.Tau / 6f), Mathf.Sin(hi * Mathf.Tau / 6f)) * 10f;
+                    DrawColoredPolygon(hex[..6], new Color(HudE.Enemy, 0.85f));
+                    DrawPolyline(hex, HudE.Ink, 1.2f, true);
+                    DrawArc(q, 14f, 0, Mathf.Tau, 24, new Color(HudE.Enemy, 0.7f), 1.5f, true);
+                }
                 else if (e.IsTitan)
                 {
                     // Titan : grand disque cerclé d'un anneau, trait vers où il regarde (direction du souffle).
@@ -540,6 +549,16 @@ public partial class HudRadar : HudBlock
             {
                 off++;
                 OffTri(v / len, HudE.Enemy);
+            }
+            // Vaisseau-mère : zone visée par le canon (charge et tir), anneau pulsé, même hors de portée du vaisseau lui-même.
+            if (e.IsMothership && e.MothershipDangerZone is { } dz)
+            {
+                var zv = Rel(p, yaw, dz);
+                if (zv.Length() <= Range)
+                {
+                    var pr = 20f * k + 2f * Mathf.Sin(Time.GetTicksMsec() / 110f);
+                    DrawArc(C + zv * k, Mathf.Max(pr, 6f), 0, Mathf.Tau, 24, HudE.Enemy, 2.2f, true);
+                }
             }
         }
 

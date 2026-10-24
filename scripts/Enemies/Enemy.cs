@@ -57,6 +57,8 @@ public partial class Enemy : StaticBody3D
         if (airdrop) yaw -= 10f;
         // Le vaisseau de largage arrive très haut (même altitude chez chaque pair).
         if (type == EnemyType.DropShip) pos.Y = 78f;
+        // Le vaisseau-mère arrive des nuages (même altitude chez chaque pair), puis descend en position.
+        if (type == EnemyType.Mothership) pos.Y = BugModel.MsArrivalAlt;
         var e = new Enemy
         {
             Id = id,
@@ -85,6 +87,7 @@ public partial class Enemy : StaticBody3D
         }
         var s = def.Size;
         if (e.IsMachine) e.CreateMachineShapes();
+        else if (type == EnemyType.Mothership) e.CreateMothershipShapes(hpMul);
         else if (type == EnemyType.Titan) e.CreateTitanShapes(hpMul);
         else if (e.IsAlienKind) e.CreateAlienShapes();
         else if (type == EnemyType.Nest)
@@ -153,6 +156,7 @@ public partial class Enemy : StaticBody3D
     public override void _Ready()
     {
         if (IsMachine) MachineReady();
+        if (IsMothership) MothershipReady();
         if (IsTitan) TitanReady();
         if (IsAlienKind) AlienReady();
         if (State == EnemyState.Emerging)
@@ -172,7 +176,7 @@ public partial class Enemy : StaticBody3D
 
     private bool IsFortress => Def.Type == EnemyType.Fortress;
     /// <summary>Zone visée par le canon principal pendant sa charge (hôte uniquement), sinon null.</summary>
-    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : IsMachine ? MachineDangerZone : IsTitan ? BreathAim() : null;
+    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : IsMachine ? MachineDangerZone : IsTitan ? BreathAim() : IsMothership ? MothershipDangerZone : null;
 
     /// <summary>Formes de collision des segments du mille-pattes (le corps suit la trace de la tête).</summary>
     private CollisionShape3D[] _segShapes;
@@ -245,6 +249,13 @@ public partial class Enemy : StaticBody3D
             if (IsShip) MachineAudio();
             return;
         }
+        if (IsMothership)
+        {
+            Model.AnimateMothership(dt);
+            SyncMothershipShapes();
+            MothershipAudio();
+            return;
+        }
         if (IsTitan)
         {
             Model.AnimateTitan(dt, speed, attack);
@@ -299,6 +310,7 @@ public partial class Enemy : StaticBody3D
     {
         if (State == EnemyState.Dead) return;
         if (IsAlienKind) { HostTickAlien(dt); return; }
+        if (IsMothership) { HostTickMothership(dt); return; }
         if (Frozen && State != EnemyState.Emerging)
         {
             // Vitrine : le titan figé joue quand même ses attaques forcées (tests).
@@ -667,6 +679,7 @@ public partial class Enemy : StaticBody3D
         if (Grabbing) TickGrabFx(dt);
         if (IsMachine) ClientTickMachine(dt);
         if (IsTitan) ClientTickTitan(dt);
+        if (IsMothership) ClientTickMothership(dt);
         if (IsAlien) ClientTickAlien(dt);
         AnimateModel(dt, _speedNow, Grabbing ? 0f : _attackAnim);
     }
@@ -685,6 +698,7 @@ public partial class Enemy : StaticBody3D
         if (IsFortress) { FortressDie(); return; }
         if (IsMachine) { MachineDie(); return; }
         if (IsTitan) { TitanDie(); return; }
+        if (IsMothership) { MothershipDie(); return; }
         if (IsAlienKind) { AlienDie(); return; }
         var pos = Center;
         var color = Def.Type switch
@@ -729,6 +743,7 @@ public partial class Enemy : StaticBody3D
     public void CameraFade(Vector3 cam, Vector3 focus)
     {
         if (IsMachine) { MachineCameraFade(cam); return; }
+        if (IsMothership) { MothershipCameraFade(); return; }
         if (IsTitan) { TitanCameraFade(cam); return; }
         if (IsAlienKind) { AlienCameraFade(cam, focus); return; }
         if (IsFortress || Def.Static) return;
@@ -958,6 +973,7 @@ public partial class Enemy : StaticBody3D
     public void FortressFx(int kind, Vector3 target)
     {
         if (IsMachine) { MachineFx(kind, target); return; }
+        if (IsMothership) { MothershipFx(kind, target); return; }
         if (IsTitan) { TitanFx(kind, target); return; }
         if (IsAlienKind) { AlienFx(kind, target); return; }
         if (!IsFortress || State == EnemyState.Dead) return;

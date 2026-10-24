@@ -168,7 +168,7 @@ public partial class Tank : Vehicle
             if (hit["collider"].AsGodotObject() is Enemy e && e.State != EnemyState.Dead)
             {
                 var dmg = 14f * p.DamageMul * (1f + 0.25f * (int)_world.Difficulty);
-                var weak = e.IsMachine && e.IsWeakShape(hit["shape"].AsInt32()); // soute ouverte, noyau, genoux
+                var weak = (e.IsMachine || e.IsMothership) && e.IsWeakShape(hit["shape"].AsInt32()); // soute ouverte, noyau, genoux, cœur du vaisseau-mère
                 Net.I.SendDamageEnemy(e.Id, dmg, end, weak);
                 _world.LocalHitFx(e, end, true, dmg, weak);
             }
