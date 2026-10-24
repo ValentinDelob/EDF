@@ -28,6 +28,7 @@ public partial class GuideMenu
         EnemyType.Walker => "Robot bipède de quinze mètres. Garde ses distances et pilonne au canon lourd : la ligne rouge annonce le tir. Visez les genoux.",
         EnemyType.Tripod => "Marcheur à trois pattes. Son rayon balaie le sol et rase les immeubles ; le tracé s'allume avant le tir. Visez le noyau lumineux sous la coque.",
         EnemyType.DropShip => "Vaisseau de largage qui dépose des fourmis par sa soute. Invulnérable soute fermée : tirez dans la soute quand elle s'ouvre.",
+        EnemyType.Titan => "Reptile colossal de soixante mètres qui traverse les immeubles. Souffle de feu annoncé par sa gorge qui s'embrase, coup de queue contre qui le prend à revers. Brisez ses plaques d'armure et visez la chair à vif.",
         _ => "Données en cours d'analyse.",
     };
 

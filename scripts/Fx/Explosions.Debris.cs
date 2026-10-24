@@ -26,6 +26,9 @@ public partial class ExplosionFx
     /// <summary>Lueur brève (réserve partagée avec les explosions).</summary>
     public void Flash(Vector3 pos, Color color, float energy, float range, float life) => StartLight(pos, color, energy, range, life);
 
+    /// <summary>Trace de brûlure au sol (réserve partagée avec les explosions) : sol incendié par le souffle du titan.</summary>
+    public void ScorchMark(Vector3 pos, float size) => StartDecal(pos, size, new Color(1, 1, 1, 0.9f));
+
     /// <summary>Distance à la caméra active (niveau de détail des effets de destruction).</summary>
     public float CameraDistance(Vector3 pos)
     {

@@ -85,6 +85,7 @@ public partial class Enemy : StaticBody3D
         }
         var s = def.Size;
         if (e.IsMachine) e.CreateMachineShapes();
+        else if (type == EnemyType.Titan) e.CreateTitanShapes(hpMul);
         else if (type == EnemyType.Nest)
         {
             e.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 6f * s, Height = 4.5f * s }, Position = new Vector3(0, 2.2f, 0) * s });
@@ -151,6 +152,7 @@ public partial class Enemy : StaticBody3D
     public override void _Ready()
     {
         if (IsMachine) MachineReady();
+        if (IsTitan) TitanReady();
         if (State == EnemyState.Emerging)
         {
             Model.Position = new Vector3(0, -2.5f * Def.Size, 0);
@@ -160,13 +162,14 @@ public partial class Enemy : StaticBody3D
     }
 
     /// <summary>Centre du corps (au-dessus des pattes, selon la normale de la surface pour les grimpeurs).</summary>
-    public Vector3 Center => IsFortress ? GlobalPosition + Vector3.Up * BugModel.FortHullY
+    public Vector3 Center => IsTitan ? (IsInsideTree() ? Model.TitanChest : GlobalPosition + Vector3.Up * BugModel.TitanCenterY)
+        : IsFortress ? GlobalPosition + Vector3.Up * BugModel.FortHullY
         : IsMachine ? MachineCenter
         :GlobalPosition + (Def.Flying ? Vector3.Zero : Basis.Y * ((_segShapes != null ? 0.65f : 1.1f) * Def.Size));
 
     private bool IsFortress => Def.Type == EnemyType.Fortress;
     /// <summary>Zone visée par le canon principal pendant sa charge (hôte uniquement), sinon null.</summary>
-    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : IsMachine ? MachineDangerZone : null;
+    public Vector3? CannonZone => IsFortress && _fChargeT >= 0 ? _fCannonTarget : IsMachine ? MachineDangerZone : IsTitan ? BreathAim() : null;
 
     /// <summary>Formes de collision des segments du mille-pattes (le corps suit la trace de la tête).</summary>
     private CollisionShape3D[] _segShapes;
@@ -239,6 +242,12 @@ public partial class Enemy : StaticBody3D
             if (IsShip) MachineAudio();
             return;
         }
+        if (IsTitan)
+        {
+            Model.AnimateTitan(dt, speed, attack);
+            SyncTitanShapes();
+            return;
+        }
         if (IsFortress) Model.AnimateFortress(dt, speed, attack);
         else Model.Animate(dt, speed, attack);
         if (_segShapes != null) SyncSegmentShapes();
@@ -284,7 +293,13 @@ public partial class Enemy : StaticBody3D
     private void HostTickCore(float dt)
     {
         if (State == EnemyState.Dead) return;
-        if (Frozen && State != EnemyState.Emerging) { AnimateModel(dt, 2f, Mathf.Max(0, Mathf.Sin(Time.GetTicksMsec() / 600f))); return; }
+        if (Frozen && State != EnemyState.Emerging)
+        {
+            // Vitrine : le titan figé joue quand même ses attaques forcées (tests).
+            if (IsTitan) { TickTitanFx(dt, true); AnimateModel(dt, 0f, 0f); return; }
+            AnimateModel(dt, 2f, Mathf.Max(0, Mathf.Sin(Time.GetTicksMsec() / 600f)));
+            return;
+        }
         if (State == EnemyState.Emerging)
         {
             _emergeT += dt;
@@ -296,6 +311,7 @@ public partial class Enemy : StaticBody3D
         }
         if (Def.Static) { AnimateModel(dt, 0, 0); return; }
         if (IsMachine) { HostTickMachine(dt); return; }
+        if (IsTitan) { HostTickTitan(dt); return; }
         if (!Def.Boss && HostStuck(dt)) { _world.HostRespawnStuck(this); return; }
 
         _attackCd -= dt;
@@ -640,6 +656,7 @@ public partial class Enemy : StaticBody3D
         _attackAnim = Mathf.Max(0, _attackAnim - dt * 3f);
         if (Grabbing) TickGrabFx(dt);
         if (IsMachine) ClientTickMachine(dt);
+        if (IsTitan) ClientTickTitan(dt);
         AnimateModel(dt, _speedNow, Grabbing ? 0f : _attackAnim);
     }
 
@@ -656,6 +673,7 @@ public partial class Enemy : StaticBody3D
         CollisionLayer = 0;
         if (IsFortress) { FortressDie(); return; }
         if (IsMachine) { MachineDie(); return; }
+        if (IsTitan) { TitanDie(); return; }
         var pos = Center;
         var color = Def.Type switch
         {
@@ -699,6 +717,7 @@ public partial class Enemy : StaticBody3D
     public void CameraFade(Vector3 cam, Vector3 focus)
     {
         if (IsMachine) { MachineCameraFade(cam); return; }
+        if (IsTitan) { TitanCameraFade(cam); return; }
         if (IsFortress || Def.Static) return;
         var s = Def.Size;
         bool fade;
@@ -925,6 +944,7 @@ public partial class Enemy : StaticBody3D
     public void FortressFx(int kind, Vector3 target)
     {
         if (IsMachine) { MachineFx(kind, target); return; }
+        if (IsTitan) { TitanFx(kind, target); return; }
         if (!IsFortress || State == EnemyState.Dead) return;
         switch (kind)
         {

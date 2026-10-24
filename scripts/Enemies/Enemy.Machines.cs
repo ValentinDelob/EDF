@@ -132,6 +132,8 @@ public partial class Enemy
         EnemyType.Walker => shape is 1 or 2,
         EnemyType.Tripod => shape == 1,
         EnemyType.DropShip => shape == 1 && HatchOpen,
+        // Titan : la tête, et la chair à vif des plaques brisées (formes 16 à 23).
+        EnemyType.Titan => shape == 1 || shape >= 16 && shape < 16 + BugModel.TitanPlateCount && TitanPlateBroken(shape - 16),
         _ => shape == 1,
     };
 

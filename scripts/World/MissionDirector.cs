@@ -208,7 +208,8 @@ public class MissionDirector
                 break;
             case MissionGoal.Boss:
                 _w.ObjectiveText = _bossKilled ? "Éliminer les derniers ennemis"
-                    : BossType == EnemyType.Fortress ? "Détruire la forteresse marcheuse" : "Abattre la reine";
+                    : BossType == EnemyType.Fortress ? "Détruire la forteresse marcheuse"
+                    : BossType == EnemyType.Titan ? "Abattre le titan reptilien" : "Abattre la reine";
                 break;
             case MissionGoal.Defense:
                 var s = Obj?.Structure;
@@ -247,7 +248,12 @@ public class MissionDirector
         {
             _bossKilled = true;
             _queue.Clear();
-            Net.I.BroadcastMessage(e.Def.Type == EnemyType.Fortress ? "La forteresse s'effondre ! Nettoyez la zone." : "La reine est morte ! Nettoyez la zone.", 1);
+            Net.I.BroadcastMessage(e.Def.Type switch
+            {
+                EnemyType.Fortress => "La forteresse s'effondre ! Nettoyez la zone.",
+                EnemyType.Titan => "Le titan s'abat ! Nettoyez la zone.",
+                _ => "La reine est morte ! Nettoyez la zone.",
+            }, 1);
         }
         if (e.Def.Type == EnemyType.Nest)
         {

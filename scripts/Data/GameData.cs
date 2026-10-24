@@ -373,7 +373,7 @@ public class WeaponInstance
     }
 }
 
-public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede, Walker, Tripod, DropShip }
+public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede, Walker, Tripod, DropShip, Titan }
 
 public record EnemyDef(
     EnemyType Type,
@@ -425,6 +425,10 @@ public static class Enemies
         new(EnemyType.Walker, "Marcheur", 2500, 4.2f, 45, 110f, 5.5f, 3.5f, 0.25f, Ranged: true),
         new(EnemyType.Tripod, "Tripode", 4000, 3.6f, 5, 125f, 10f, 5f, 0.25f, Ranged: true),
         new(EnemyType.DropShip, "Vaisseau de largage", 6000, 12f, 5, 90f, 2.6f, 6f, 1f, Flying: true, Ranged: true),
+        // Titan reptilien (spécification §10.2) : kaiju d'environ 60 m, modèle construit en mètres (pas de gigantisme).
+        // Damage = un tic de 0,1 s du souffle de feu (piétinement, coup de queue et sol en feu en multiples) ; BaseSize règle
+        // l'écrasement du mobilier (force 6) et l'éparpillement du butin. Plaques d'armure à briser : voir Enemy.Titan.cs.
+        new(EnemyType.Titan, "Titan reptilien", 120000, 3.2f, 8, 95f, 11f, 10f, 1f, Ranged: true, Boss: true),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];
