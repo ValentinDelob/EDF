@@ -7,7 +7,8 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Sons synthétisés au démarrage (aucun fichier audio externe) et lecture 2D/3D par pool de lecteurs.
+/// Sons synthétisés au démarrage, remplacés par des enregistrements pour les armes et explosions (<see cref="Recorded"/>),
+/// et lecture 2D/3D par pool de lecteurs.
 /// </summary>
 public partial class Sfx : Node
 {
@@ -87,6 +88,7 @@ public partial class Sfx : Node
             _variants[n] = v.Select(Wav).ToArray();
             _sounds[n] = _variants[n][0];
         }
+        LoadRecorded();
         BuildMs = ms;
     }
 
@@ -151,7 +153,7 @@ public partial class Sfx : Node
         I._next3D = (I._next3D + 1) % I._pool3D.Count;
         p.Stream = s;
         p.GlobalPosition = pos;
-        p.VolumeDb = volumeDb;
+        p.VolumeDb = volumeDb + I.Gain(name);
         p.PitchScale = pitch * (float)GD.RandRange(0.94, 1.06);
         p.Play();
     }
@@ -165,7 +167,7 @@ public partial class Sfx : Node
         var p = I._pool2D[I._next2D];
         I._next2D = (I._next2D + 1) % I._pool2D.Count;
         p.Stream = s;
-        p.VolumeDb = volumeDb;
+        p.VolumeDb = volumeDb + I.Gain(name);
         p.PitchScale = pitch * (float)GD.RandRange(0.97, 1.03);
         p.Play();
     }

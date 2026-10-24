@@ -527,7 +527,7 @@ public partial class World : Node3D
             case 0:
                 Effects.Tracer(FxRoot, a, b, new Color(1f, 0.75f, 0.35f));
                 Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.4f);
-                Sfx.At("rifle", a, -2f);
+                Sfx.At("rifle_far", a, -2f);
                 break;
             case 1:
                 Effects.Tracer(FxRoot, a, b, new Color(0.5f, 0.75f, 1f));

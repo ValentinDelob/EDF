@@ -124,7 +124,7 @@ public partial class Ally : Node3D
     {
         _recoil = 0.5f;
         Effects.Tracer(w.FxRoot, from, to, new Color(1f, 0.75f, 0.35f), 0.035f);
-        Sfx.At("rifle", from, -8f, 1.05f, 50);
+        Sfx.At("rifle_far", from, -8f, 1.05f, 50);
     }
 
     public void PackSnapshot(BinaryWriter wr)

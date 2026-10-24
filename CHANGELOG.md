@@ -1,5 +1,11 @@
 # Journal des versions
 
+## v0.7.1 — Vrais sons d'armes
+
+- **Sons d'armes enregistrés** à la place des sons synthétisés : fusils d'assaut (AR-15, AK-47), arme de défense (Carl Gustav M45), fusils à pompe (Benelli Nova, Charles Daly), précision (Mosin Nagant), mitrailleuse rotative, lance-grenades, départ de roquette, réarmement (pompe Winchester) et clic à vide. Plusieurs variantes par arme tirées au hasard ; les tirs des alliés et des coéquipiers utilisent une prise de son à distance.
+- **Explosions enregistrées** (grosse explosion, petites explosions, effondrement d'immeuble) et armes à énergie modernisées (laser, lance électrique, plasma, marteau).
+- Sons non compressés pour un rendu net. Sources toutes CC0, listées dans `assets/sfx/CREDITS.md`.
+
 ## v0.7.0 — Démesure
 
 - **Insectes géants, comme dans EDF** : la fourmi noire fait environ 11 m de long et 4,3 m de haut (le soldat arrive sous sa tête, les pattes passent au-dessus de lui). Rouge ≈ 13 m, charognard ≈ 8 m, araignée ≈ 12 m d'envergure, guêpe ≈ 6 m, drone ≈ 5 m, mille-pattes ≈ 25 m, reine ≈ 34 m, nid ≈ 34 m ; la forteresse ne change pas. Portées de morsure, collisions, points faibles, escalade, sorties de terre, tirs et butin suivent la taille ; foulées plus longues et vitesses à peine relevées ; points de vie inchangés.
