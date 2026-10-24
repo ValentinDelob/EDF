@@ -55,6 +55,8 @@ public partial class Enemy
         if (!_caster.IsColliding()) return false;
         point = _caster.GetCollisionPoint();
         normal = _caster.GetCollisionNormal();
+        // Origine à l'intérieur d'un solide (normale nulle) : ce n'est pas une surface praticable.
+        if (normal.LengthSquared() < 0.25f) return false;
         if (normal.Dot(from - point) < 0) normal = -normal;
         if (Mathf.Abs(point.X) > CityBuilder.Half + 3f || point.Z < -CityBuilder.Half - 3f || point.Z > CityBuilder.SeaStart + 7f) return false;
         return true;
@@ -76,9 +78,45 @@ public partial class Enemy
         return t.LengthSquared() > 1e-4f ? t.Normalized() : Vector3.Zero;
     }
 
+    private float _undergroundT;
+    /// <summary>Insectes remis à la surface depuis le lancement (journal --fps).</summary>
+    public static int UndergroundFixes;
+
+    /// <summary>
+    /// Garde-fou : un insecte passé sous le sol (accroché à la face cachée d'une dalle, d'une bordure) est remis à la surface.
+    /// Un creux à ciel ouvert (escalier du métro, lit de rivière) reste permis : seul compte le décor au-dessus du corps.
+    /// </summary>
+    private bool FixUnderground(float dt)
+    {
+        var p = GlobalPosition;
+        if (p.Y > -0.15f) { _undergroundT = 0; return false; }
+        _undergroundT -= dt;
+        if (_undergroundT > 0) return false;
+        _undergroundT = 0.1f;
+        // Ciel dégagé au-dessus (hors du corps lui-même) : vrai creux, rien à corriger.
+        if (!Ray(p + Vector3.Up * 0.05f, p + Vector3.Up * Mathf.Max(3f, -p.Y + 1.5f), out _, out _)
+            && !Ray(new Vector3(p.X, 0.05f, p.Z), new Vector3(p.X, -0.05f, p.Z), out _, out _)) return false;
+        var top = new Vector3(p.X, Mathf.Max(p.Y, 0f) + 60f, p.Z);
+        var land = Ray(top, new Vector3(p.X, -40f, p.Z), out var lp, out var ln) && ln.Y > 0.5f ? lp : new Vector3(p.X, 0, p.Z);
+        GlobalPosition = land;
+        _surfN = Vector3.Up;
+        _up = Vector3.Up;
+        _ceilDir = Vector3.Zero;
+        _falling = false;
+        _fallV = 0;
+        _probeDist = 0;
+        UndergroundFixes++;
+        return true;
+    }
+
+    /// <summary>Point sous le niveau du sol là où le sol existe (face cachée d'une dalle, d'une bordure, pied d'un mur enterré).</summary>
+    private bool UnderSlab(Vector3 pt) =>
+        pt.Y < -0.08f && Ray(new Vector3(pt.X, 0.1f, pt.Z), new Vector3(pt.X, -0.1f, pt.Z), out _, out _);
+
     /// <summary>Avance d'un pas sur la surface (hôte) et recale position et normale.</summary>
     private void ClimbStep(Vector3 dir, float dist, float dt)
     {
+        if (FixUnderground(dt)) return;
         var p = GlobalPosition;
         _speedNow = dist / Mathf.Max(dt, 1e-4f);
         if (_falling)
@@ -104,7 +142,10 @@ public partial class Enemy
         // (les sondes portent assez loin, en multiples de la taille, pour couvrir le chemin fait sans sonder).
         _probeDist += dist;
         var flat = n.Y > 0.97f && _up.Y > 0.97f && p.Y < 0.6f;
-        if (_probeDist < (flat ? 0.6f : 0.3f) * Mathf.Max(Def.Size, 1f) && dist > 0)
+        // Un pas qui descendrait sous le niveau du sol (descente d'un mur, d'une bordure) sonde tout de suite : sans cela
+        // l'insecte continuait tout droit sous la dalle jusqu'au sondage suivant.
+        var crossesGround = p.Y >= -0.05f && (p + step).Y < -0.02f;
+        if (_probeDist < (flat ? 0.6f : 0.3f) * Mathf.Max(Def.Size, 1f) && dist > 0 && !crossesGround)
         {
             GlobalPosition = p + step;
             return;
@@ -115,7 +156,7 @@ public partial class Enemy
 
         var lift = n * ProbeH;
         // 1. Angle rentrant : paroi devant le corps.
-        if (Ray(p + lift, p + lift + dir * (travelled + 1.3f * Def.Size), out var wp, out var wn) && wn.Dot(n) < 0.6f
+        if (Ray(p + lift, p + lift + dir * (travelled + 1.3f * Def.Size), out var wp, out var wn) && wn.Dot(n) < 0.6f && !UnderSlab(wp)
             && (p + lift).DistanceTo(wp) <= travelled + 0.8f * Def.Size)
         {
             var reach = travelled + 1.3f * Def.Size;
@@ -149,7 +190,7 @@ public partial class Enemy
         }
         // 2. Accroche : la surface sous la nouvelle position (marches, bordures, pentes).
         var q = p + step;
-        if (Ray(q + lift, q - n * (ProbeH + 0.6f + travelled), out var sp, out var sn))
+        if (Ray(q + lift, q - n * (ProbeH + 0.6f + travelled), out var sp, out var sn) && !UnderSlab(sp))
         {
             GlobalPosition = sp;
             SetSurface(sn);
@@ -158,14 +199,22 @@ public partial class Enemy
         }
         // 3. Angle saillant : on passe l'arête et on s'accroche à la face suivante, sous le bord.
         var under = q - n * (0.35f * Def.Size);
-        if (Ray(under, under - dir * (travelled + 1.2f * Def.Size), out var ep, out var en))
+        if (Ray(under, under - dir * (travelled + 1.2f * Def.Size), out var ep, out var en) && !UnderSlab(ep))
         {
             GlobalPosition = ep;
             SetSurface(en);
             _speedNow = dist / Mathf.Max(dt, 1e-4f);
             return;
         }
-        // 4. Plus de surface : chute.
+        // 4. Plus de surface : chute. Arrivé sous le sol (bas d'un mur descendu), on se pose sur le sol à la place.
+        if (UnderSlab(q))
+        {
+            var top = new Vector3(q.X, 2.5f, q.Z);
+            GlobalPosition = Ray(top, new Vector3(q.X, -0.2f, q.Z), out var gp, out var gn) && gn.Y > 0.5f ? gp : new Vector3(q.X, 0, q.Z);
+            SetSurface(Vector3.Up);
+            _speedNow = dist / Mathf.Max(dt, 1e-4f);
+            return;
+        }
         _falling = true;
         _fallV = 0;
         _surfN = Vector3.Up;
@@ -270,7 +319,7 @@ public partial class Enemy
             if (e._falling) falling++;
             top = Mathf.Max(top, e.GlobalPosition.Y);
         }
-        return $"murs {walls} hauteur {high} chute {falling} ymax {top:0.0}";
+        return $"murs {walls} hauteur {high} chute {falling} ymax {top:0.0} sous-sol {UndergroundFixes}";
     }
 
     // ---------------- Mort : chute au sol ----------------

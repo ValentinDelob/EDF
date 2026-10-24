@@ -421,6 +421,9 @@ public partial class Enemy : CharacterBody3D
             _world.HostEnemyProjectile(this, 0, Center + Basis.Z * 1.4f * Def.Size, target + Vector3.Up, 1);
             Net.I.BroadcastEnemyAttack(Id, 1, target);
         }
+        // Corps à corps à travers une paroi : ni morsure ni saisie (on réessaie peu après, le temps de contourner).
+        if (attacking && _attackCd <= 0 && !Def.Ranged && _guard == null && Climbs && !MeleeClear(target))
+            _attackCd = 0.4f;
         if (attacking && _attackCd <= 0)
         {
             // Fourmi rouge : la morsure devient une saisie (la victime reste prise dans les mandibules).

@@ -69,6 +69,33 @@ public partial class Enemy
         }
     }
 
+    /// <summary>
+    /// Corps à corps possible : aucune paroi entre le corps de l'insecte et la poitrine de la victime (mur, façade, muret,
+    /// véhicule). Les obstacles fins (arbre, poteau, petit mobilier) ne bloquent pas : le rayon repart juste derrière eux.
+    /// </summary>
+    private bool MeleeClear(Vector3 victim)
+    {
+        var from = Center;
+        var to = victim + Vector3.Up * 1.1f;
+        var dir = to - from;
+        var len = dir.Length();
+        if (len < 0.01f) return true;
+        dir /= len;
+        var space = GetWorld3D().DirectSpaceState;
+        for (var i = 0; i < 6; i++)
+        {
+            var q = PhysicsRayQueryParameters3D.Create(from, to, 1);
+            var hit = space.IntersectRay(q);
+            if (hit.Count == 0) return true;
+            var id = _world.Decor?.FromHit(hit["collider"].AsGodotObject(), hit["shape"].AsInt32()) ?? -1;
+            var prop = id >= 0 ? _world.Decor.Get(id) : null;
+            if (prop == null || prop.Kind is not (PropKind.Tree or PropKind.Pole or PropKind.Small or PropKind.Furniture)) return false;
+            from = hit["position"].AsVector3() + dir * 0.6f;
+            if ((to - from).Dot(dir) <= 0) return true;
+        }
+        return true;
+    }
+
     /// <summary>Hôte : la morsure devient une saisie si la cible peut être attrapée.</summary>
     private bool HostTryGrab(long peer, Ally ally)
     {

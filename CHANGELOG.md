@@ -1,5 +1,10 @@
 # Journal des versions
 
+## Non publié
+
+- **Plus de fourmis sous le sol** : une fourmi qui descendait un mur ou une bordure pouvait continuer sous la dalle et s'y accrocher à une face cachée. Le suivi de surface sonde maintenant dès qu'un pas franchit le niveau du sol, refuse les points situés sous un sol existant (les vrais creux à ciel ouvert, comme l'escalier du métro, restent praticables) et un garde-fou remet en surface tout insecte resté sous le sol.
+- **Pas de morsure ni de saisie à travers une paroi** : la fourmi rouge (et toute morsure) exige qu'aucun mur, façade, muret ou véhicule ne la sépare de sa victime ; un arbre, un poteau ou du petit mobilier ne bloquent pas.
+
 ## v0.8.0 — Machines, objectifs et quartier d'affaires
 
 - **Escouades à rallier** : les soldats PNJ tiennent leur poste et combattent sur place jusqu'à ce qu'un joueur les rallie (touche d'interaction à moins de 10 m, repère « Rallier [E] » à l'approche) ; ils suivent ensuite ce joueur. Le Fusilier commande jusqu'à 2 escouades, les autres classes une seule. Si le chef quitte la partie, l'escouade reprend un poste sur place. Synchronisé en LAN. L'étiquette « Soldat » géante au-dessus des PNJ disparaît (barre fine du HUD seulement).
