@@ -737,7 +737,8 @@ public partial class World : Node3D
     public void LocalHitFx(Enemy e, Vector3 at, bool sound = true, float damage = 0, bool weak = false)
     {
         if (e.Invulnerable(weak)) damage = 0; // blindage du vaisseau : ni chiffre ni dégât
-        if (e.Def.Type == EnemyType.Fortress || e.IsMachine) Effects.Sparks(this, at, Vector3.Up);
+        if (e.IsMachine) e.HitSparks(at);
+        else if (e.Def.Type == EnemyType.Fortress) Effects.Sparks(this, at, Vector3.Up);
         else Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
         if (damage > 0 && Settings.I.DamageNumbers)

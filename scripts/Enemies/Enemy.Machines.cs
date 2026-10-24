@@ -391,8 +391,7 @@ public partial class Enemy
         if (_bTick <= 0)
         {
             _bTick = 0.07f;
-            Effects.Sparks(_world, impact, hit.Count > 0 ? (Vector3)hit["normal"] : Vector3.Up);
-            if (GD.Randf() < 0.35f) Effects.Smoke(_world, impact, 3f, 2.2f);
+            BeamImpactFx(impact, hit.Count > 0 ? (Vector3)hit["normal"] : Vector3.Up);
         }
         if (!host) return;
         // Dégâts toutes les 0,1 s : le long du faisceau et autour de l'impact ; explosion toutes les 0,35 s.
@@ -649,7 +648,7 @@ public partial class Enemy
                 Model.WalkerFire(arm);
                 var from = Model.WalkerMuzzle(arm);
                 Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.65f, 0.3f), 3.2f);
-                Effects.Smoke(_world, from, 2.5f, 1.6f);
+                PuffFx(from, 2.5f, 1.6f, false);
                 Sfx.At("mech_cannon", from, 10f, (float)GD.RandRange(0.92, 1.05), 0);
                 Shell(from, target);
                 _world.ShakeCamera(from, 0.35f, 45f);
@@ -681,7 +680,7 @@ public partial class Enemy
                 }
                 break;
             case 62:
-                Effects.Smoke(_world, target + Vector3.Up, 2.5f, 1.4f);
+                PuffFx(target + Vector3.Up, 2.5f, 1.4f, false);
                 Sfx.At("hit", target, 2f, 0.5f, 60);
                 break;
             case 70 or 71:
@@ -695,6 +694,41 @@ public partial class Enemy
 
     /// <summary>Mission (monde) où le conseil « visez la soute » a déjà été donné.</summary>
     private static ulong _hatchTold;
+
+    /// <summary>Impact du rayon : étincelles, flammèches et fumée par les émetteurs partagés d'ExplosionFx (aucun nœud créé).</summary>
+    private void BeamImpactFx(Vector3 p, Vector3 n)
+    {
+        var fx = ExplosionFx.For(_world);
+        for (var i = 0; i < 5; i++)
+        {
+            var v = (n + new Vector3((float)GD.RandRange(-1, 1), (float)GD.RandRange(0, 1.2), (float)GD.RandRange(-1, 1))).Normalized() * (float)GD.RandRange(6, 16);
+            fx.Spark(p, v, 0.18f, (float)GD.RandRange(0.3, 0.7), new Color(1f, 0.7f, 0.3f));
+        }
+        fx.FirePuff(p + n * 0.5f, n * 2f, 1.6f, 0.5f, new Color(1f, 0.55f, 0.25f));
+        if (GD.Randf() < 0.4f) fx.SmokePuff(p + n, Vector3.Up * 2.5f, 3.5f, 3f, new Color(0.18f, 0.17f, 0.16f));
+    }
+
+    /// <summary>Impact de balle sur le blindage : quelques étincelles (émetteurs partagés, feu nourri sans nœud par tir).</summary>
+    public void HitSparks(Vector3 at)
+    {
+        var fx = ExplosionFx.For(_world);
+        var n = (at - Center).Normalized();
+        for (var i = 0; i < 3; i++)
+            fx.Spark(at, (n + new Vector3((float)GD.RandRange(-0.8, 0.8), (float)GD.RandRange(-0.3, 1), (float)GD.RandRange(-0.8, 0.8))).Normalized() * (float)GD.RandRange(4, 10),
+                0.1f, (float)GD.RandRange(0.15, 0.35), new Color(1f, 0.8f, 0.45f));
+    }
+
+    /// <summary>Bouffée de fumée (bouche du canon, largage) ou de poussière (pas lourd), sans nœud.</summary>
+    private void PuffFx(Vector3 p, float size, float life, bool dust)
+    {
+        var fx = ExplosionFx.For(_world);
+        for (var i = 0; i < 4; i++)
+        {
+            var d = new Vector3((float)GD.RandRange(-1, 1), 0, (float)GD.RandRange(-1, 1));
+            if (dust) fx.DustPuff(p + d * size * 0.4f, d * size * 0.8f + Vector3.Up * 0.6f, size, life, new Color(0.52f, 0.49f, 0.44f));
+            else fx.SmokePuff(p + d * 0.5f, d + Vector3.Up * 1.5f, size, life, new Color(0.3f, 0.29f, 0.28f));
+        }
+    }
 
     /// <summary>Obus du Marcheur (visuel) : trait incandescent du canon jusqu'à l'impact.</summary>
     private void Shell(Vector3 from, Vector3 to)
@@ -721,7 +755,7 @@ public partial class Enemy
     {
         if (State == EnemyState.Dead) return;
         var tri = Def.Type == EnemyType.Tripod;
-        Effects.Dust(_world, p, tri ? new Vector3(7f, 2f, 7f) : new Vector3(5f, 1.6f, 5f));
+        PuffFx(p, tri ? 5f : 3.5f, 2.4f, true);
         _world.ShakeCamera(p, tri ? 0.4f : 0.3f, tri ? 60f : 45f);
         Sfx.At("mech_step", p, tri ? 8f : 5f, tri ? 0.8f : (float)GD.RandRange(0.95, 1.08), 60);
         if (!Net.I.IsHost) return;
