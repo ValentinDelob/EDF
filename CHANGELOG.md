@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## v0.10.0 — Aliens, Titan reptilien, base du désert
 
 - **Nouvelle carte « Base militaire du désert »** : base aérienne fortifiée submergée par l'invasion. Piste en béton qui file jusqu'à l'horizon (un avion de transport écrasé y brûle encore), voie de circulation et tarmac ; grand hangar cintré ouvert (épave d'avion de transport à l'intérieur, voûte crevée), hangar à charpente, deux abris bétonnés (chasseur calciné), tour de contrôle et sa vigie vitrée ; casernements préfabriqués et réfectoire, trois soutes à munitions enterrées, parc automobile, dépôt de carburant dans sa cuvette de merlons, radôme éventré, pylône de transmissions, hélisurfaces. Rempart de gabions percé de brèches, douze miradors, murs en T, postes de combat en sacs de sable, poste de contrôle à la porte sud et route du désert au-delà. Dunes qui envahissent la base, affleurements de grès, cratères, épaves de chars, de blindés et de camions calcinés. Au loin : champ de dunes, mesas, station radar.
 - **Véhicules abondants** : trois chars et deux hélicoptères pilotables en plus de ceux du point de départ (devant le parc automobile et sur les hélisurfaces). Synchronisés en LAN comme les autres.
