@@ -55,11 +55,7 @@ public partial class Hud : CanvasLayer
         _root.AddChild(_armor);
         _root.AddChild(_radar);
         _root.AddChild(_weapons);
-        _grab = new HudGrab { World = World };
-        _root.AddChild(_grab);
     }
-
-    private HudGrab _grab;
 
     /// <summary>Assombrissement radial des bords (maquette) + voile rouge des dégâts / armure basse.</summary>
     private static ShaderMaterial VignetteMaterial()
@@ -131,7 +127,6 @@ void fragment() {
             _armor.Layout(s, screen);
             _radar.Layout(s, screen);
             _weapons.Layout(s, screen);
-            _grab.Center(s, screen);
             _markers.S = _reticle.S = s;
             _damageArc.Scale = new Vector2(s, s);
         }
