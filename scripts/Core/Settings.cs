@@ -65,6 +65,7 @@ public partial class Settings : Node
     public bool ColorblindCrates;   // palette des caisses lisible par les daltoniens (orange / bleu ciel / magenta)
     public float ShakeScale = 1f;   // intensité des secousses de caméra (0 = aucune)
     public bool ReduceFlashes;      // éclairs et lumières d'explosion atténués
+    public float AimAssist = 0.5f;  // visée assistée à la manette (0 = désactivée)
 
     // Joueur
     public string PlayerName = "Soldat";
@@ -307,6 +308,7 @@ public partial class Settings : Node
         cfg.SetValue("access", "colorblind_crates", ColorblindCrates);
         cfg.SetValue("access", "shake", ShakeScale);
         cfg.SetValue("access", "reduce_flashes", ReduceFlashes);
+        cfg.SetValue("mouse", "aim_assist", AimAssist);
         cfg.SetValue("player", "name", PlayerName);
         cfg.SetValue("player", "last_ip", LastIp);
         cfg.Save(FilePath);
@@ -336,6 +338,7 @@ public partial class Settings : Node
         ColorblindCrates = (bool)cfg.GetValue("access", "colorblind_crates", ColorblindCrates);
         ShakeScale = (float)cfg.GetValue("access", "shake", ShakeScale);
         ReduceFlashes = (bool)cfg.GetValue("access", "reduce_flashes", ReduceFlashes);
+        AimAssist = (float)cfg.GetValue("mouse", "aim_assist", AimAssist);
         PlayerName = (string)cfg.GetValue("player", "name", PlayerName);
         LastIp = (string)cfg.GetValue("player", "last_ip", LastIp);
     }

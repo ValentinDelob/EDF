@@ -213,6 +213,8 @@ public partial class OptionsMenu : MenuScreen
             "Multiplicateur appliqué quand vous visez (clic droit), pour des tirs plus précis à longue distance.");
         Row("Inverser l'axe vertical", Selector(OnOff, Settings.I.InvertY ? 1 : 0, i => Settings.I.InvertY = i == 1),
             "Pousser la souris vers l'avant fait regarder vers le bas.");
+        Row("Visée assistée (manette)", Slider(0f, 1f, 0.05f, Settings.I.AimAssist, v => Settings.I.AimAssist = v, v => $"{v * 100:0} %"),
+            "Freine le réticule sur les ennemis et l'attire doucement vers eux, uniquement à la manette. 0 % pour la désactiver.");
         Section("Touches");
         foreach (var a in Settings.Actions)
         {

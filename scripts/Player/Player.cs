@@ -118,6 +118,9 @@ public partial class Player : CharacterBody3D
 
     public override void _UnhandledInput(InputEvent e)
     {
+        // Dernier périphérique utilisé : la visée assistée ne joue qu'à la manette.
+        if (e is InputEventJoypadMotion jm && Mathf.Abs(jm.AxisValue) > 0.3f || e is InputEventJoypadButton) _padActive = true;
+        else if (e is InputEventMouseMotion || e is InputEventMouseButton || e is InputEventKey) _padActive = false;
         if (World.Paused || World.Ended) return;
         if (e is InputEventMouseMotion mm && Input.MouseMode == Input.MouseModeEnum.Captured)
         {
@@ -374,9 +377,14 @@ public partial class Player : CharacterBody3D
         if (!World.Paused && !World.Ended)
         {
             var look = Input.GetVector("look_left", "look_right", "look_up", "look_down");
+            var move = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
+            var assist = _padActive && Vehicle == null && !Downed ? AimAssistTarget(dt) : null;
+            if (assist != null && (look.LengthSquared() > 0.0001f || move.LengthSquared() > 0.01f || Aiming)) PullToward(assist, dt);
             if (look.LengthSquared() > 0.0001f)
             {
                 var sens = 3.2f * Settings.I.MouseSensitivity * (Aiming ? Settings.I.AimSensitivity : 1f) * dt;
+                // Freinage de la visée quand le réticule passe sur un ennemi.
+                if (assist != null) sens *= 1f - 0.5f * Settings.I.AimAssist;
                 _yaw -= look.X * Mathf.Abs(look.X) * sens;
                 _pitch -= look.Y * Mathf.Abs(look.Y) * sens * 0.7f * (Settings.I.InvertY ? -1 : 1);
                 _pitch = Mathf.Clamp(_pitch, -1.35f, 1.2f);
@@ -908,6 +916,49 @@ public partial class Player : CharacterBody3D
             ReviveProgress = 0;
             ReviveTarget = target;
         }
+    }
+
+    private bool _padActive;
+    private Enemy _assistTarget;
+    private float _assistScan;
+
+    /// <summary>
+    /// Visée assistée (manette) : ennemi vivant le plus proche de l'axe de visée dans un cône de 7° (9° en visée), jusqu'à 160 m.
+    /// Recherche toutes les 0,1 s.
+    /// </summary>
+    private Enemy AimAssistTarget(float dt)
+    {
+        if (Settings.I.AimAssist <= 0.01f) return null;
+        _assistScan -= dt;
+        if (_assistScan > 0 && _assistTarget != null && IsInstanceValid(_assistTarget) && _assistTarget.State != EnemyState.Dead) return _assistTarget;
+        if (_assistScan > 0) return null;
+        _assistScan = 0.1f;
+        _assistTarget = null;
+        var eye = Camera.GlobalPosition;
+        var fwd = -Camera.GlobalBasis.Z;
+        var cone = Mathf.Cos(Mathf.DegToRad(Aiming ? 9f : 7f));
+        var best = cone;
+        foreach (var e in World.EnemiesById.Values)
+        {
+            if (e.State == EnemyState.Dead) continue;
+            var to = e.Center - eye;
+            var d = to.Length();
+            if (d < 2f || d > 160f) continue;
+            var c = fwd.Dot(to / d);
+            if (c > best) { best = c; _assistTarget = e; }
+        }
+        return _assistTarget;
+    }
+
+    /// <summary>Attire doucement la visée vers la cible (vitesse proportionnelle au réglage, jamais instantanée).</summary>
+    private void PullToward(Enemy e, float dt)
+    {
+        var dir = e.Center - Camera.GlobalPosition;
+        var yaw = Mathf.Atan2(-dir.X, -dir.Z);
+        var pitch = Mathf.Atan2(dir.Y, new Vector2(dir.X, dir.Z).Length());
+        var rate = Settings.I.AimAssist * (Aiming ? 1.6f : 0.9f) * dt;
+        _yaw += Mathf.Clamp(Mathf.AngleDifference(_yaw, yaw), -rate, rate);
+        _pitch = Mathf.Clamp(_pitch + Mathf.Clamp(pitch - _pitch, -rate * 0.6f, rate * 0.6f), -1.35f, 1.2f);
     }
 
     /// <summary>Portée du ralliement d'une escouade PNJ (touche d'interaction).</summary>
