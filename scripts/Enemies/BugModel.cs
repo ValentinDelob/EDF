@@ -43,6 +43,9 @@ public partial class BugModel : Node3D
             case EnemyType.Drone: m.BuildDrone(); break;
             case EnemyType.Fortress: m.BuildFortress(); break;
             case EnemyType.Centipede: m.BuildCentipede(); break;
+            case EnemyType.Walker: m.BuildWalker(); break;
+            case EnemyType.Tripod: m.BuildTripod(); break;
+            case EnemyType.DropShip: m.BuildDropShip(); break;
         }
         // Gigantisme : tout le modèle (et donc la foulée, voir Animate) suit EnemyDef.Giant.
         m.Scale *= Enemies.Get(type).Giant;
@@ -159,6 +162,11 @@ public partial class BugModel : Node3D
     public override void _Ready()
     {
         // Variante élite : chitine dorée (Enemy ne trouve plus de SphereMesh à recolorer).
+        if (IsMachine)
+        {
+            if (GetParent() is Enemy { Elite: true }) ApplyMachineElite();
+            return;
+        }
         if (GetParent() is Enemy { Elite: true })
         {
             var gold = Mats.Chitin(new Color(0.78f, 0.58f, 0.14f));
@@ -264,7 +272,7 @@ public partial class BugModel : Node3D
     /// <summary>Bref flash blanc à l'impact (retour visuel des tirs).</summary>
     public void Flash()
     {
-        if (Type is EnemyType.Queen or EnemyType.Nest) return; // cibles touchées en continu : pas de flash
+        if (Type is EnemyType.Queen or EnemyType.Nest || IsMachine) return; // cibles touchées en continu : pas de flash
         _flashMat ??= new StandardMaterial3D
         {
             AlbedoColor = new Color(1f, 0.55f, 0.3f, 0.16f),

@@ -437,7 +437,17 @@ public partial class HudRadar : HudBlock
             if (len <= Range)
             {
                 var q = C + v * k;
-                if (e.IsBoss || e.IsStatic)
+                if (e.IsMachine)
+                {
+                    // Machines : carré cerclé (losange pour le vaisseau), plus grand selon la taille.
+                    var r = e.Def.Type == EnemyType.Walker ? 4.6f : 5.6f;
+                    var pts = e.Def.Type == EnemyType.DropShip
+                        ? new[] { q + new Vector2(0, -r * 1.25f), q + new Vector2(r * 1.25f, 0), q + new Vector2(0, r * 1.25f), q + new Vector2(-r * 1.25f, 0) }
+                        : new[] { q + new Vector2(-r, -r), q + new Vector2(r, -r), q + new Vector2(r, r), q + new Vector2(-r, r) };
+                    DrawColoredPolygon(pts, HudE.Enemy);
+                    DrawPolyline(new[] { pts[0], pts[1], pts[2], pts[3], pts[0] }, HudE.Ink, 1f, true);
+                }
+                else if (e.IsBoss || e.IsStatic)
                 {
                     DrawCircle(q, 6f, HudE.Enemy);
                     DrawArc(q, 6f, 0, Mathf.Tau, 16, HudE.Ink, 1f, true);

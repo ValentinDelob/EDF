@@ -61,6 +61,7 @@ public partial class Sfx : Node
                 Build(snd, vars);
                 BuildVehicles(snd, loops);
                 BuildProps(snd);
+                BuildMachines(snd, loops);
                 var ms = sw.ElapsedMilliseconds;
                 Callable.From(() => OnBuilt(snd, vars, loops, ms)).CallDeferred();
             }

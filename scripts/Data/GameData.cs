@@ -345,7 +345,7 @@ public class WeaponInstance
     }
 }
 
-public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede }
+public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede, Walker, Tripod, DropShip }
 
 public record EnemyDef(
     EnemyType Type,
@@ -391,6 +391,12 @@ public static class Enemies
         new(EnemyType.Fortress, "Forteresse marcheuse", 70000, 2.5f, 5, 170f, 4f, 12f, 1f, Ranged: true, Boss: true),
         // Mille-pattes : morsure au contact et courte giclée d'acide à mi-distance (Damage pour les deux).
         new(EnemyType.Centipede, "Mille-pattes", 360, 8f, 10, 9f, 1.5f, 1.25f, 0.6f, Giant: 2.3f),
+        // Machines (modèles construits en mètres, sans gigantisme ; BaseSize règle séparation, écrasement et souffle) :
+        // Marcheur ≈ 14 m (Damage = un obus de canon), Tripode ≈ 21 m (Damage = un tic de 0,1 s du rayon),
+        // vaisseau de largage ≈ 44 m (Damage = un tir laser de tourelle ; vulnérable seulement par la soute ouverte).
+        new(EnemyType.Walker, "Marcheur", 2500, 4.2f, 45, 110f, 5.5f, 3.5f, 0.25f, Ranged: true),
+        new(EnemyType.Tripod, "Tripode", 4000, 3.6f, 5, 125f, 10f, 5f, 0.25f, Ranged: true),
+        new(EnemyType.DropShip, "Vaisseau de largage", 6000, 12f, 5, 90f, 2.6f, 6f, 1f, Flying: true, Ranged: true),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];

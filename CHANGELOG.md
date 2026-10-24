@@ -1,5 +1,16 @@
 # Journal des versions
 
+## Non publié
+
+- **Machines extraterrestres** : trois nouveaux ennemis mécaniques, gris acier, sales et rouillés, à l'échelle EDF.
+  - **Marcheur** (≈ 14 m) : robot bipède aux jambes inversées et aux deux bras-canons lourds. Il garde ses distances et pilonne : chaque tir se charge 1,3 s (trait de visée rouge, cercle au sol) avant un obus explosif qui abîme immeubles et mobilier. Point faible : les genoux (dégâts ×2). Le sol tremble à chaque pas.
+  - **Tripode** (≈ 23 m) : coque blindée sur trois immenses pattes, tentacules mécaniques. Son rayon de destruction se charge 1,8 s (trajectoire marquée au sol) puis balaie la zone en diagonale : il brûle les soldats, fait exploser le mobilier et peut abattre un immeuble. Point faible : le noyau incandescent sous la coque (×3).
+  - **Vaisseau de largage** (≈ 44 m) : descend au-dessus des toits, ouvre sa soute et lâche des fourmis (ou des drones), puis recommence ailleurs avant de repartir. Il ne craint rien tant que sa soute est fermée : visez l'intérieur quand elle s'ouvre (×3, les explosions dans la soute comptent aussi). Abattu, il pique en flammes et s'écrase.
+  - Destructions spectaculaires (chapelets d'explosions, effondrement, crash), sons dédiés (pas lourds, charges, canon, rayon, soute, moteurs), marqueurs propres sur le radar, variantes d'élite au blindage bronze, butin. Entièrement synchronisé en LAN.
+- **Deux nouvelles missions** : « Acier » (marcheurs et drones dans le centre-ville, sous la pluie) et « Les tripodes » (tripodes et vaisseaux de largage sur le bourg, dans la tempête).
+- Le bot de test esquive aussi les tirs lourds des machines.
+- Tests : `--showcase=machines`, `--machines=...` (combat, caméra libre, captures aux instants de mission, destruction) et `--hitch` (journal des à-coups).
+
 ## v0.7.4 — Jetpack discret
 
 - **Son du jetpack adouci** : bourdonnement grave et constant (plus de pulsation, d'étincelles ni d'éclats), allumage et coupure en fondu, poussée en simple souffle feutré ; volume nettement plus bas et portée réduite pour les coéquipiers.
