@@ -170,6 +170,13 @@ public partial class LobbyMenu : Control
                 if (!Host) { p.FocusMode = FocusModeEnum.None; p.MouseFilter = MouseFilterEnum.Ignore; p.MouseDefaultCursorShape = CursorShape.Arrow; }
                 // Survol / focus : le briefing suit la mission désignée.
                 p.FocusEntered += () => ShowMission(idx);
+                // Survol à la souris : la mission s'actualise tout de suite (et prend le focus, clavier et souris restent d'accord).
+                p.MouseEntered += () =>
+                {
+                    if (_diffLayer != null && _diffLayer.Visible) return;
+                    ShowMission(idx);
+                    if (p.FocusMode != FocusModeEnum.None && !p.HasFocus()) p.GrabFocus();
+                };
                 _list.AddChild(p);
                 _plates[i] = p;
             }
