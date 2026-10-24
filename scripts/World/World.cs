@@ -109,7 +109,7 @@ public partial class World : Node3D
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
         Decor = Destructibles.Begin(this);
-        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), MapId.Forest => ForestBuilder.Build(this, Mission.Time), MapId.Underground => UndergroundBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), MapId.Forest => ForestBuilder.Build(this, Mission.Time), MapId.Underground => UndergroundBuilder.Build(this, Mission.Time), MapId.Capital => CapitalBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
         Decor.EndBuild();
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
@@ -140,6 +140,7 @@ public partial class World : Node3D
                 BugModel.PrewarmMachines(LocalPlayer.Camera, Mission);
                 BugModel.PrewarmTitan(LocalPlayer.Camera, Mission);
                 BugModel.PrewarmAliens(LocalPlayer.Camera, Mission);
+                BugModel.PrewarmMothership(LocalPlayer.Camera, Mission);
             }
             else if (Net.I.Players.TryGetValue(id, out var info))
             {
@@ -222,6 +223,7 @@ public partial class World : Node3D
         if (Mission.Map == MapId.Desert) DesertBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         if (Mission.Map == MapId.Forest) ForestBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         if (Underground) UndergroundBuilder.ApplyGrade(env, _sun);
+        if (Mission.Map == MapId.Capital) CapitalBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);
         AddChild(_sun);
@@ -246,6 +248,7 @@ public partial class World : Node3D
         env.VolumetricFogDensity = Mission.Time switch { TimeOfDay.Night => 0.012f, TimeOfDay.Dusk => 0.008f, _ => 0.005f };
         if (Mission.Map == MapId.Desert) env.VolumetricFogDensity *= DesertBuilder.VolumetricFactor(Mission.Weather);
         if (Mission.Map == MapId.Forest) env.VolumetricFogDensity *= ForestBuilder.VolumetricFactor(Mission.Time);
+        if (Mission.Map == MapId.Capital) env.VolumetricFogDensity *= CapitalBuilder.VolumetricFactor(Mission.Weather);
         env.VolumetricFogAlbedo = env.FogLightColor;
         _sun.DirectionalShadowMaxDistance = q switch { 0 => 80f, 1 => 140f, 2 => 220f, _ => 320f };
         _sun.ShadowEnabled = true;
@@ -786,6 +789,8 @@ public partial class World : Node3D
         if (e.IsMachine && (dmg = e.HostAdjustDamage(dmg, weak)) <= 0f) return;
         // Titan : plaques d'armure (la plaque encaisse), chair à vif des plaques brisées.
         if (e.IsTitan) dmg = e.TitanAdjustDamage(dmg, weak, at);
+        // Vaisseau-mère : seul le canon ouvert (cœur, trappes) et les tourelles encaissent.
+        if (e.IsMothership && (dmg = e.MothershipAdjustDamage(dmg, weak, at)) <= 0f) return;
         // Aliens : tête ou cellule dorsale, bouclier contre les explosions de face ; portail : craint surtout les explosifs.
         if (e.IsAlienKind && (dmg = e.AlienAdjustDamage(dmg, weak)) <= 0f) return;
         e.Health -= dmg;
@@ -846,6 +851,11 @@ public partial class World : Node3D
     {
         if (e.Invulnerable(weak)) damage = 0; // blindage du vaisseau : ni chiffre ni dégât
         if (e.IsMachine) e.HitSparks(at);
+        else if (e.IsMothership)
+        {
+            e.MothershipHitFx(at);
+            damage *= e.MothershipDisplayScale(at, weak);
+        }
         else if (e.IsTitan)
         {
             e.TitanHitFx(at);
@@ -877,14 +887,14 @@ public partial class World : Node3D
         // Butin : là où le corps tombe (au pied du mur, ou sur le toit).
         var ground = e.LandingPoint;
         var drops = 0;
-        if (e.Def.Boss) drops = e.IsTitan ? Rng.RandiRange(8, 10) : 10; // spécification §7.2 : 8 à 10 caisses, 5 armes garanties
+        if (e.Def.Boss) drops = e.IsTitan ? Rng.RandiRange(8, 10) : e.IsMothership ? 14 : 10; // spécification §7.2 : 8 à 10 caisses, 5 armes garanties (boss final : 14 dont 7)
         else if (e.Def.Type == EnemyType.Nest || e.IsPortal) drops = 4;
         else if (e.Elite) drops = 2;
         else if (Rng.Randf() < e.Def.DropChance) drops = 1;
         drops += e.EatenCrates + (e.EatenCrates > 0 ? 1 : 0);
         for (var i = 0; i < drops; i++)
         {
-            var type = (e.Def.Boss && i < 5) || (e.Elite && i == 0) ? CrateType.Weapon : Crates.Roll(Rng);
+            var type = (e.Def.Boss && i < (e.IsMothership ? 7 : 5)) || (e.Elite && i == 0) ? CrateType.Weapon : Crates.Roll(Rng);
             HostSpawnCrate(type, ground + new Vector3(Rng.RandfRange(-2, 2) * (e.Def.Size), 0, Rng.RandfRange(-2, 2) * e.Def.Size));
         }
     }

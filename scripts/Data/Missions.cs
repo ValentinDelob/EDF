@@ -28,7 +28,7 @@ public record MissionDef(
     ObjectiveDef Objective = null,
     EnemyType NestType = EnemyType.Nest);
 
-public enum MapId { City, Port, Suburb, Business, Industrial, Desert, Forest, Underground }
+public enum MapId { City, Port, Suburb, Business, Industrial, Desert, Forest, Underground, Capital }
 
 public enum Weather { Clear, Rain, Storm, Sandstorm }
 
@@ -453,5 +453,42 @@ public static class Missions
                     new WaveDef("beach", 0, "Des mille-pattes sortent des parois de la caverne !", (EnemyType.RedAnt, 10), (EnemyType.Centipede, 2)),
                     new WaveDef("south", 8, null, (EnemyType.BlackAnt, 12))),
             }, Weather.Clear, MapId.Underground),
+        // Capitale en ruines : finale de la campagne (spécification §9.1, §10.2).
+        new(26, "Reconquête",
+            "Le vaisseau-mère s'est abattu au-delà du fleuve, mais ses troupes tiennent encore le cœur de la capitale : des machines et des aliens retranchés autour de la grande place, de l'avenue jusqu'au parlement. Reprenez la ville rue par rue. Les marcheurs se postent sur les quais et pilonnent la place ; les gardes tiennent les ponts. Gare aux façades : elles s'effondrent sous les obus.",
+            MissionGoal.Exterminate, TimeOfDay.Day, 0.0025f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Machines sur l'avenue nord, deux marcheurs ! Visez les genoux.", (EnemyType.Walker, 2), (EnemyType.AlienTrooper, 6))),
+                new PhaseDef(3, 0,
+                    new WaveDef("east", 0, "Gardes à bouclier dans les rues à l'est !", (EnemyType.AlienGuard, 3), (EnemyType.AlienTrooper, 5)),
+                    new WaveDef("west", 6, "Volants au-dessus du jardin !", (EnemyType.AlienFlyer, 5))),
+                new PhaseDef(3, 0,
+                    new WaveDef("beach", 0, "Vaisseau de largage au-dessus du quai : visez la soute ouverte !", (EnemyType.DropShip, 1)),
+                    new WaveDef("south", 8, "Un tripode sur la rive sud, devant le parlement !", (EnemyType.Tripod, 1), (EnemyType.Drone, 8))),
+                new PhaseDef(4, 0,
+                    new WaveDef("center", 0, "Dernière poche de résistance sous le viaduc. Nettoyez la place !", (EnemyType.Walker, 2), (EnemyType.AlienGuard, 2), (EnemyType.AlienTrooper, 8)),
+                    new WaveDef("north", 6, null, (EnemyType.AlienFlyer, 4))),
+            }, Weather.Rain, MapId.Capital),
+        new(27, "Dernier rempart",
+            "Le vaisseau-mère est au-dessus de la capitale. Sa coque couvre le ciel d'un bout à l'autre du centre historique et il déverse ses troupes sur ce qu'il en reste. C'est la dernière ligne : derrière nous, il n'y a plus rien. Sa coque ne craint rien ; quand son canon principal s'ouvre, le cœur incandescent et les trappes sont à nu : concentrez tout dessus. Dès que le sol s'allume sous le canon, quittez la zone. Abattez ses tourelles, tenez la place. Pour tous ceux qui sont tombés avant nous.",
+            MissionGoal.Boss, TimeOfDay.Dusk, 0.0022f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Contact colossal au-dessus de la ville : le vaisseau-mère ! Visez le canon quand il s'ouvre.", (EnemyType.Mothership, 1), (EnemyType.AlienTrooper, 6)),
+                    new WaveDef("east", 12, "Drones à l'est, ils sortent des soutes !", (EnemyType.Drone, 8))),
+                new PhaseDef(0, 60,
+                    new WaveDef("west", 0, "Le jardin est envahi : fantassins et gardes à bouclier à l'ouest !", (EnemyType.AlienTrooper, 6), (EnemyType.AlienGuard, 2))),
+                new PhaseDef(0, 130,
+                    new WaveDef("south", 0, "Des marcheurs franchissent le fleuve par le grand pont !", (EnemyType.Walker, 2), (EnemyType.AlienTrooper, 4))),
+                new PhaseDef(0, 200,
+                    new WaveDef("beach", 0, "Un tripode remonte le quai nord, près du pont éventré !", (EnemyType.Tripod, 1), (EnemyType.AlienFlyer, 4))),
+                new PhaseDef(0, 280,
+                    new WaveDef("center", 0, "Ils descendent le boulevard sous le viaduc !", (EnemyType.AlienGuard, 3), (EnemyType.AlienTrooper, 6), (EnemyType.Drone, 6))),
+                new PhaseDef(0, 360,
+                    new WaveDef("north", 0, "Nouvelle colonne sur l'avenue, avec des marcheurs. Tenez la place !", (EnemyType.Walker, 2), (EnemyType.AlienFlyer, 6))),
+            }, Weather.Clear, MapId.Capital),
     };
 }

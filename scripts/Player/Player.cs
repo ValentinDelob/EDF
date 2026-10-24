@@ -744,7 +744,7 @@ public partial class Player : CharacterBody3D
             if (_beamAccum >= 0.1f)
             {
                 // Machines : le rayon compte aussi les points faibles (soute ouverte du vaisseau, noyau, genoux).
-                var bweak = e.IsMachine && hit.Count > 0 && e.IsWeakShape(hit["shape"].AsInt32());
+                var bweak = (e.IsMachine || e.IsMothership) && hit.Count > 0 && e.IsWeakShape(hit["shape"].AsInt32());
                 Net.I.SendDamageEnemy(e.Id, _beamDamage, end, bweak);
                 World.LocalHitFx(e, end, true, _beamDamage, bweak);
                 HitMarker = 1f;

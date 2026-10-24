@@ -403,6 +403,7 @@ public static partial class AutoTest
             };
             WreckTest(app, dir); // --wreck=N : destructions décidées par l'hôte, vues du client
             TitanTest(app); // --titan-plates : plaques brisées par l'hôte, vues du client
+            MothershipTest(app, dir); // --mothership-act : canon, tourelles, lancements décidés par l'hôte
             AlienNetLog(app);
             ScheduleShots(app, dir, "host");
             return;
@@ -484,9 +485,10 @@ public static partial class AutoTest
                     app.GetTree().CreateTimer(t).Timeout += () =>
                         GD.Print("[test] " + string.Join(" | ", ids.Select(i => w.EnemiesById.TryGetValue(i, out var x) ? $"{i}:{x.State} {x.GlobalPosition.Snapped(Vector3.One * 0.1f)}" : $"{i}:retiré")));
             };
-        if (Screenshot.CmdArg("showcase") is { } sc && sc is not ("machines" or "titan" or "aliens")) Showcase(app);
+        if (Screenshot.CmdArg("showcase") is { } sc && sc is not ("machines" or "titan" or "aliens" or "mothership")) Showcase(app);
         MachineTest(app, dir);
         TitanTest(app); // --titan-act, --titan-plates, --titan-hp (AutoTest.Titan.cs)
+        MothershipTest(app, dir); // --showcase=mothership, --mothership-act, --mothership-cam… (AutoTest.Mothership.cs)
         AlienTest(app, dir);
         BoomTest(app, dir);
         WreckTest(app, dir);

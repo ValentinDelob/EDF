@@ -220,7 +220,8 @@ public class MissionDirector
             case MissionGoal.Boss:
                 _w.ObjectiveText = _bossKilled ? "Éliminer les derniers ennemis"
                     : BossType == EnemyType.Fortress ? "Détruire la forteresse marcheuse"
-                    : BossType == EnemyType.Titan ? "Abattre le titan reptilien" : "Abattre la reine";
+                    : BossType == EnemyType.Titan ? "Abattre le titan reptilien"
+                    : BossType == EnemyType.Mothership ? "Abattre le vaisseau-mère" : "Abattre la reine";
                 break;
             case MissionGoal.Defense:
                 var s = Obj?.Structure;
@@ -263,6 +264,7 @@ public class MissionDirector
             {
                 EnemyType.Fortress => "La forteresse s'effondre ! Nettoyez la zone.",
                 EnemyType.Titan => "Le titan s'abat ! Nettoyez la zone.",
+                EnemyType.Mothership => "Le vaisseau-mère s'abat sur la ville ! Achevez ce qu'il a lâché sur nous.",
                 _ => "La reine est morte ! Nettoyez la zone.",
             }, 1);
         }
