@@ -759,8 +759,10 @@ public partial class Enemy
 }
 
 /// <summary>
-/// Chute du vaisseau-mère abattu (tous les pairs, même trajectoire : point d'écrasement déduit de la position et du cap à
-/// la mort) : chapelet d'explosions sur la coque, inclinaison et glissade, traînée de feu et de fumée, impact au loin.
+/// Chute du vaisseau-mère abattu (tous les pairs, même trajectoire : point d'écrasement déduit de la position à la mort) :
+/// explosions qui courent du cœur vers les bords de la coque (7 s), puis le vaisseau s'incline et glisse en perdant de
+/// l'altitude, traînant un rideau de feu et de fumée ; impact à ~430 m hors de la ville : éclair, champignon de feu
+/// au-dessus des toits, onde de poussière, secousse ; l'épave brûle jusqu'à la fin de la mission.
 /// </summary>
 public partial class MothershipFall : Node
 {
@@ -768,11 +770,14 @@ public partial class MothershipFall : Node
     private Enemy _ship;
     private Vector3 _start, _crash;
     private Basis _basis0;
-    private float _t, _boomT, _smokeT;
+    private float _t, _boomT, _smokeT, _crashT = -1f;
     private bool _crashed;
     private readonly RandomNumberGenerator _rng = new() { Seed = 4404 };
 
-    public const float FallTime = 26f;
+    public const float FallTime = 22f, CascadeTime = 7f;
+
+    /// <summary>Teinte des boules de feu (le shader des nuages part du feu et refroidit en suie : couleur sombre).</summary>
+    private static readonly Color FireTint = new(0.06f, 0.057f, 0.054f, 0.95f);
 
     public void Setup(World w, Enemy ship)
     {
@@ -780,11 +785,37 @@ public partial class MothershipFall : Node
         _ship = ship;
         _start = ship.GlobalPosition;
         _basis0 = ship.GlobalBasis;
-        // S'écarte du centre de la ville (vers le nord ou le sud selon sa position) et va s'écraser à ~750 m.
+        // S'écarte du centre de la ville (vers le nord ou le sud selon sa position) et va s'écraser hors des murs.
         var away = new Vector3(_start.X, 0, _start.Z + 40f);
         if (away.LengthSquared() < 400f) away = new Vector3(ship.GlobalBasis.Z.X, 0, ship.GlobalBasis.Z.Z);
         away = away.Normalized();
-        _crash = new Vector3(_start.X, -14f, _start.Z) + away * 760f;
+        _crash = new Vector3(_start.X, -16f, _start.Z) + away * 360f;
+    }
+
+    /// <summary>Point sous la coque (repère du vaisseau) à l'angle <paramref name="a"/> et au rayon <paramref name="r"/> du cœur.</summary>
+    private Vector3 Underside(float a, float r)
+    {
+        var x = BugModel.MsIris.X + Mathf.Cos(a) * r;
+        var z = Mathf.Clamp(BugModel.MsIris.Z + Mathf.Sin(a) * r, -205f, 205f);
+        x = Mathf.Clamp(x, -BugModel.MsHalfWidth(z) * 0.95f, BugModel.MsHalfWidth(z) * 0.95f);
+        return _ship.GlobalTransform * new Vector3(x, BugModel.MsUnder(z, x) - 3f, z);
+    }
+
+    /// <summary>Boule de feu géante (vue de loin) : bouffées de feu serrées, braises, éclair éventuel.</summary>
+    private void Fireball(Vector3 p, float size, int puffs, bool light)
+    {
+        var fx = ExplosionFx.For(_world);
+        for (var i = 0; i < puffs; i++)
+        {
+            var d = new Vector3(_rng.RandfRange(-1f, 1f), _rng.RandfRange(-1f, 0.6f), _rng.RandfRange(-1f, 1f)).Normalized();
+            fx.FirePuff(p + d * size * 0.3f, d * size * _rng.RandfRange(0.8f, 1.6f), size * _rng.RandfRange(0.5f, 0.9f), _rng.RandfRange(1.8f, 3f), FireTint);
+        }
+        for (var i = 0; i < puffs * 2; i++)
+        {
+            var d = new Vector3(_rng.RandfRange(-1f, 1f), _rng.RandfRange(-1f, 0.4f), _rng.RandfRange(-1f, 1f)).Normalized();
+            fx.Spark(p, d * _rng.RandfRange(20f, 60f), _rng.RandfRange(0.4f, 0.9f), _rng.RandfRange(1f, 2.4f), new Color(1f, 0.55f, 0.2f));
+        }
+        if (light) fx.Flash(p, new Color(1f, 0.6f, 0.3f), 16f, size * 9f, 0.8f);
     }
 
     public override void _Process(double delta)
@@ -795,66 +826,131 @@ public partial class MothershipFall : Node
         var fx = ExplosionFx.For(_world);
         if (!_crashed)
         {
-            // Trajectoire : glisse en accélérant, perd de l'altitude de plus en plus vite, s'incline et pique du nez.
-            var k = Mathf.Clamp(_t / FallTime, 0f, 1f);
+            // Trajectoire : quelques secondes de flottement, puis glisse en accélérant et pique en s'inclinant.
+            var k = Mathf.Clamp((_t - 2f) / (FallTime - 2f), 0f, 1f);
             var h = k * k;
             var p = _start.Lerp(_crash, h);
-            p.Y = Mathf.Lerp(_start.Y, _crash.Y, k * k * k * 0.6f + h * 0.4f);
+            p.Y = Mathf.Lerp(_start.Y, _crash.Y, k * k * k * 0.55f + h * 0.45f) - Mathf.Min(_t, 2f) * 1.5f;
             var dir = (_crash - _start) with { Y = 0 };
             var side = dir.Cross(Vector3.Up).Normalized();
-            var tilt = new Basis(side, -0.16f * Mathf.SmoothStep(0, 1, k * 1.4f)) * new Basis(dir.Normalized(), 0.22f * Mathf.SmoothStep(0, 1, k * 1.2f));
+            var tilt = new Basis(side, -0.2f * Mathf.SmoothStep(0, 1, k * 1.4f)) * new Basis(dir.Normalized(), 0.26f * Mathf.SmoothStep(0, 1, k * 1.2f));
             _ship.GlobalTransform = new Transform3D(tilt * _basis0, p);
-            // Explosions en cascade sur la coque (plus serrées au début), fumée et feu traînés.
             _boomT -= dt;
             if (_boomT <= 0f)
             {
-                _boomT = Mathf.Lerp(0.18f, 0.6f, k);
-                var local = new Vector3(_rng.RandfRange(-130f, 130f), _rng.RandfRange(-12f, 14f), _rng.RandfRange(-190f, 190f));
-                local.X = Mathf.Clamp(local.X, -BugModel.MsHalfWidth(local.Z) * 0.9f, BugModel.MsHalfWidth(local.Z) * 0.9f);
-                var bp = _ship.GlobalTransform * local;
-                Effects.Explosion(_world, bp, _rng.RandfRange(12f, 26f), _rng.Randf() < 0.3f ? ExplosionFx.Plasma : 0);
-                if (_rng.Randf() < 0.35f) Sfx.At("explosion", bp, 12f, _rng.RandfRange(0.5f, 0.75f), 0);
+                if (_t < CascadeTime)
+                {
+                    // Cascade : un anneau d'explosions court du cœur vers les bords de la coque.
+                    _boomT = 0.14f;
+                    var r = Mathf.Lerp(30f, 210f, _t / CascadeTime);
+                    for (var i = 0; i < 2; i++)
+                    {
+                        var bp = Underside(_rng.RandfRange(0f, Mathf.Tau), r * _rng.RandfRange(0.85f, 1.05f));
+                        Effects.Explosion(_world, bp, 24f, i == 0 && _rng.Randf() < 0.4f ? ExplosionFx.Plasma : 0);
+                        Fireball(bp, _rng.RandfRange(14f, 24f), 5, i == 0);
+                    }
+                    if (_rng.Randf() < 0.5f) Sfx.At("explosion", _ship.GlobalPosition, 16f, _rng.RandfRange(0.45f, 0.65f), 0);
+                }
+                else
+                {
+                    _boomT = Mathf.Lerp(0.25f, 0.7f, k);
+                    var bp = Underside(_rng.RandfRange(0f, Mathf.Tau), _rng.RandfRange(20f, 200f));
+                    Effects.Explosion(_world, bp, 24f, 0);
+                    Fireball(bp, _rng.RandfRange(16f, 28f), 6, _rng.Randf() < 0.3f);
+                    if (_rng.Randf() < 0.3f) Sfx.At("explosion", bp, 16f, _rng.RandfRange(0.45f, 0.65f), 0);
+                }
             }
+            // Rideau de feu et de fumée traîné par la coque (dessus et bords).
             _smokeT -= dt;
             if (_smokeT <= 0f)
             {
-                _smokeT = 0.12f;
-                for (var i = 0; i < 3; i++)
+                // Bouffées limitées en nombre et en taille : de très grosses bouffées qui s'accumulent coûtent un plein
+                // écran de remplissage chacune (la cadence tombait sous 20 images par seconde).
+                _smokeT = 0.15f;
+                for (var i = 0; i < 2; i++)
                 {
-                    var local = new Vector3(_rng.RandfRange(-90f, 90f), 10f, _rng.RandfRange(-150f, 150f));
-                    var sp = _ship.GlobalTransform * local;
-                    fx.SmokePuff(sp, Vector3.Up * 6f, _rng.RandfRange(22f, 36f), 9f, new Color(0.09f, 0.085f, 0.09f));
-                    if (i == 0) fx.FirePuff(sp, Vector3.Up * 3f, _rng.RandfRange(12f, 20f), 1.6f, new Color(1f, 0.55f, 0.25f));
+                    var z = _rng.RandfRange(-180f, 180f);
+                    var x = _rng.RandfRange(-1f, 1f) * BugModel.MsHalfWidth(z) * 0.9f;
+                    var sp = _ship.GlobalTransform * new Vector3(x, 14f, z);
+                    fx.SmokePuff(sp, Vector3.Up * 8f, _rng.RandfRange(20f, 30f), 7f, new Color(0.075f, 0.07f, 0.072f));
+                    if (_t > 3f) fx.FirePuff(sp, Vector3.Up * 5f, _rng.RandfRange(12f, 20f), 2f, FireTint);
                 }
             }
             if (_t >= FallTime) Crash();
             return;
         }
-        // Épave au sol : fumée et feux qui ne s'éteignent pas.
+        // Après l'impact : champignon qui monte pendant 4 s, puis épave en feu et fumée.
+        _crashT += dt;
+        if (_crashT < 4f && _rng.Randf() < dt * 12f)
+        {
+            var c = _crash with { Y = 0f };
+            var hh = Mathf.Lerp(10f, 150f, _crashT / 4f);
+            fx.FirePuff(c + new Vector3(_rng.RandfRange(-20f, 20f), hh, _rng.RandfRange(-20f, 20f)), Vector3.Up * 22f, _rng.RandfRange(30f, 48f), 3f, FireTint);
+            fx.SmokePuff(c + new Vector3(_rng.RandfRange(-30f, 30f), hh + 20f, _rng.RandfRange(-30f, 30f)), Vector3.Up * 16f + new Vector3(_rng.RandfRange(-6f, 6f), 0, _rng.RandfRange(-6f, 6f)), _rng.RandfRange(36f, 52f), 10f, new Color(0.07f, 0.065f, 0.065f));
+        }
         _smokeT -= dt;
         if (_smokeT <= 0f)
         {
-            _smokeT = 0.35f;
-            var local = new Vector3(_rng.RandfRange(-110f, 110f), 12f, _rng.RandfRange(-170f, 170f));
-            var sp = _ship.GlobalTransform * local;
-            fx.SmokePuff(sp, Vector3.Up * 9f, _rng.RandfRange(30f, 46f), 14f, new Color(0.08f, 0.075f, 0.08f));
-            fx.FirePuff(sp, Vector3.Up * 4f, _rng.RandfRange(10f, 18f), 2f, new Color(1f, 0.5f, 0.2f));
+            _smokeT = 0.6f;
+            var z = _rng.RandfRange(-170f, 170f);
+            var x = _rng.RandfRange(-1f, 1f) * BugModel.MsHalfWidth(z) * 0.8f;
+            var sp = _ship.GlobalTransform * new Vector3(x, 14f, z);
+            fx.SmokePuff(sp, Vector3.Up * 9f, _rng.RandfRange(24f, 34f), 10f, new Color(0.07f, 0.066f, 0.068f));
+            fx.FirePuff(sp, Vector3.Up * 4f, _rng.RandfRange(10f, 16f), 2f, FireTint);
         }
     }
 
     private void Crash()
     {
         _crashed = true;
-        var c = _crash with { Y = 2f };
-        for (var i = 0; i < 6; i++)
+        _crashT = 0f;
+        var c = _crash with { Y = 4f };
+        for (var i = 0; i < 8; i++)
         {
-            var o = new Vector3(_rng.RandfRange(-120f, 120f), _rng.RandfRange(0f, 20f), _rng.RandfRange(-160f, 160f));
-            Effects.Explosion(_world, c + _ship.GlobalBasis * o, _rng.RandfRange(40f, 70f), i % 2 == 0 ? 0 : ExplosionFx.Plasma);
+            var o = new Vector3(_rng.RandfRange(-140f, 140f), _rng.RandfRange(0f, 30f), _rng.RandfRange(-180f, 180f));
+            var p = c + _ship.GlobalBasis * o;
+            Effects.Explosion(_world, p, 24f, i % 3 == 2 ? ExplosionFx.Plasma : 0);
+            Fireball(p, _rng.RandfRange(34f, 56f), 10, i < 2);
         }
-        Effects.Dust(_world, c, new Vector3(520f, 60f, 520f));
-        ExplosionFx.For(_world).Flash(c + Vector3.Up * 40f, new Color(1f, 0.7f, 0.4f), 60f, 1400f, 2.5f);
+        // Onde de poussière qui roule sur la ville.
+        var fx = ExplosionFx.For(_world);
+        for (var i = 0; i < 40; i++)
+        {
+            var a = i * Mathf.Tau / 40f;
+            var d = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            fx.DustPuff(c + d * 120f + Vector3.Up * 10f, d * 45f + Vector3.Up * 4f, 45f, 7f, new Color(0.36f, 0.32f, 0.28f, 0.55f));
+        }
+        fx.Flash(c + Vector3.Up * 60f, new Color(1f, 0.7f, 0.4f), 40f, 1600f, 2.5f);
+        // Dôme de feu, colonne et chapeau du champignon : surfaces lumineuses sans brouillard (lisibles à 400 m dans la brume).
+        var fire = new Color(1f, 0.5f, 0.18f);
+        void Glow(Mesh mesh, Vector3 at, Vector3 s0, Vector3 s1, float delay, float grow, float life, float energy)
+        {
+            var root = new Node3D();
+            _world.FxRoot.AddChild(root);
+            root.GlobalPosition = at;
+            root.Scale = s0;
+            var mat = BugModel.GlowMaterial(fire, energy, 0.35f);
+            mat.SetShaderParameter("alpha", 0f);
+            root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = mat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = mesh is CylinderMesh ? Vector3.Up * 0.5f : Vector3.Zero });
+            var tw = root.CreateTween();
+            tw.TweenInterval(delay);
+            tw.TweenCallback(Callable.From(() => mat.SetShaderParameter("alpha", 1f)));
+            tw.SetParallel();
+            tw.TweenProperty(root, "scale", s1, grow).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+            tw.TweenMethod(Callable.From((float a) => mat.SetShaderParameter("alpha", a)), 1f, 0f, life).SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
+            tw.Chain().TweenCallback(Callable.From(root.QueueFree));
+        }
+        var sphere = new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 24, Rings = 12 };
+        Glow(sphere, c, Vector3.One, new Vector3(170f, 110f, 170f), 0f, 2.4f, 5.5f, 3.2f);
+        // Tige du champignon en boules étirées qui montent, puis chapeau.
+        for (var i = 0; i < 5; i++)
+        {
+            var y = 40f + i * 42f;
+            Glow(sphere, c + Vector3.Up * y, new Vector3(20f, 10f, 20f), new Vector3(42f - i * 3f, 34f, 42f - i * 3f), 0.3f + i * 0.45f, 2.5f, 8f, 1.8f);
+        }
+        Glow(sphere, c + Vector3.Up * 235f, Vector3.One * 10f, new Vector3(115f, 58f, 115f), 2.6f, 3.5f, 9f, 2f);
         _world.ShakeCamera(c, 1.8f, 2600f);
-        Sfx.At("ms_crash", c, 20f, 1f, 0);
+        Sfx.At("ms_crash", c, 24f, 1f, 0);
         foreach (var o in new[] { new Vector3(-60, 0, -80), new Vector3(40, 0, 30), new Vector3(10, 0, 120) })
             _world.FxRoot.AddChild(RuinFire.Plume(c + _ship.GlobalBasis * o, _world.Mission.Time == TimeOfDay.Night));
     }

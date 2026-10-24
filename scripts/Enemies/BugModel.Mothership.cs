@@ -207,6 +207,14 @@ void fragment() {
 
     private static Shader _beamShader;
 
+    /// <summary>Matière lumineuse additive sans brouillard (colonne, boule de feu lointaine), instance propre.</summary>
+    public static ShaderMaterial GlowMaterial(Color c, float energy, float flow = 1f)
+    {
+        var m = BeamMaterial(c, energy);
+        m.SetShaderParameter("flow", flow);
+        return m;
+    }
+
     private static ShaderMaterial BeamMaterial(Color c, float energy)
     {
         _beamShader ??= new Shader { Code = BeamCode };
@@ -354,11 +362,13 @@ void fragment() {
         for (var z = -200f; z < 205f; z += 18f)
             foreach (var s in new[] { -1f, 1f })
                 m.Ellipsoid(new Vector3(s * (MsHalfWidth(z) - 1f), -1f, z), Vector3.One * 1.1f, 2, 6, Colors.White);
+        // Rayons lumineux (violets, énergie du canon) qui partent de la couronne.
+        m.Use(Mats.Glow(new Color(0.62f, 0.36f, 1f), 2.4f));
         for (var i = 0; i < 12; i++)
         {
             var a = i * Mathf.Tau / 12f + 0.13f + Mathf.Pi / 12f;
             var dir = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
-            for (var d = MsIrisR + 14f; d < 190f; d += 9f)
+            for (var d = MsIrisR + 14f; d < 190f; d += 13f)
             {
                 var p = MsIris + dir * d;
                 if (Mathf.Abs(p.X) > MsHalfWidth(p.Z) - 14f || Mathf.Abs(p.Z) > 196f) break;
@@ -382,6 +392,7 @@ void fragment() {
                     var rot = new Basis(Vector3.Up, Mathf.Atan2(d.X, d.Z));
                     m.Box(new Transform3D(rot, (a + b) / 2), new Vector3(0.45f, 0.2f, d.Length() / 2f), Colors.White);
                 }
+        m.Use(MachRed());
         foreach (var bp in MsBays)
         {
             m.Box(new Transform3D(Basis.Identity, bp + new Vector3(0, -0.6f, 14.2f)), new Vector3(9f, 0.25f, 0.25f), Colors.White);
@@ -419,7 +430,7 @@ void fragment() {
             m.Ellipsoid(new Vector3(x, 2f, -217.5f), new Vector3(7.6f, 7.6f, 0.5f), 2, 18, Colors.White);
         // Plots de sustentation sous la coque.
         foreach (var (x, z) in new[] { (-70f, 40f), (70f, 40f), (-80f, -90f), (80f, -90f) })
-            m.Ellipsoid(new Vector3(x, MsUnder(z, x) - 1.3f, z), new Vector3(11f, 0.5f, 11f), 2, 18, Colors.White);
+            m.Ellipsoid(new Vector3(x, MsUnder(z, x) - 0.9f, z), new Vector3(6.5f, 0.35f, 6.5f), 2, 16, Colors.White);
     }
 
     /// <summary>Pétale de la couronne : coin blindé (repère : charnière au bord extérieur, pointe vers le centre).</summary>
@@ -458,6 +469,8 @@ void fragment() {
         m.Torus(Vector3.Up * 0.5f, Basis.Identity, 6.8f, 0.9f, 16, 5, MDark);
         m.Use(MachRed());
         m.Ellipsoid(Vector3.Down * 3.9f, new Vector3(1.4f, 0.4f, 1.4f), 2, 8, Colors.White);
+        // Couronne rouge autour du socle : la tourelle se repère du sol.
+        m.Torus(Vector3.Down * 1.2f, Basis.Identity, 6.6f, 0.45f, 20, 4, Colors.White);
     }
 
     private static void BuildMsTurretGun(InsectMesh m)
