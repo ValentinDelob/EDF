@@ -305,11 +305,36 @@ public class AllyManager
         }
     }
 
+    private readonly List<(Ally A, Vector3 P)> _pos = new();
+    private bool _posCached;
+
+    /// <summary>
+    /// Relève (true) ou oublie (false) la position des alliés pour <see cref="Nearest"/> : la boucle d'IA des ennemis
+    /// interroge les alliés des centaines de fois par image alors qu'ils ne bougent qu'ensuite (<see cref="HostTick"/>).
+    /// </summary>
+    public void CachePositions(bool on)
+    {
+        _posCached = on;
+        _pos.Clear();
+        if (on) foreach (var a in ById.Values) if (!a.Dead) _pos.Add((a, a.GlobalPosition));
+    }
+
     /// <summary>Allié le plus proche (cible secondaire des insectes).</summary>
     public Ally Nearest(Vector3 pos, float range)
     {
         Ally best = null;
         var bd = range * range;
+        if (_posCached)
+        {
+            // Pendant la boucle des ennemis, les alliés ne bougent pas : positions relevées une fois (voir CachePositions).
+            foreach (var (a, p) in _pos)
+            {
+                if (a.Dead) continue;
+                var d = p.DistanceSquaredTo(pos);
+                if (d < bd) { bd = d; best = a; }
+            }
+            return best;
+        }
         foreach (var a in ById.Values)
         {
             if (a.Dead) continue;

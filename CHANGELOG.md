@@ -1,5 +1,15 @@
 # Journal des versions
 
+## Non publié
+
+- **Performances avec beaucoup d'insectes** (objectif : 300 ennemis à 60 images par seconde) : sur la ville avec 300 fourmis, de ~30 à ~55 images par seconde (150 fourmis : de ~50 à ~80), « Tours de verre » de ~30 à ~58 (150 : de ~53 à ~80), « Acier » (marcheurs et drones) de ~28 à ~50 (150 : de ~49 à ~74). Rendu, comportement et réseau inchangés.
+  - Les insectes sont fusionnés en deux maillages animés par os au lieu d'une vingtaine de pièces chacun : moins de mises à jour et d'appels de dessin, animation calculée sans passer par le moteur.
+  - Les ennemis ne coûtent plus de calcul physique (corps statiques déplacés par position).
+  - Les insectes lointains ou hors champ s'animent moins souvent (jamais ceux dont le corps sert aux collisions : mille-pattes, fourmi qui saisit).
+  - IA : positions des soldats, des alliés et des voisins relevées une fois par image.
+  - Radar : points ennemis dessinés sans créer de polygone à chaque image.
+- Tests : `--perf` (journal détaillé du temps de chaque image, voir ARCHITECTURE.md › Performances) ; `--novsync` lève aussi la limite d'images du profil.
+
 ## v0.8.0 — Machines, objectifs et quartier d'affaires
 
 - **Escouades à rallier** : les soldats PNJ tiennent leur poste et combattent sur place jusqu'à ce qu'un joueur les rallie (touche d'interaction à moins de 10 m, repère « Rallier [E] » à l'approche) ; ils suivent ensuite ce joueur. Le Fusilier commande jusqu'à 2 escouades, les autres classes une seule. Si le chef quitte la partie, l'escouade reprend un poste sur place. Synchronisé en LAN. L'étiquette « Soldat » géante au-dessus des PNJ disparaît (barre fine du HUD seulement).

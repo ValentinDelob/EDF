@@ -314,8 +314,9 @@ public partial class BugModel
     /// <summary>Attache le squelette de rendu aux instances (chaque entrée en scène : MeshInstance3D le détache).</summary>
     private void AttachSkin()
     {
-        if (_skinMeshes == null) return;
-        foreach (var mi in _skinMeshes) RenderingServer.InstanceAttachSkeleton(mi.GetInstance(), _skeleton);
+        if (_skinMeshes == null || !IsInstanceValid(this) || !IsInsideTree()) return;
+        foreach (var mi in _skinMeshes)
+            if (IsInstanceValid(mi)) RenderingServer.InstanceAttachSkeleton(mi.GetInstance(), _skeleton);
     }
 
     /// <summary>Repère d'un nœud de l'armature dans l'espace du modèle (calculé à la demande, l'armature étant hors scène).</summary>

@@ -9,10 +9,13 @@ namespace Rempart;
 /// une ligne <c>[perf]</c> dans le journal (temps moyens par image en ms). Sans l'option, <see cref="On"/> vaut false et
 /// chaque mesure se réduit à un test de booléen.
 ///
-/// Lecture : <c>cpu</c> = temps de <c>_process</c> (scripts) et <c>_physics_process</c> (moteur physique compris) ;
-/// <c>rendu cpu/gpu</c> = temps mesurés par le serveur de rendu pour la fenêtre (préparation des listes de rendu,
-/// puis exécution sur la carte graphique) ; <c>appels</c>, <c>objets</c>, <c>prim</c> = passe visible, <c>ombres</c> = passes
-/// d'ombres. Les sections imbriquées (escalade, animation, séparation dans l'IA) sont comptées aussi dans leur parent.
+/// Lecture : l'image (<c>Frame</c>) se découpe en <c>Scripts</c> (tous les _process) → <c>Flush</c> (appels différés, dont
+/// les _draw de l'interface, puis notifications de transformation et suppressions) → <c>Flush2</c> (minuteurs, Tween) →
+/// <c>Draw</c> (serveur de rendu sur le fil principal, attente du GPU comprise) → <c>PhysGap</c> (pas de physique et entrées).
+/// <c>rendu cpu/gpu</c> = temps mesurés par le serveur de rendu pour la fenêtre ; <c>appels</c>, <c>objets</c>, <c>prim</c> =
+/// passe visible, <c>ombres</c> = passes d'ombres (appels / objets). Les sections imbriquées (escalade, rayons, animation,
+/// envoi des os, séparation dans l'IA des ennemis) sont comptées aussi dans leur parent. Une seconde ligne détaille les _draw
+/// de l'interface (temps écoulé depuis le précédent, appels différés intercalés compris) et le reste de Flush.
 /// </summary>
 public partial class Perf : Node
 {
@@ -82,13 +85,13 @@ public partial class Perf : Node
         Calls[(int)s]++;
     }
 
-    /// <summary>Compteurs libres (ennemis animés en plein, à cadence réduite, ombres actives...).</summary>
-    public static readonly int[] Counters = new int[8];
-    public static readonly string[] CounterNames = { "anim", "animLod", "ombres", "rayons", "<30m", "<60m", "<150m", "" };
+    /// <summary>Compteurs par image : insectes animés à chaque image / à cadence réduite, rayons d'escalade, ennemis par distance à la caméra.</summary>
+    public static readonly int[] Counters = new int[6];
+    public static readonly string[] CounterNames = { "anim", "animLod", "rayons", "<30m", "<60m", "<150m" };
 
     private double _t;
     private ulong _frames;
-    private double _proc, _phys, _rcpu, _rgpu;
+    private double _rcpu, _rgpu;
     private long _draw, _objs, _prims, _shDraw, _shObjs;
     private int _gc0, _gc2;
     private double _gcPause;
@@ -105,16 +108,15 @@ public partial class Perf : Node
         {
             Name = "PerfHead", ProcessMode = ProcessModeEnum.Always, ProcessPriority = int.MinValue, ProcessPhysicsPriority = int.MinValue,
         });
-        GD.Print($"[perf] modèle de fil du rendu {ProjectSettings.GetSetting("rendering/driver/threads/thread_model")}, physique sur fil séparé {ProjectSettings.GetSetting("physics/3d/run_on_separate_thread")}, fil principal {System.Environment.CurrentManagedThreadId}");
-        var once = false;
-        RenderingServer.FramePreDraw += () => { if (!once) { once = true; GD.Print($"[perf] rendu émis sur le fil {System.Environment.CurrentManagedThreadId}"); } };
+        // Rendu sur le fil principal (modèle « Safe ») : les signaux du serveur de rendu bornent la section Draw.
         RenderingServer.FramePreDraw += () => { End(S.Flush2); Begin(S.Draw); };
+        // Un minuteur de durée nulle relancé à chaque image marque le passage aux minuteurs de l'arbre (fin de Flush).
         var tree = root.GetTree();
         void Tick()
         {
             End(S.Flush);
             var tail = Stopwatch.GetTimestamp() - _drawMark;
-            DrawAcc["(après les _draw)"] = (DrawAcc.TryGetValue("(après les _draw)", out var v) ? v : 0) + tail;
+            DrawAcc["reste"] = (DrawAcc.TryGetValue("reste", out var v) ? v : 0) + tail;
             Begin(S.Flush2);
             tree.CreateTimer(0, true, false, false).Timeout += Tick;
         }
@@ -176,8 +178,6 @@ public partial class Perf : Node
         var rid = vp.GetViewportRid();
         _frames++;
         _t += delta;
-        _proc += Performance.GetMonitor(Performance.Monitor.TimeProcess);
-        _phys += Performance.GetMonitor(Performance.Monitor.TimePhysicsProcess);
         _rcpu += RenderingServer.ViewportGetMeasuredRenderTimeCpu(rid) + RenderingServer.GetFrameSetupTimeCpu();
         _rgpu += RenderingServer.ViewportGetMeasuredRenderTimeGpu(rid);
         _draw += vp.GetRenderInfo(Viewport.RenderInfoType.Visible, Viewport.RenderInfo.DrawCallsInFrame);
@@ -192,9 +192,9 @@ public partial class Perf : Node
             foreach (var e in cw.EnemiesById.Values)
             {
                 var dd = e.GlobalPosition.DistanceTo(cp);
-                if (dd < 30) Counters[4] += 10;
-                else if (dd < 60) Counters[5] += 10;
-                else if (dd < 150) Counters[6] += 10;
+                if (dd < 30) Counters[3] += 10;
+                else if (dd < 60) Counters[4] += 10;
+                else if (dd < 150) Counters[5] += 10;
             }
         }
         if (_t < 3.0) return;
@@ -207,8 +207,6 @@ public partial class Perf : Node
         // Synchronisation verticale ou plafond actifs : les temps d'image sont arrondis (60 / 30 i/s).
         if (DisplayServer.WindowGetVsyncMode() != DisplayServer.VSyncMode.Disabled || Engine.MaxFps > 0)
             sb.Append($" [vsync {DisplayServer.WindowGetVsyncMode()} plafond {Engine.MaxFps}]");
-        // Les moniteurs de temps sont en secondes.
-        sb.Append($" | cpu process {_proc * 1000 / f:0.00} physique {_phys * 1000 / f:0.00}");
         sb.Append($" | rendu cpu {_rcpu / f:0.00} gpu {_rgpu / f:0.00}");
         sb.Append($" | appels {_draw / f:0} objets {_objs / f:0} prim {_prims / f / 1000:0}k ombres {_shDraw / f:0}/{_shObjs / f:0}");
         sb.Append($" | physique objets actifs {Performance.GetMonitor(Performance.Monitor.Physics3DActiveObjects):0} paires {Performance.GetMonitor(Performance.Monitor.Physics3DCollisionPairs):0} nœuds {Performance.GetMonitor(Performance.Monitor.ObjectNodeCount):0}");
@@ -243,7 +241,7 @@ public partial class Perf : Node
         System.Array.Clear(Counters);
         _t = 0;
         _frames = 0;
-        _proc = _phys = _rcpu = _rgpu = 0;
+        _rcpu = _rgpu = 0;
         _draw = _objs = _prims = _shDraw = _shObjs = 0;
     }
 }

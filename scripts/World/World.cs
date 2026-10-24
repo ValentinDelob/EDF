@@ -270,10 +270,19 @@ public partial class World : Node3D
         FlushDamageNumbers(dt);
     }
 
+    /// <summary>Copie de la liste des ennemis pour la boucle d'IA (un ennemi peut en faire apparaître ou disparaître), réutilisée.</summary>
+    private readonly List<Enemy> _enemyList = new();
+
     private void HostProcess(float dt)
     {
         Perf.Begin(Perf.S.EnemyHost);
-        foreach (var e in EnemiesById.Values.ToList()) e.HostTick(dt);
+        CacheSoldiers(true);
+        Allies?.CachePositions(true);
+        _enemyList.Clear();
+        _enemyList.AddRange(EnemiesById.Values);
+        foreach (var e in _enemyList) e.HostTick(dt);
+        Allies?.CachePositions(false);
+        CacheSoldiers(false);
         Perf.End(Perf.S.EnemyHost);
         _flowTimer -= dt;
         if (_flowTimer <= 0)
@@ -352,11 +361,35 @@ public partial class World : Node3D
             if (!r.Downed) yield return r.GlobalPosition;
     }
 
+    /// <summary>Positions des soldats relevées pour la boucle d'IA des ennemis (ils ne bougent pas pendant celle-ci).</summary>
+    private readonly List<(long Peer, Node3D P, Vector3 At)> _soldiers = new();
+    private bool _soldiersCached;
+
+    private void CacheSoldiers(bool on)
+    {
+        _soldiersCached = on;
+        _soldiers.Clear();
+        if (!on) return;
+        if (LocalPlayer != null) _soldiers.Add((Net.I.MyId, LocalPlayer, LocalPlayer.GlobalPosition));
+        foreach (var (id, r) in Remotes) _soldiers.Add((id, r, r.GlobalPosition));
+    }
+
     public bool NearestPlayer(Vector3 pos, out long peer, out Vector3 at)
     {
         peer = 0;
         at = Vector3.Zero;
         var best = float.MaxValue;
+        if (_soldiersCached)
+        {
+            // Même ordre et même règle que ci-dessous ; l'état « à terre » reste lu en direct.
+            foreach (var (id, p, a) in _soldiers)
+            {
+                if (p is Player lp ? lp.Downed : ((RemotePlayer)p).Downed) continue;
+                var d = pos.DistanceSquaredTo(a);
+                if (d < best) { best = d; peer = id; at = a; }
+            }
+            return peer != 0;
+        }
         if (LocalPlayer != null && !LocalPlayer.Downed)
         {
             best = pos.DistanceSquaredTo(LocalPlayer.GlobalPosition);
@@ -640,8 +673,10 @@ public partial class World : Node3D
                 var d = p - o.SepPos;
                 if (flat) d.Y = 0;
                 var r = radius + o.Def.Size * 1.3f;
-                var len = d.Length();
-                if (len < r && len > 0.001f) push += d / len * (1f - len / r);
+                var l2 = d.LengthSquared();
+                if (l2 >= r * r) continue; // hors de portée : pas de racine carrée
+                var len = Mathf.Sqrt(l2);
+                if (len > 0.001f) push += d / len * (1f - len / r);
             }
         }
         return push;
