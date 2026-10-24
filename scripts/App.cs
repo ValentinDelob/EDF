@@ -252,6 +252,11 @@ public static class AutoTest
             GD.Print($"Migration {old.TemplateId} Nv.{old.Level} : étoiles [{string.Join(", ", old.Stars)}] → {System.Text.Json.JsonSerializer.Serialize(old)}");
             Profile.I.Data.Arsenal.Add(old);
         }
+        // Migration version 3 : les doublons d'un même modèle (ajoutés tels quels ci-dessus) sont fusionnés.
+        var before = Profile.I.Data.Arsenal.Count;
+        Profile.I.MergeDuplicates();
+        var dupLeft = Profile.I.Data.Arsenal.GroupBy(x => x.TemplateId).Count(g => g.Count() > 1);
+        GD.Print($"Fusion des doublons : {before} → {Profile.I.Data.Arsenal.Count} armes, doublons restants : {dupLeft}");
         var tree = app.GetTree();
         void Key(Key k)
         {
@@ -314,9 +319,23 @@ public static class AutoTest
             {
                 var w = app.CurrentWorld;
                 if (w == null) return;
-                w.CratesCollected[(int)CrateType.Weapon] += 6;
+                w.CratesCollected[(int)CrateType.Weapon] += 3;
                 w.CratesCollected[(int)CrateType.Armor] += 14;
-                w.CratesCollected[(int)CrateType.Credits] += 3;
+                // Butin fixe en plus du tirage : une arme nouvelle, une arme de départ améliorée (niveau + étoiles)
+                // et un doublon sans amélioration, pour vérifier toutes les lignes du bilan.
+                var cls = Profile.I.Data.SelectedClass;
+                var starter = Weapons.StarterLoadout[cls];
+                var fresh = Weapons.ForClass(cls).FirstOrDefault(t => Profile.I.Data.Arsenal.All(a => a.TemplateId != t.Id));
+                var improved = new WeaponInstance { TemplateId = starter[0], Level = 18 };
+                improved.Stars[(int)WeaponStat.Damage] = 3;
+                improved.Stars[(int)WeaponStat.Reload] = 2;
+                MissionReport.TestDrops = new() { improved, new WeaponInstance { TemplateId = starter[1], Level = 0 } };
+                if (fresh != null)
+                {
+                    var nw = new WeaponInstance { TemplateId = fresh.Id, Level = 12 };
+                    nw.Stars[(int)WeaponStat.Damage] = 1;
+                    MissionReport.TestDrops.Add(nw);
+                }
                 w.EndMission(true);
             };
         // --pause-at=N : ouvre le menu pause après N s (captures du menu pause).

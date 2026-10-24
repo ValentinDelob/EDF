@@ -41,4 +41,6 @@ Supprimés : objectif, panneau escouade, notification de butin, message radio, b
 Reprendre / Options / Abandonner la mission (boutons communs), panneau mission (objectif, phase, difficulté, temps, éliminations, ennemis restants), panneau escouade. Pas de phrase « la partie continue », pas de butin.
 
 ## Bilan
-VICTOIRE / ÉCHEC dans le bandeau, statistiques en plaques communes (nom à gauche, valeur à droite), butin (armes avec Lv et ☆, **sans rareté**), armure gagnée, crédits, XP de classe, boutons Rejouer / Continuer au style commun.
+VICTOIRE / ÉCHEC dans le bandeau, statistiques en plaques communes (nom à gauche, valeur à droite), butin (armes avec Lv et ☆, **sans rareté**), une arme déjà possédée dont le niveau ou des caractéristiques progressent liste ses améliorations en dessous (« Dégâts ☆2 → ☆3 (+10) », « Niveau 12 → 18 »), armure gagnée (ligne simple, **sans barre**), boutons Rejouer / Continuer au style commun.
+
+Décision ultérieure du commanditaire : **plus de crédits ni d'XP / niveaux de classe** (retirés du profil, des menus, du bilan et du guide).

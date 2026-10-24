@@ -8,21 +8,44 @@ namespace Rempart;
 
 public class ProfileData
 {
-    /// <summary>1 : rareté + 5 étoiles (1..5) ; 2 : étoiles par caractéristique (0..MaxStars), sans rareté.</summary>
-    public const int CurrentVersion = 2;
+    /// <summary>
+    /// 1 : rareté + 5 étoiles (1..5) ; 2 : étoiles par caractéristique (0..MaxStars), sans rareté ;
+    /// 3 : un seul exemplaire par modèle d'arme, plus de crédits ni d'expérience de classe
+    /// (les anciens champs « Credits » et « ClassXp » sont simplement ignorés à la lecture).
+    /// </summary>
+    public const int CurrentVersion = 3;
     public int Version { get; set; } = CurrentVersion;
     public SoldierClass SelectedClass { get; set; } = SoldierClass.Rifleman;
     public Dictionary<string, float> ArmorBonus { get; set; } = new();
+    /// <summary>Armes possédées : au plus un exemplaire par modèle.</summary>
     public List<WeaponInstance> Arsenal { get; set; } = new();
     public Dictionary<string, List<string>> Equipped { get; set; } = new();
-    public int Credits { get; set; }
     /// <summary>Clé "mission:difficulté" → nombre de victoires.</summary>
     public Dictionary<string, int> Cleared { get; set; } = new();
     public int PityCounter { get; set; }
     public int TotalKills { get; set; }
-    /// <summary>Expérience cumulée par classe.</summary>
-    public Dictionary<string, int> ClassXp { get; set; } = new();
     public int MissionsPlayed { get; set; }
+}
+
+/// <summary>
+/// Résultat de l'attribution d'une arme trouvée : nouvelle arme, arme possédée améliorée (niveau et/ou étoiles)
+/// ou arme possédée sans amélioration. <see cref="Before"/> et <see cref="After"/> sont des instantanés.
+/// </summary>
+public class LootResult
+{
+    /// <summary>Exemplaire de l'arsenal (nouveau ou amélioré).</summary>
+    public WeaponInstance Weapon;
+    /// <summary>Arme tirée au butin.</summary>
+    public WeaponInstance Dropped;
+    /// <summary>État avant (null pour une arme nouvelle) et après l'attribution.</summary>
+    public WeaponInstance Before, After;
+    public bool IsNew => Before == null;
+    public bool Improved => Before != null && (After.Level > Before.Level || ImprovedStats.Any());
+
+    /// <summary>Caractéristiques dont le nombre d'étoiles a augmenté.</summary>
+    public IEnumerable<WeaponStat> ImprovedStats => Before == null
+        ? Enumerable.Empty<WeaponStat>()
+        : Enum.GetValues<WeaponStat>().Where(s => After.HasStat(s) && After.StarsOf(s) > Before.StarsOf(s));
 }
 
 /// <summary>Profil joueur sauvegardé localement (user://profile.json).</summary>
@@ -51,37 +74,9 @@ public partial class Profile : Node
         Load();
     }
 
+    /// <summary>Armure (PV max) : armure de base de la classe + armure ramassée dans les caisses.</summary>
     public float Armor(SoldierClass c) =>
-        Classes.Get(c).BaseArmor + (Data.ArmorBonus.TryGetValue(c.ToString(), out var b) ? b : 0) + (Level(c) - 1) * 3f;
-
-    public const int MaxLevel = 60;
-
-    /// <summary>Expérience nécessaire pour passer du niveau n au niveau n+1.</summary>
-    public static int XpForLevel(int n) => (int)(300 * Mathf.Pow(n, 1.3f));
-
-    public int Xp(SoldierClass c) => Data.ClassXp.TryGetValue(c.ToString(), out var x) ? x : 0;
-
-    public int Level(SoldierClass c)
-    {
-        var xp = Xp(c);
-        var lvl = 1;
-        while (lvl < MaxLevel && xp >= XpForLevel(lvl)) { xp -= XpForLevel(lvl); lvl++; }
-        return lvl;
-    }
-
-    /// <summary>Progression (0..1) dans le niveau courant.</summary>
-    public float LevelProgress(SoldierClass c)
-    {
-        var xp = Xp(c);
-        var lvl = 1;
-        while (lvl < MaxLevel && xp >= XpForLevel(lvl)) { xp -= XpForLevel(lvl); lvl++; }
-        return lvl >= MaxLevel ? 1f : xp / (float)XpForLevel(lvl);
-    }
-
-    /// <summary>Bonus de dégâts de classe (+1 % par niveau au-delà du premier).</summary>
-    public float DamageBonus(SoldierClass c) => 1f + (Level(c) - 1) * 0.01f;
-
-    public void AddXp(SoldierClass c, int amount) => Data.ClassXp[c.ToString()] = Xp(c) + amount;
+        Classes.Get(c).BaseArmor + (Data.ArmorBonus.TryGetValue(c.ToString(), out var b) ? b : 0);
 
     public void AddArmor(SoldierClass c, float amount)
     {
@@ -115,21 +110,22 @@ public partial class Profile : Node
     }
 
     /// <summary>
-    /// Ajoute une arme trouvée à l'arsenal. Seul cas écarté : un doublon strict (même modèle, niveau et étoiles
-    /// inférieurs ou égaux à un exemplaire déjà possédé) ; il est converti en quelques crédits et signalé comme doublon.
+    /// Attribue une arme trouvée. L'arsenal garde un seul exemplaire par modèle : une arme nouvelle est ajoutée ;
+    /// une arme déjà possédée améliore l'exemplaire existant (niveau le plus haut, et pour chaque caractéristique
+    /// le plus grand nombre d'étoiles). Le résultat porte l'état avant / après pour le bilan.
     /// </summary>
-    public (WeaponInstance weapon, bool duplicate) Grant(WeaponInstance w)
+    public LootResult Grant(WeaponInstance w)
     {
-        var dup = Data.Arsenal.FirstOrDefault(x => x.TemplateId == w.TemplateId && x.Level >= w.Level
-            && Enum.GetValues<WeaponStat>().All(s => x.StarsOf(s) >= w.StarsOf(s)));
-        if (dup != null)
+        var owned = Data.Arsenal.FirstOrDefault(x => x.TemplateId == w.TemplateId);
+        if (owned == null)
         {
-            Data.Credits += 100 + w.Level * 5;
-            return (w, true);
+            w.IsNew = true;
+            Data.Arsenal.Add(w);
+            return new LootResult { Weapon = w, Dropped = w.Clone(), After = w.Clone() };
         }
-        w.IsNew = true;
-        Data.Arsenal.Add(w);
-        return (w, false);
+        var before = owned.Clone();
+        owned.MergeFrom(w);
+        return new LootResult { Weapon = owned, Dropped = w, Before = before, After = owned.Clone() };
     }
 
     public bool IsCleared(int mission, Difficulty d) => Data.Cleared.TryGetValue($"{mission}:{(int)d}", out var n) && n > 0;
@@ -196,7 +192,34 @@ public partial class Profile : Node
             }
             for (var i = 0; i < w.Stars.Length; i++) w.Stars[i] = Math.Clamp(w.Stars[i], 0, WeaponInstance.MaxStars);
         }
+        MergeDuplicates();
         Data.Version = ProfileData.CurrentVersion;
+    }
+
+    /// <summary>
+    /// Un seul exemplaire par modèle : les doublons d'un ancien profil sont fusionnés dans le premier exemplaire
+    /// (niveau max, étoiles max par caractéristique) et les références d'équipement sont redirigées vers lui.
+    /// </summary>
+    public void MergeDuplicates()
+    {
+        var keep = new Dictionary<string, WeaponInstance>();
+        var remap = new Dictionary<string, string>();
+        foreach (var w in Data.Arsenal.ToList())
+        {
+            if (!keep.TryGetValue(w.TemplateId, out var k))
+            {
+                keep[w.TemplateId] = w;
+                continue;
+            }
+            k.MergeFrom(w);
+            k.IsNew |= w.IsNew;
+            remap[w.Uid] = k.Uid;
+            Data.Arsenal.Remove(w);
+        }
+        if (remap.Count == 0) return;
+        foreach (var key in Data.Equipped.Keys.ToList())
+            Data.Equipped[key] = Data.Equipped[key].Select(u => remap.TryGetValue(u, out var n) ? n : u).Distinct().ToList();
+        GD.Print($"Profil : {remap.Count} doublon(s) d'arme fusionné(s).");
     }
 
     private void EnsureStarterWeapons()

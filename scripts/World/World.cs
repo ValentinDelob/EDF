@@ -34,7 +34,7 @@ public partial class World : Node3D
     public float HealthMul => Difficulties.EnemyHealth[(int)Difficulty] * (1f + 0.35f * (Net.I.Players.Count - 1));
 
     // Butin d'équipe ramassé pendant la mission.
-    public readonly int[] CratesCollected = new int[4];
+    public readonly int[] CratesCollected = new int[Crates.Count];
     /// <summary>Éliminations par joueur (0 = alliés PNJ et décor). Tenu par l'hôte, diffusé à tous.</summary>
     public readonly Dictionary<long, int> KillsBy = new();
     private float _scoreTimer;

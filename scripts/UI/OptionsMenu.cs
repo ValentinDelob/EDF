@@ -294,6 +294,6 @@ public partial class OptionsMenu : MenuScreen
             reset.Text = "Effacé";
             reset.Disabled = true;
         };
-        Row("Réinitialiser la progression", reset, "Efface l'armure gagnée, les armes et les crédits. Cliquez deux fois pour confirmer. Action irréversible.");
+        Row("Réinitialiser la progression", reset, "Efface l'armure gagnée, les armes et les missions terminées. Cliquez deux fois pour confirmer. Action irréversible.");
     }
 }

@@ -202,6 +202,32 @@ public class WeaponInstance
 
     [JsonIgnore] public WeaponTemplate T => Weapons.Get(TemplateId);
 
+    /// <summary>Copie indépendante (instantané avant / après d'une amélioration).</summary>
+    public WeaponInstance Clone() => new()
+    {
+        Uid = Uid, TemplateId = TemplateId, Level = Level, IsNew = IsNew,
+        Stars = (int[])(Stars ?? new int[StatCount]).Clone(),
+    };
+
+    /// <summary>
+    /// Fusionne un autre exemplaire du même modèle dans celui-ci : niveau le plus haut et, pour chaque caractéristique,
+    /// le plus grand nombre d'étoiles. Renvoie vrai si quelque chose a été amélioré.
+    /// </summary>
+    public bool MergeFrom(WeaponInstance o)
+    {
+        var improved = false;
+        if (o.Level > Level) { Level = o.Level; improved = true; }
+        if (Stars == null || Stars.Length != StatCount)
+        {
+            var s = new int[StatCount];
+            if (Stars != null) Array.Copy(Stars, s, Math.Min(s.Length, Stars.Length));
+            Stars = s;
+        }
+        foreach (var st in Enum.GetValues<WeaponStat>())
+            if (o.StarsOf(st) > StarsOf(st)) { Stars[(int)st] = o.StarsOf(st); improved = true; }
+        return improved;
+    }
+
     /// <summary>Étoiles d'une caractéristique, bornées (une sauvegarde ou un MaxStars modifié restent valides).</summary>
     public int StarsOf(WeaponStat s)
     {
@@ -266,6 +292,9 @@ public class WeaponInstance
 
     private static string Fr(float v, string fmt) => v.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
 
+    /// <summary>Petit bonus : une décimale sous 10 (évite un « +0 » pour une étoile réellement gagnée).</summary>
+    private static string Small(float v) => Fr(v, v < 10 ? "0.#" : "0");
+
     /// <summary>Texte affiché d'une caractéristique : valeur actuelle et bonus apporté par ses étoiles (« (+10) »), toujours favorable.</summary>
     public (string value, string bonus) Describe(WeaponStat s)
     {
@@ -275,7 +304,7 @@ public class WeaponInstance
             case WeaponStat.Damage:
             {
                 var pel = T.Pellets > 1 && T.Kind is WeaponKind.Hitscan or WeaponKind.Projectile ? $" ×{T.Pellets}" : "";
-                return ($"{Fr(Damage, "0")}{pel}", $"+{Fr(Damage - DamageAt(0), "0")}");
+                return ($"{Fr(Damage, "0")}{pel}", $"+{Small(Damage - DamageAt(0))}");
             }
             case WeaponStat.FireRate:
                 return ($"{Fr(FireRate * 60f, "0")}/min", $"+{Fr((FireRate - FireRateAt(0)) * 60f, "0")}/min");
@@ -287,7 +316,7 @@ public class WeaponInstance
                 return ($"{Fr(Reload, fmt)} s", $"−{Fr(ReloadAt(0) - Reload, fmt)} s");
             }
             case WeaponStat.Accuracy:
-                return ($"{Fr(AccuracyScore(Spread), "0")}", $"+{Fr(AccuracyScore(Spread) - AccuracyScore(SpreadAt(0)), "0")}");
+                return ($"{Fr(AccuracyScore(Spread), "0")}", $"+{Small(AccuracyScore(Spread) - AccuracyScore(SpreadAt(0)))}");
             case WeaponStat.Range:
                 return ($"{Fr(Range, "0")} m", $"+{Fr(Range - RangeAt(0), "0")} m");
         }
@@ -365,27 +394,31 @@ public static class Difficulties
     public static readonly int[] LevelMin = { 0, 5, 20, 40, 60 };
     public static readonly int[] LevelMax = { 25, 40, 60, 80, 100 };
     public static readonly float[] ArmorPerCrate = { 1, 1, 2, 3, 4 };
-    public static readonly float[] XpMul = { 0.75f, 1f, 1.5f, 2f, 3f };
     /// <summary>Plafond d'armure en multijoueur (0 = aucun).</summary>
     public static readonly float[] OnlineArmorCap = { 0, 1500, 3000, 6000, 0 };
 }
 
-public enum CrateType { Weapon = 0, Armor = 1, Health = 2, Credits = 3 }
+/// <summary>
+/// Types de caisse. L'entier circule sur le réseau (RPC CrateSpawn / CratePicked) et indexe les compteurs :
+/// la valeur 3 (anciennes caisses de crédits, supprimées) reste réservée et n'est plus jamais tirée.
+/// </summary>
+public enum CrateType { Weapon = 0, Armor = 1, Health = 2, Reserved3 = 3 }
 
 public static class Crates
 {
-    public static readonly string[] Names = { "Arme", "Armure", "Soin", "Crédits" };
+    /// <summary>Taille des compteurs de caisses (valeur réservée 3 comprise).</summary>
+    public const int Count = 4;
+    public static readonly string[] Names = { "Arme", "Armure", "Soin", "" };
     public static readonly Color[] Colors =
     {
-        new(0.85f, 0.15f, 0.12f), new(0.2f, 0.75f, 0.25f), new(1f, 0.45f, 0.75f), new(1f, 0.8f, 0.15f),
+        new(0.85f, 0.15f, 0.12f), new(0.2f, 0.75f, 0.25f), new(1f, 0.45f, 0.75f), new(0.5f, 0.5f, 0.5f),
     };
 
     public static CrateType Roll(RandomNumberGenerator rng)
     {
         var r = rng.Randf();
-        if (r < 0.36f) return CrateType.Weapon;
-        if (r < 0.72f) return CrateType.Armor;
-        if (r < 0.92f) return CrateType.Health;
-        return CrateType.Credits;
+        if (r < 0.39f) return CrateType.Weapon;
+        if (r < 0.78f) return CrateType.Armor;
+        return CrateType.Health;
     }
 }
