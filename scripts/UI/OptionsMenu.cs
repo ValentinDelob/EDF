@@ -280,6 +280,13 @@ public partial class OptionsMenu : MenuScreen
             "Affiche les dégâts infligés au-dessus des ennemis touchés (en jaune sur un point faible).");
         Row("Réduire les animations", Selector(OnOff, Settings.I.ReduceMotion ? 1 : 0, i => Settings.I.ReduceMotion = i == 1),
             "Fige le fond animé des menus (grille, radar, circuits, particules) et les reflets des boutons.");
+        Section("Accessibilité");
+        Row("Caisses pour daltoniens", Selector(OnOff, Settings.I.ColorblindCrates ? 1 : 0, i => Settings.I.ColorblindCrates = i == 1),
+            "Arme orange, armure bleu ciel, soin magenta (au lieu de rouge, vert et rose). Chaque type garde aussi sa forme.");
+        Row("Secousses de caméra", Slider(0f, 1f, 0.05f, Settings.I.ShakeScale, f => Settings.I.ShakeScale = f, f => $"{f * 100:0} %"),
+            "Intensité des tremblements de la caméra (explosions, coups reçus, saisie).");
+        Row("Atténuer les flashs", Selector(OnOff, Settings.I.ReduceFlashes ? 1 : 0, i => Settings.I.ReduceFlashes = i == 1),
+            "Réduit les éclairs lumineux des explosions et des tirs.");
         Section("Joueur");
         var name = new LineEdit { Text = Settings.I.PlayerName, MaxLength = 20, CustomMinimumSize = new Vector2(320, 42) };
         name.TextChanged += t => Settings.I.PlayerName = string.IsNullOrWhiteSpace(t) ? "Soldat" : t.Trim();

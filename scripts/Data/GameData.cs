@@ -425,6 +425,14 @@ public static class Crates
     {
         new(0.85f, 0.15f, 0.12f), new(0.2f, 0.75f, 0.25f), new(1f, 0.45f, 0.75f), new(0.5f, 0.5f, 0.5f),
     };
+    // Palette d'Okabe et Ito : distincte pour les principales formes de daltonisme.
+    private static readonly Color[] ColorblindColors =
+    {
+        new("e69f00"), new("56b4e9"), new("cc79a7"), new(0.5f, 0.5f, 0.5f),
+    };
+
+    /// <summary>Couleur d'une caisse selon l'option d'accessibilité.</summary>
+    public static Color Tint(CrateType t) => (Settings.I?.ColorblindCrates == true ? ColorblindColors : Colors)[(int)t];
 
     public static CrateType Roll(RandomNumberGenerator rng)
     {

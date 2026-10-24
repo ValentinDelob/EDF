@@ -1018,6 +1018,6 @@ public partial class Player : CharacterBody3D
 
     private Building _ramTarget;
 
-    public void AddShake(float amount) => _shake = Mathf.Min(1.2f, _shake + amount);
+    public void AddShake(float amount) => _shake = Mathf.Min(1.2f, _shake + amount * Settings.I.ShakeScale);
     public void ApplyRally() => RallyTime = 15f;
 }

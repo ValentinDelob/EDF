@@ -61,6 +61,10 @@ public partial class Settings : Node
     public float HudScale = 1f;
     public bool DamageNumbers = true;
     public bool ReduceMotion; // coupe les animations décoratives des menus
+    // Accessibilité
+    public bool ColorblindCrates;   // palette des caisses lisible par les daltoniens (orange / bleu ciel / magenta)
+    public float ShakeScale = 1f;   // intensité des secousses de caméra (0 = aucune)
+    public bool ReduceFlashes;      // éclairs et lumières d'explosion atténués
 
     // Joueur
     public string PlayerName = "Soldat";
@@ -300,6 +304,9 @@ public partial class Settings : Node
         cfg.SetValue("ui", "hud_scale", HudScale);
         cfg.SetValue("ui", "damage_numbers", DamageNumbers);
         cfg.SetValue("ui", "reduce_motion", ReduceMotion);
+        cfg.SetValue("access", "colorblind_crates", ColorblindCrates);
+        cfg.SetValue("access", "shake", ShakeScale);
+        cfg.SetValue("access", "reduce_flashes", ReduceFlashes);
         cfg.SetValue("player", "name", PlayerName);
         cfg.SetValue("player", "last_ip", LastIp);
         cfg.Save(FilePath);
@@ -326,6 +333,9 @@ public partial class Settings : Node
         HudScale = (float)cfg.GetValue("ui", "hud_scale", HudScale);
         DamageNumbers = (bool)cfg.GetValue("ui", "damage_numbers", DamageNumbers);
         ReduceMotion = (bool)cfg.GetValue("ui", "reduce_motion", ReduceMotion);
+        ColorblindCrates = (bool)cfg.GetValue("access", "colorblind_crates", ColorblindCrates);
+        ShakeScale = (float)cfg.GetValue("access", "shake", ShakeScale);
+        ReduceFlashes = (bool)cfg.GetValue("access", "reduce_flashes", ReduceFlashes);
         PlayerName = (string)cfg.GetValue("player", "name", PlayerName);
         LastIp = (string)cfg.GetValue("player", "last_ip", LastIp);
     }

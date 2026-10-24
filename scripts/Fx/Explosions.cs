@@ -601,6 +601,9 @@ void fragment() {
         p.EmitParticle(new Transform3D(basis, pos), vel, color, custom, EmitAll);
     }
 
+    /// <summary>Éclair assombri quand l'option « Atténuer les flashs » est active.</summary>
+    private static Color FlashTint(Color c) => Settings.I.ReduceFlashes ? c * 0.35f : c;
+
     private void StartLight(Vector3 pos, Color color, float peak, float range, float life)
     {
         FxLight pick = null;
@@ -610,6 +613,7 @@ void fragment() {
             if (pick == null || l.L.LightEnergy < pick.L.LightEnergy) pick = l;
         }
         if (pick == null) return;
+        if (Settings.I.ReduceFlashes) peak *= 0.3f;
         pick.Age = 0;
         pick.Peak = peak;
         pick.Life = life;
@@ -682,7 +686,7 @@ void fragment() {
     {
         var fb = vis * 0.32f; // rayon de la boule de feu
         // Éclair.
-        Emit(_flashes, TFlash, pos + Vector3.Up * fb * 0.4f, Vector3.Zero, fb * 1.6f, 0.12f, new Color(1f, 0.78f, 0.5f));
+        Emit(_flashes, TFlash, pos + Vector3.Up * fb * 0.4f, Vector3.Zero, fb * 1.6f, 0.12f, FlashTint(new Color(1f, 0.78f, 0.5f)));
         if (dist < (_busy < 1f && !big ? 60f : 130f)) StartLight(pos + Vector3.Up * (1f + fb * 0.5f), new Color(1f, 0.6f, 0.3f), 5f + vis * 0.9f, vis * 1.4f + 6f, big ? 1.4f : 0.7f);
         if (dist < 55f && onGround && (big || _busy >= 1f)) StartHaze(pos + Vector3.Up * fb * 0.5f, vis * 0.9f, big ? 0.016f : 0.011f);
 
@@ -775,7 +779,7 @@ void fragment() {
     {
         var fb = vis * 0.3f;
         var blue = new Color(0.2f, 0.5f, 1f);
-        Emit(_flashes, TFlash, pos + Vector3.Up * fb * 0.3f, Vector3.Zero, fb * 2.6f, 0.16f, new Color(0.7f, 0.85f, 1f));
+        Emit(_flashes, TFlash, pos + Vector3.Up * fb * 0.3f, Vector3.Zero, fb * 2.6f, 0.16f, FlashTint(new Color(0.7f, 0.85f, 1f)));
         if (dist < (_busy < 1f ? 60f : 130f)) StartLight(pos + Vector3.Up * (1f + fb * 0.5f), new Color(0.5f, 0.72f, 1f), 6f + vis * 1f, vis * 1.6f + 6f, 0.6f);
         if (dist < 55f && _busy >= 1f) StartHaze(pos + Vector3.Up * fb * 0.4f, vis * 1f, 0.018f);
         for (var i = 0; i < N(10); i++)

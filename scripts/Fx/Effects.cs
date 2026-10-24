@@ -141,7 +141,7 @@ public static class Effects
         };
         parent.AddChild(m);
         m.GlobalPosition = pos;
-        var light = new OmniLight3D { LightColor = color, LightEnergy = 2.5f, OmniRange = 6f };
+        var light = new OmniLight3D { LightColor = color, LightEnergy = Settings.I.ReduceFlashes ? 0.8f : 2.5f, OmniRange = 6f };
         parent.AddChild(light);
         light.GlobalPosition = pos;
         var tw = m.CreateTween();

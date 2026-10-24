@@ -2,6 +2,7 @@
 
 ## Non publié
 
+- **Accessibilité** (Options › Jeu) : caisses pour daltoniens (orange / bleu ciel / magenta), intensité des secousses de caméra réglable, éclairs d'explosion atténuables. La caisse de soin devient cylindrique : chaque type de caisse se reconnaît aussi à sa forme.
 - **Encyclopédie** dans le Guide : bestiaire (espèces abattues au moins une fois, points de vie, comportement, nombre d'éliminations ; les autres restent « ? ? ? »), armes obtenues par classe et par catégorie, opérations réussies par difficulté.
 
 ## v0.7.4 — Jetpack discret
