@@ -25,6 +25,9 @@ public partial class GuideMenu
         EnemyType.Drone => "Machine volante en formation, tirs laser. Vulnérable aux missiles.",
         EnemyType.Fortress => "Quadrupède géant : tourelles laser, barrages de missiles et canon principal à charge. Visez le noyau.",
         EnemyType.Centipede => "Corps de douze segments qui serpente ; chaque segment encaisse séparément. Morsure et crachat d'acide.",
+        EnemyType.Walker => "Robot bipède de quinze mètres. Garde ses distances et pilonne au canon lourd : la ligne rouge annonce le tir. Visez les genoux.",
+        EnemyType.Tripod => "Marcheur à trois pattes. Son rayon balaie le sol et rase les immeubles ; le tracé s'allume avant le tir. Visez le noyau lumineux sous la coque.",
+        EnemyType.DropShip => "Vaisseau de largage qui dépose des fourmis par sa soute. Invulnérable soute fermée : tirez dans la soute quand elle s'ouvre.",
         _ => "Données en cours d'analyse.",
     };
 
@@ -46,7 +49,7 @@ public partial class GuideMenu
             }
             _col.AddChild(UiKit.Gap(10));
             _col.AddChild(UiE.Title(e.Name.ToUpperInvariant(), 20, UiE.Mint, UiE.CondSemi));
-            var kind = e.Boss ? "Boss" : e.Static ? "Structure" : e.Flying ? "Volant" : e.Type is EnemyType.Drone or EnemyType.Fortress ? "Machine" : "Insecte";
+            var kind = e.Boss ? "Boss" : e.Static ? "Structure" : e.Flying ? "Volant" : e.Type is EnemyType.Drone or EnemyType.Fortress or EnemyType.Walker or EnemyType.Tripod or EnemyType.DropShip ? "Machine" : "Insecte";
             Para($"{kind} · {e.Health:0} PV · {(e.Ranged ? "attaque à distance" : "corps à corps")} · {kills} abattu{(kills > 1 ? "s" : "")}");
             Para(EnemyNotes(e.Type));
         }

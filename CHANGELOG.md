@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## v0.8.0 — Machines, objectifs et quartier d'affaires
 
 - **Escouades à rallier** : les soldats PNJ tiennent leur poste et combattent sur place jusqu'à ce qu'un joueur les rallie (touche d'interaction à moins de 10 m, repère « Rallier [E] » à l'approche) ; ils suivent ensuite ce joueur. Le Fusilier commande jusqu'à 2 escouades, les autres classes une seule. Si le chef quitte la partie, l'escouade reprend un poste sur place. Synchronisé en LAN. L'étiquette « Soldat » géante au-dessus des PNJ disparaît (barre fine du HUD seulement).
 - **Visée assistée à la manette** (Options › Contrôles, 50 % par défaut) : le réticule freine sur les ennemis et s'en rapproche doucement quand on bouge ou qu'on vise ; sans effet au clavier et à la souris.
