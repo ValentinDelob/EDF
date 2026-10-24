@@ -64,6 +64,11 @@ public class MissionReport
 
         r.Squad = w.ScoreRows();
         profile.Data.TotalKills += r.Kills;
+        foreach (var (type, n) in w.KillsByType)
+        {
+            profile.Data.Bestiary.TryGetValue(type.ToString(), out var k);
+            profile.Data.Bestiary[type.ToString()] = k + n;
+        }
         profile.Data.MissionsPlayed++;
         if (success) profile.MarkCleared(w.Mission.Index, w.Difficulty);
         profile.Save();

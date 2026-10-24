@@ -311,6 +311,15 @@ public static partial class AutoTest
             Shot(15f, () => app.ShowArsenal(app.ShowMain), "menu_arsenal");
             Shot(18f, app.ShowJoin, "menu_join");
             Shot(21f, app.ShowGuide, "menu_guide");
+            // Encyclopédie : bestiaire partiellement rempli (profil de test), armes, opérations.
+            Shot(24f, () =>
+            {
+                foreach (var t in new[] { EnemyType.BlackAnt, EnemyType.RedAnt, EnemyType.Wasp, EnemyType.Spider })
+                    Profile.I.Data.Bestiary[t.ToString()] = 37;
+                (app.CurrentScreen as GuideMenu)?.ShowTab(3);
+            }, "menu_guide_bestiary");
+            Shot(27f, () => (app.CurrentScreen as GuideMenu)?.ShowTab(4), "menu_guide_weapons");
+            Shot(30f, () => (app.CurrentScreen as GuideMenu)?.ShowTab(5), "menu_guide_operations");
         }
 
         // --end-after=N : termine la mission (succès) après N s avec du butin fictif, pour tester le bilan.

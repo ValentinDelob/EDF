@@ -1,5 +1,9 @@
 # Journal des versions
 
+## Non publié
+
+- **Encyclopédie** dans le Guide : bestiaire (espèces abattues au moins une fois, points de vie, comportement, nombre d'éliminations ; les autres restent « ? ? ? »), armes obtenues par classe et par catégorie, opérations réussies par difficulté.
+
 ## v0.7.4 — Jetpack discret
 
 - **Son du jetpack adouci** : bourdonnement grave et constant (plus de pulsation, d'étincelles ni d'éclats), allumage et coupure en fondu, poussée en simple souffle feutré ; volume nettement plus bas et portée réduite pour les coéquipiers.

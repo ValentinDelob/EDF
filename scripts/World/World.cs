@@ -747,6 +747,7 @@ public partial class World : Node3D
         e.Die();
         EnemiesById.Remove(e.Id);
         TeamKills++;
+        CountKill(e);
         Net.I.BroadcastEnemyDeath(e.Id, pos);
         _director?.OnEnemyKilled(e);
 
@@ -795,6 +796,7 @@ public partial class World : Node3D
         e.Die();
         EnemiesById.Remove(id);
         TeamKills++;
+        CountKill(e);
     }
 
     public void OnEnemyAttack(int id, int kind, Vector3 target)

@@ -24,6 +24,8 @@ public class ProfileData
     public Dictionary<string, int> Cleared { get; set; } = new();
     public int PityCounter { get; set; }
     public int TotalKills { get; set; }
+    /// <summary>Encyclopédie : éliminations par type d'ennemi (nom de l'énumération) ; présent = rencontré.</summary>
+    public Dictionary<string, int> Bestiary { get; set; } = new();
     public int MissionsPlayed { get; set; }
 }
 

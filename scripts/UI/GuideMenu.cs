@@ -2,7 +2,7 @@ using Godot;
 
 namespace Rempart;
 
-/// <summary>Guide du joueur : commandes, classes et règles du butin.</summary>
+/// <summary>Guide du joueur : commandes, classes, règles du butin et encyclopédie (bestiaire, armes, opérations).</summary>
 public partial class GuideMenu : MenuScreen
 {
     private VBoxContainer _col;
@@ -24,6 +24,9 @@ public partial class GuideMenu : MenuScreen
         AddTab("Les bases", BuildBasics);
         AddTab("Classes", BuildClasses);
         AddTab("Butin et progression", BuildLoot);
+        AddTab("Bestiaire", BuildBestiary);
+        AddTab("Armes", BuildWeapons);
+        AddTab("Opérations", BuildOperations);
         FooterLeft.AddChild(UiE.KeyHint("Q/E:Onglets"));
         FooterLeft.AddChild(UiE.KeyHint("↑↓:Défiler"));
         FooterLeft.AddChild(UiE.KeyHint("Échap:Retour", () => App.I.ShowMain()));
