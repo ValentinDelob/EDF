@@ -52,6 +52,7 @@ public partial class ArsenalMenu : Control
     private readonly List<Column> _cols = new();
     private readonly List<(Rect2 rect, Action action)> _hints = new();
     private float _k = 1;
+    private SoldierPortrait _portrait; // même rendu 3D du personnage que le menu principal et la sélection de mission
     private Vector2 _o;
     private double _t;
 
@@ -63,6 +64,8 @@ public partial class ArsenalMenu : Control
         _cls = Profile.I.Data.SelectedClass;
         _bg = new ArsenalEBackground();
         AddChild(_bg);
+        _portrait = new SoldierPortrait();
+        AddChild(_portrait);
         _stage = new Control { MouseFilter = MouseFilterEnum.Stop };
         UiKit.FillRect(_stage);
         _stage.Draw += DrawStage;
@@ -153,6 +156,9 @@ public partial class ArsenalMenu : Control
         _k = Mathf.Min(Size.X / EStyle.DesignW, Size.Y / EStyle.DesignH);
         if (_k <= 0) _k = 1;
         _o = ((Size - new Vector2(EStyle.DesignW, EStyle.DesignH) * _k) / 2f).Floor();
+        _portrait.Position = _o + new Vector2(944, 96) * _k;
+        _portrait.Size = new Vector2(300, 540) * _k;
+        _portrait.SetClass(_cls);
         foreach (var col in _cols)
         {
             col.Clip.Position = _o + new Vector2(col.X, RowsTop) * _k;
@@ -295,6 +301,7 @@ public partial class ArsenalMenu : Control
     {
         var n = Classes.All.Length;
         _cls = (SoldierClass)(((int)_cls + dir + n) % n);
+        _portrait.SetClass(_cls);
         _selected = null;
         _slot = 0;
         Sfx.Ui("ui_click", -8f, 1f);
@@ -463,9 +470,6 @@ public partial class ArsenalMenu : Control
 
     private void DrawLoadout(Pen p)
     {
-        var tex = ArsenalESoldier.Texture;
-        if (tex != null) _stage.DrawTextureRect(tex, p.R(944, 96, 300, 540), false);
-
         var def = Classes.Get(_cls);
         var eq = Profile.I.Equipped(_cls);
         const float x = 940, w = 290;
