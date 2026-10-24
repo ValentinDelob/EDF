@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## v0.7.0 — Démesure
 
 - **Insectes géants, comme dans EDF** : la fourmi noire fait environ 11 m de long et 4,3 m de haut (le soldat arrive sous sa tête, les pattes passent au-dessus de lui). Rouge ≈ 13 m, charognard ≈ 8 m, araignée ≈ 12 m d'envergure, guêpe ≈ 6 m, drone ≈ 5 m, mille-pattes ≈ 25 m, reine ≈ 34 m, nid ≈ 34 m ; la forteresse ne change pas. Portées de morsure, collisions, points faibles, escalade, sorties de terre, tirs et butin suivent la taille ; foulées plus longues et vitesses à peine relevées ; points de vie inchangés.
 - **Saisie par les fourmis rouges** : la fourmi rouge attrape sa victime dans ses mandibules, la soulève et la secoue en la mordant (dégâts continus) ; seule la mort de la fourmi la libère. Aucun message à l'écran, seulement un voile rouge qui pulse. Synchronisé en LAN.
