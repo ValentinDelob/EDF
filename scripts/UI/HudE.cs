@@ -41,6 +41,33 @@ public static class HudE
 
     private static Font _mono, _cond, _condBold;
     private static readonly Dictionary<int, FontVariation> Spaced = new();
+    private static ImageTexture _dot;
+
+    /// <summary>Disque blanc (16 px, bord lissé) : points du radar dessinés en rectangles texturés, regroupés par le rendu 2D.</summary>
+    public static Texture2D Dot
+    {
+        get
+        {
+            if (_dot != null) return _dot;
+            const int n = 16;
+            var img = Image.CreateEmpty(n, n, false, Image.Format.Rgba8);
+            for (var y = 0; y < n; y++)
+            for (var x = 0; x < n; x++)
+            {
+                // Couverture du pixel (4 × 4 échantillons) : bord du disque sans crénelage.
+                var cov = 0;
+                for (var sy = 0; sy < 4; sy++)
+                for (var sx = 0; sx < 4; sx++)
+                {
+                    var dx = x + (sx + 0.5f) / 4f - n / 2f;
+                    var dy = y + (sy + 0.5f) / 4f - n / 2f;
+                    if (dx * dx + dy * dy <= n * n / 4f) cov++;
+                }
+                img.SetPixel(x, y, new Color(1, 1, 1, cov / 16f));
+            }
+            return _dot = ImageTexture.CreateFromImage(img);
+        }
+    }
 
     private static Font Load(string path, Font fallback)
     {
@@ -490,7 +517,8 @@ public partial class HudRadar : HudBlock
                     DrawCircle(q, 6f, HudE.Enemy);
                     DrawArc(q, 6f, 0, Mathf.Tau, 16, HudE.Ink, 1f, true);
                 }
-                else DrawCircle(q, 3.4f, HudE.Enemy);
+                // Point en texture : un DrawCircle crée un polygone (tampons du GPU) par appel, ~13 µs pièce à 300 ennemis.
+                else DrawTextureRect(HudE.Dot, new Rect2(q - new Vector2(3.4f, 3.4f), new Vector2(6.8f, 6.8f)), false, HudE.Enemy);
             }
             else if (off < MaxOffRange && len < Range * 3f)
             {

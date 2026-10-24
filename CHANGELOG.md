@@ -1,5 +1,15 @@
 # Journal des versions
 
+## Non publié
+
+- **Performances avec beaucoup d'insectes** (objectif : 300 ennemis à 60 images par seconde) : sur la ville avec 300 fourmis, de ~30 à ~55 images par seconde (150 fourmis : de ~50 à ~80), « Tours de verre » de ~30 à ~58 (150 : de ~53 à ~80), « Acier » (marcheurs et drones) de ~28 à ~50 (150 : de ~49 à ~74). Rendu, comportement et réseau inchangés.
+  - Les insectes sont fusionnés en deux maillages animés par os au lieu d'une vingtaine de pièces chacun : moins de mises à jour et d'appels de dessin, animation calculée sans passer par le moteur.
+  - Les ennemis ne coûtent plus de calcul physique (corps statiques déplacés par position).
+  - Les insectes lointains ou hors champ s'animent moins souvent (jamais ceux dont le corps sert aux collisions : mille-pattes, fourmi qui saisit).
+  - IA : positions des soldats, des alliés et des voisins relevées une fois par image.
+  - Radar : points ennemis dessinés sans créer de polygone à chaque image.
+- Tests : `--perf` (journal détaillé du temps de chaque image, voir ARCHITECTURE.md › Performances) ; `--novsync` lève aussi la limite d'images du profil.
+
 ## v0.9.0 — Zone industrielle, Grenadier et Opérateur complets
 
 - **Plus de fourmis sous le sol** : une fourmi qui descendait un mur ou une bordure pouvait continuer sous la dalle et s'y accrocher à une face cachée. Le suivi de surface sonde maintenant dès qu'un pas franchit le niveau du sol, refuse les points situés sous un sol existant (les vrais creux à ciel ouvert, comme l'escalier du métro, restent praticables) et un garde-fou remet en surface tout insecte resté sous le sol.

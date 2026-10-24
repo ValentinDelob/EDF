@@ -192,7 +192,8 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--autohost=2` / `--autojoin=IP` | Test LAN à deux instances. |
 | `--tank` / `--heli` | Monte dans le char ou l'hélicoptère au début de la mission. |
 | `--heli-test=down` / `--heli-test=ram` | Avec `--bot --heli` : vise à la verticale et tire (journal des impacts de roquettes), ou fonce dans l'immeuble le plus proche (journal des chocs). |
-| `--stress=N` `--novsync` `--fps` | Test de charge et journal d'images par seconde (avec le nombre d'insectes sur les murs et en hauteur). |
+| `--stress=N` `--novsync` `--fps` | Test de charge et journal d'images par seconde (avec le nombre d'insectes sur les murs et en hauteur). `--novsync` lève aussi la limite d'images du profil. |
+| `--perf` | Profilage : ligne `[perf]` toutes les 3 s (voir « Performances ») : images par seconde, temps de rendu CPU / GPU, appels de dessin (passe visible et ombres), nœuds, objets physiques actifs, temps moyens par image (ms) des sections, compteurs, ramasse-miettes ; seconde ligne : coût des `_draw` de l'interface. Exemple : `--autostart=0 --bot --god --stress=300 --perf --novsync`. |
 | `--god` / `--holdfire` | Le soldat ne subit aucun dégât / le bot vise sans tirer (mesures et captures stables). |
 | `--roof[=N]` | Le soldat (bot immobile) est posé sur le toit plat le plus proche du départ, N insectes (30) apparaissent autour et l'escaladent. Avec `--autohost`, test de l'escalade vue du client. |
 | `--grab[=client\|ally]` | Une fourmi rouge sort de terre à 9 m devant le soldat (bot immobile) et le saisit ; une nouvelle apparaît 4 s après la mort de la précédente (les insectes ignorent les alliés). `=client` (avec `--autohost`) : devant le soldat du client (vue de la victime côté client) ; `=ally` : devant un allié, le soldat observe à 16 m. Avec `--holdfire`, la fourmi est invulnérable (saisie durable pour les captures). Journal `[grab]`. Exemple : `--autostart=0 --bot --grab --god --holdfire --shots=build/grab --shot-times=16,17,18`. |
@@ -220,6 +221,29 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--call-vehicle=tank\|heli` | Avec `--class=2` : crédits fournis, appel du véhicule au point visé, contrôle de la confirmation et du débit, de la pose (~8 s), puis appel de l'autre type (l'ancien est rapatrié) et montée à bord ; journal `[appel]`, « [appel] ok » à la fin. Autre classe (hôte d'un test LAN) : journal des livraisons seulement. Avec `--shots`, le bot regarde la livraison et capture `call_*`. |
 
 Les lancements de test utilisent un profil séparé (`profile_test.json`). Le script `tools/shots.sh` enchaîne compilation et captures dans `build/shots`. `tools/smoke.ps1` lance chaque mission, puis vérifie l'issue des objectifs (survie gagnée, défense perdue quand la structure tombe, convoi arrivé), le char, l'hélicoptère, les deux jeux d'armes du Grenadier, l'appel de véhicule de l'Opérateur, le bilan et une partie LAN.
+
+## Performances
+
+Objectif (spécification §13.3) : 300 ennemis actifs à 60 images par seconde sur la configuration recommandée. `--perf` (`scripts/Core/Perf.cs`) découpe chaque image :
+
+| Section | Contenu |
+| --- | --- |
+| `Scripts` | Tous les `_process` ; dedans `World`, `EnemyHost` (IA hôte) ou `EnemyClient` (interpolation), avec `Climb` (pas sur les surfaces, dont `Ray` : rayons des sondes), `Anim` (animation des modèles, dont `Skin` : envoi des os), `Separation`, puis `Hash`, `Flow`, `Director`, `Decor` (écrasement du mobilier), `CamFade`, `Allies`, `Snapshot`. |
+| `Flush` | Appels différés (dont les `_draw` de l'interface, détaillés sur la seconde ligne), notifications de transformation, suppressions. |
+| `Flush2` | Minuteurs et Tween de l'arbre de scène. |
+| `Draw` | Serveur de rendu sur le fil principal (instances modifiées, culling, listes, envoi au GPU, attente). |
+| `PhysGap` / `PhysScripts` | Pas de physique (60 Hz) et scripts `_physics_process`. |
+
+Compteurs : `anim` / `animLod` (insectes animés à chaque image / à cadence réduite), `rayons` d'escalade, ennemis à moins de 30, 60 et 150 m de la caméra.
+
+Choix qui tiennent la charge :
+
+- **Insectes cuits** (`BugModel.Skin.cs`, `Bone.cs`) : fourmis, charognard, reine, araignée, guêpe, mille-pattes et drone sont construits pièce par pièce (une vingtaine de MeshInstance3D par fourmi), puis fusionnés en deux maillages à os partagés par type (avec ombre : corps, tête, gastre, mandibules ; sans ombre, portée 90 m : pattes, antennes, ailes). Chaque sommet suit l'os de sa pièce (poids 1, sommets dans le repère de la pièce). L'armature (des `Bone`, nœuds Node3D dont les propriétés masquées gardent la pose côté C#) sort de la scène : l'animation n'appelle plus le moteur, `SyncSkin` compose les repères et n'envoie au squelette du serveur de rendu que les os qui ont bougé. Fondu caméra, flash d'impact et chitine dorée des élites s'appliquent aux deux instances. Les points d'ancrage (`GrabSocketPosition`, `HeadCenterPosition`) se calculent à la demande. Machines, forteresse et nid gardent leurs pièces (lumières, formes de collision recalées sur le modèle, peu nombreux). Un nouvel insecte : nœuds articulés en `Bone`, pièces par `Part`, type ajouté à `Bakes`.
+- **Corps statiques** : `Enemy` est un `StaticBody3D` déplacé par position (rien ne heurte les ennemis : ils ne sont que la cible des tirs et des rayons) ; un corps cinématique coûtait un pas de physique chacun.
+- **Animation à cadence réduite** (`Enemy.AnimStep`, visuel seulement) : chaque image à moins de 60 m dans le champ, une sur deux jusqu'à 150 m, une sur trois au-delà, une sur quatre hors du champ de vision (temps cumulé : la démarche reste continue). Jamais pour le mille-pattes, une fourmi qui saisit ou une forme de collision recalée sur le modèle : le jeu est identique.
+- **Boucle d'IA** : positions des soldats et des alliés relevées une fois par image (ils ne bougent pas pendant la boucle), position des voisins pour la séparation relevée dans la grille, liste des ennemis réutilisée.
+- **Radar** : points ennemis en rectangles texturés (un `DrawCircle` crée un polygone, donc des tampons GPU, à chaque appel).
+- `Mathf.SinCos` est très lent (~25 × `Sin` + `Cos`) : à éviter dans les boucles chaudes.
 
 ## Build et publication
 

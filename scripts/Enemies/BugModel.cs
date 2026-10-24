@@ -13,14 +13,14 @@ public partial class BugModel : Node3D
 {
     private class Leg
     {
-        public Node3D Hip, Femur, Knee;
+        public Bone Hip, Femur, Knee;
         public float Phase, Side, Fwd, Swing, Lf, Lt, Reach, HipY, Drop, Lift;
     }
 
     private readonly List<Leg> _legs = new();
-    private readonly List<Node3D> _wings = new();
-    private readonly List<Node3D> _antennae = new();
-    private Node3D _head, _gaster, _mandL, _mandR, _bodyPivot;
+    private readonly List<Bone> _wings = new();
+    private readonly List<Bone> _antennae = new();
+    private Bone _head, _gaster, _mandL, _mandR, _bodyPivot;
     private float _gait;
     private float _t;
     private float _pivotY;
@@ -50,6 +50,8 @@ public partial class BugModel : Node3D
         // Gigantisme : tout le modèle (et donc la foulée, voir Animate) suit EnemyDef.Giant.
         m.Scale *= Enemies.Get(type).Giant;
         m._baseScale = m.Scale.X;
+        // Pièces fusionnées en maillages à os (voir BugModel.Skin.cs).
+        m.Bake();
         return m;
     }
 
@@ -149,6 +151,17 @@ public partial class BugModel : Node3D
     {
         var inv = GetParent<Node3D>().GlobalTransform.AffineInverse();
         Aabb? box = null;
+        if (_skin != null)
+        {
+            // Modèle cuit : boîtes des pièces d'origine, portées par l'armature.
+            SyncSkin();
+            foreach (var (part, node) in _skin.Parts)
+            {
+                var b = (inv * GlobalTransform * _rigXf[node]) * part;
+                box = box?.Merge(b) ?? b;
+            }
+            return box ?? new Aabb();
+        }
         foreach (var node in FindChildren("*", "MeshInstance3D", true, false))
         {
             var mi = (MeshInstance3D)node;
@@ -237,12 +250,12 @@ public partial class BugModel : Node3D
         Ik(lf, lt, reach, -(_pivotY + hipY) + drop, out var e0, out var k0);
         var tau = -gamma - (e0 + k0);
         var sideKey = side > 0 ? "R" : "L";
-        var hip = new Node3D { Position = hipPos, Rotation = new Vector3(0, -Mathf.DegToRad(fwdDeg) * side, 0) };
+        var hip = new Bone { Position = hipPos, Rotation = new Vector3(0, -Mathf.DegToRad(fwdDeg) * side, 0) };
         _bodyPivot.AddChild(hip);
-        var fem = new Node3D();
+        var fem = new Bone();
         hip.AddChild(fem);
         Part(fem, $"{key}F{sideKey}", m => { m.Mirror = side < 0; femur(m, lf); }, false, 90f);
-        var knee = new Node3D { Position = new Vector3(lf * side, 0, 0) };
+        var knee = new Bone { Position = new Vector3(lf * side, 0, 0) };
         fem.AddChild(knee);
         Part(knee, $"{key}T{sideKey}", m => { m.Mirror = side < 0; tibia(m, lt, tau); }, false, 90f);
         var leg = new Leg
@@ -304,6 +317,14 @@ public partial class BugModel : Node3D
 
     /// <summary>Anime la démarche (vitesse en m/s), l'attaque (0..1) et le vol.</summary>
     public void Animate(float dt, float speed, float attack)
+    {
+        AnimateRig(dt, speed, attack);
+        Perf.Begin(Perf.S.Skin);
+        SyncSkin();
+        Perf.End(Perf.S.Skin);
+    }
+
+    private void AnimateRig(float dt, float speed, float attack)
     {
         _t += dt;
         if (_flashT > -1f)
@@ -397,6 +418,12 @@ public partial class BugModel : Node3D
     public void DeathPose()
     {
         _dead = true;
+        DeathPoseRig();
+        SyncSkin();
+    }
+
+    private void DeathPoseRig()
+    {
         if (Type == EnemyType.Centipede) { CentipedeDeathPose(); return; }
         foreach (var l in _legs)
         {

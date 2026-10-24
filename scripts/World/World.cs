@@ -236,14 +236,22 @@ public partial class World : Node3D
 
     public override void _Process(double delta)
     {
-        var dt = (float)delta;
+        Perf.Begin(Perf.S.World);
+        ProcessWorld((float)delta);
+        Perf.End(Perf.S.World);
+    }
+
+    private void ProcessWorld(float dt)
+    {
         if (!Ended) Elapsed += dt;
         if (Input.IsActionJustPressed("debug_screenshot")) Screenshot.Take(GetViewport(), "capture");
 
-        if (Net.I.IsHost) { HostProcess(dt); Allies.HostTick(dt); }
+        if (Net.I.IsHost) { HostProcess(dt); Perf.Begin(Perf.S.Allies); Allies.HostTick(dt); Perf.End(Perf.S.Allies); }
         else
         {
+            Perf.Begin(Perf.S.EnemyClient);
             foreach (var e in EnemiesById.Values) e.ClientTick(dt);
+            Perf.End(Perf.S.EnemyClient);
             Allies.ClientTick(dt);
         }
         UpdateGrabs(); // victimes des fourmis rouges : dans les mandibules animées de cette image
@@ -253,33 +261,55 @@ public partial class World : Node3D
             var cp = cam.GlobalPosition;
             // Point suivi : le soldat (ou son véhicule), sinon un point devant la caméra.
             var focus = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.GlobalPosition + Vector3.Up * 1.3f : cp - cam.GlobalBasis.Z * 3f;
+            Perf.Begin(Perf.S.CamFade);
             foreach (var e in EnemiesById.Values) e.CameraFade(cp, focus);
+            Perf.End(Perf.S.CamFade);
         }
 
         if (LocalPlayer != null && !LocalPlayer.Downed) LocalPickupCheck();
         FlushDamageNumbers(dt);
     }
 
+    /// <summary>Copie de la liste des ennemis pour la boucle d'IA (un ennemi peut en faire apparaître ou disparaître), réutilisée.</summary>
+    private readonly List<Enemy> _enemyList = new();
+
     private void HostProcess(float dt)
     {
-        foreach (var e in EnemiesById.Values.ToList()) e.HostTick(dt);
+        Perf.Begin(Perf.S.EnemyHost);
+        CacheSoldiers(true);
+        Allies?.CachePositions(true);
+        _enemyList.Clear();
+        _enemyList.AddRange(EnemiesById.Values);
+        foreach (var e in _enemyList) e.HostTick(dt);
+        Allies?.CachePositions(false);
+        CacheSoldiers(false);
+        Perf.End(Perf.S.EnemyHost);
         _flowTimer -= dt;
         if (_flowTimer <= 0)
         {
             _flowTimer = 0.5f;
             // Les insectes convergent vers les soldats et vers l'objectif (structure défendue, camions du convoi).
+            Perf.Begin(Perf.S.Flow);
             Flow.Compute(Objective != null ? AlivePlayerPositions().Concat(Objective.FlowTargets()) : AlivePlayerPositions());
-            RebuildSpatialHash();
+            Perf.End(Perf.S.Flow);
         }
-        else RebuildSpatialHash();
+        Perf.Begin(Perf.S.Hash);
+        RebuildSpatialHash();
+        Perf.End(Perf.S.Hash);
+        Perf.Begin(Perf.S.Director);
         _director?.Tick(dt);
+        Perf.End(Perf.S.Director);
+        Perf.Begin(Perf.S.Decor);
         Decor?.HostTick(dt);
+        Perf.End(Perf.S.Decor);
 
         _snapshotTimer -= dt;
         if (_snapshotTimer <= 0 && !Net.I.IsSolo)
         {
             _snapshotTimer = 1f / 15f;
+            Perf.Begin(Perf.S.Snapshot);
             SendSnapshots();
+            Perf.End(Perf.S.Snapshot);
         }
         _objectiveTimer -= dt;
         if (_objectiveTimer <= 0)
@@ -331,11 +361,35 @@ public partial class World : Node3D
             if (!r.Downed) yield return r.GlobalPosition;
     }
 
+    /// <summary>Positions des soldats relevées pour la boucle d'IA des ennemis (ils ne bougent pas pendant celle-ci).</summary>
+    private readonly List<(long Peer, Node3D P, Vector3 At)> _soldiers = new();
+    private bool _soldiersCached;
+
+    private void CacheSoldiers(bool on)
+    {
+        _soldiersCached = on;
+        _soldiers.Clear();
+        if (!on) return;
+        if (LocalPlayer != null) _soldiers.Add((Net.I.MyId, LocalPlayer, LocalPlayer.GlobalPosition));
+        foreach (var (id, r) in Remotes) _soldiers.Add((id, r, r.GlobalPosition));
+    }
+
     public bool NearestPlayer(Vector3 pos, out long peer, out Vector3 at)
     {
         peer = 0;
         at = Vector3.Zero;
         var best = float.MaxValue;
+        if (_soldiersCached)
+        {
+            // Même ordre et même règle que ci-dessous ; l'état « à terre » reste lu en direct.
+            foreach (var (id, p, a) in _soldiers)
+            {
+                if (p is Player lp ? lp.Downed : ((RemotePlayer)p).Downed) continue;
+                var d = pos.DistanceSquaredTo(a);
+                if (d < best) { best = d; peer = id; at = a; }
+            }
+            return peer != 0;
+        }
         if (LocalPlayer != null && !LocalPlayer.Downed)
         {
             best = pos.DistanceSquaredTo(LocalPlayer.GlobalPosition);
@@ -581,7 +635,8 @@ public partial class World : Node3D
         foreach (var e in EnemiesById.Values)
         {
             if (e.State == EnemyState.Dead) continue;
-            var k = HashKey(e.GlobalPosition);
+            e.SepPos = e.GlobalPosition;
+            var k = HashKey(e.SepPos);
             if (!_hash.TryGetValue(k, out var list)) _hash[k] = list = new List<Enemy>();
             list.Add(e);
         }
@@ -603,6 +658,8 @@ public partial class World : Node3D
     {
         var p = self.GlobalPosition;
         var push = Vector3.Zero;
+        // Au sol, écartement horizontal ; les grimpeurs (murs, toits) s'écartent en 3D.
+        var flat = !self.Def.Flying && !self.Climbs;
         var cx = Mathf.FloorToInt(p.X / HashCell);
         var cz = Mathf.FloorToInt(p.Z / HashCell);
         for (var dz = -1; dz <= 1; dz++)
@@ -613,12 +670,13 @@ public partial class World : Node3D
             foreach (var o in list)
             {
                 if (o == self) continue;
-                var d = p - o.GlobalPosition;
-                // Au sol, écartement horizontal ; les grimpeurs (murs, toits) s'écartent en 3D.
-                if (!self.Def.Flying && !self.Climbs) d.Y = 0;
+                var d = p - o.SepPos;
+                if (flat) d.Y = 0;
                 var r = radius + o.Def.Size * 1.3f;
-                var len = d.Length();
-                if (len < r && len > 0.001f) push += d / len * (1f - len / r);
+                var l2 = d.LengthSquared();
+                if (l2 >= r * r) continue; // hors de portée : pas de racine carrée
+                var len = Mathf.Sqrt(l2);
+                if (len > 0.001f) push += d / len * (1f - len / r);
             }
         }
         return push;

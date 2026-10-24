@@ -75,7 +75,7 @@ public partial class BugModel
         var zc = new[] { 0.5f, 0.1f, -0.22f };
         var dzc = new[] { 0.14f, 0f, -0.06f };
 
-        _bodyPivot = new Node3D { Position = new Vector3(0, _pivotY, 0) };
+        _bodyPivot = new Bone { Position = new Vector3(0, _pivotY, 0) };
         AddChild(_bodyPivot);
 
         // Mésosome (pronotum bombé, sillon métanotal, propodéum), pétiole(s) et hanches : une seule pièce.
@@ -130,14 +130,14 @@ public partial class BugModel
         });
 
         // Gastre : gros segments annelés (tergites qui se chevauchent), pointe recourbée vers le bas.
-        _gaster = new Node3D { Position = new Vector3(0, 0.05f, -1.0f) };
+        _gaster = new Bone { Position = new Vector3(0, 0.05f, -1.0f) };
         _bodyPivot.AddChild(_gaster);
         var gl = queen ? 2.7f : 1.95f;
         var gw = queen ? 1.25f : 1f;
         Part(_gaster, "gaster", m => BuildGaster(m, gl, gw, gasterC, membrane, acid, queen));
 
         // Tête : capsule aplatie, yeux composés, carènes, clypéus ; mandibules et antennes coudées.
-        _head = new Node3D { Position = new Vector3(0, 0.15f, 0.92f), Scale = Vector3.One * 1.1f };
+        _head = new Bone { Position = new Vector3(0, 0.15f, 0.92f), Scale = Vector3.One * 1.1f };
         _bodyPivot.AddChild(_head);
         Part(_head, "head", m =>
         {
@@ -158,20 +158,20 @@ public partial class BugModel
                 for (var k = 0; k < 3; k++)
                     m.Ellipsoid(new Vector3((k - 1) * 0.08f, 0.33f, 0.45f + (k == 1 ? 0.07f : 0)), Vector3.One * 0.035f, 3, 5, eyeC);
         });
-        _mandL = new Node3D { Position = new Vector3(0.24f, -0.1f, 0.8f) };
-        _mandR = new Node3D { Position = new Vector3(-0.24f, -0.1f, 0.8f) };
+        _mandL = new Bone { Position = new Vector3(0.24f, -0.1f, 0.8f) };
+        _mandR = new Bone { Position = new Vector3(-0.24f, -0.1f, 0.8f) };
         _head.AddChild(_mandL);
         _head.AddChild(_mandR);
         foreach (var (mand, s) in new[] { (_mandL, 1f), (_mandR, -1f) })
             Part(mand, s > 0 ? "mandR" : "mandL", m => { m.Mirror = s < 0; BuildMandible(m, bodyC.Darkened(0.25f)); }, true, 70f);
         // Prise des mandibules (fourmi rouge) : la victime saisie est tenue entre les deux lames, à mi-longueur.
-        GrabSocket = new Node3D { Name = "GrabSocket", Position = new Vector3(0, -0.34f, 1.2f) };
+        GrabSocket = new Bone { Name = "GrabSocket", Position = new Vector3(0, -0.34f, 1.2f) };
         _head.AddChild(GrabSocket);
-        HeadCenter = new Node3D { Name = "HeadCenter", Position = new Vector3(0, 0.03f, 0.42f) };
+        HeadCenter = new Bone { Name = "HeadCenter", Position = new Vector3(0, 0.03f, 0.42f) };
         _head.AddChild(HeadCenter);
         foreach (var s in new[] { 1f, -1f })
         {
-            var a = new Node3D { Position = new Vector3(0.17f * s, 0.22f, 0.72f) };
+            var a = new Bone { Position = new Vector3(0.17f * s, 0.22f, 0.72f) };
             _head.AddChild(a);
             Part(a, s > 0 ? "antR" : "antL", m => { m.Mirror = s < 0; BuildAntenna(m, bodyC, legC.Lightened(0.06f)); }, false, 70f);
             _antennae.Add(a);

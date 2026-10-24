@@ -294,7 +294,9 @@ public static partial class AutoTest
     public static void Run(App app)
     {
         var dir = Screenshot.CmdArg("shots");
-        var quitAfter = Screenshot.CmdArg("quit-after");
+        // --perf : journal [perf] toutes les 3 s (processeur, rendu, appels de dessin, sections chaudes : voir Perf).
+        if (Screenshot.CmdArg("perf") != null) Perf.Install(app);
+        var quitAfter =Screenshot.CmdArg("quit-after");
         if (quitAfter != null && float.TryParse(quitAfter, NumberStyles.Float, CultureInfo.InvariantCulture, out var q))
             app.GetTree().CreateTimer(q, true, false, true).Timeout += app.Quit;
 
@@ -439,7 +441,12 @@ public static partial class AutoTest
             Net.I.HostStartMission();
         };
         // --stress=N : fait apparaître N fourmis autour du joueur (test de performance), --novsync.
-        if (Screenshot.CmdArg("novsync") != null) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+        if (Screenshot.CmdArg("novsync") != null)
+        {
+            // Mesure sans plafond : ni synchronisation verticale, ni limite d'images du profil.
+            DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+            Engine.MaxFps = 0;
+        }
         if (Screenshot.CmdArg("stress") is { } st && int.TryParse(st, out var stressN))
             app.GetTree().CreateTimer(4f).Timeout += () =>
             {
