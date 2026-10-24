@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## v0.9.0 — Zone industrielle, Grenadier et Opérateur complets
 
 - **Plus de fourmis sous le sol** : une fourmi qui descendait un mur ou une bordure pouvait continuer sous la dalle et s'y accrocher à une face cachée. Le suivi de surface sonde maintenant dès qu'un pas franchit le niveau du sol, refuse les points situés sous un sol existant (les vrais creux à ciel ouvert, comme l'escalier du métro, restent praticables) et un garde-fou remet en surface tout insecte resté sous le sol.
 - **Pas de morsure ni de saisie à travers une paroi** : la fourmi rouge (et toute morsure) exige qu'aucun mur, façade, muret ou véhicule ne la sépare de sa victime ; un arbre, un poteau ou du petit mobilier ne bloquent pas.
