@@ -217,7 +217,7 @@ public partial class LobbyMenu : Control
         if (idx < 0 || idx >= Missions.All.Length) return;
         _shownMission = idx;
         var m = Missions.All[idx];
-        var cond = $"Conditions : {MissionProgress.Time(m)}" + (m.Weather != Weather.Clear ? (m.Weather == Weather.Rain ? ", pluie" : ", orage") : "");
+        var cond = $"Conditions : {MissionProgress.Time(m)}" + (m.Weather != Weather.Clear ? (m.Weather == Weather.Rain ? ", pluie" : m.Weather == Weather.Sandstorm ? ", tempête de sable" : ", orage") : "");
         _brief.Text = $"Opération {idx + 1:00} : {m.Name}.\nType : {MissionProgress.Goal(m)}.\n{cond}. Zone : {MissionProgress.Zone(m)}.\n\n{m.Briefing}";
         // Choix de l'hôte (clients et escouade), en vert sous le briefing.
         _choice.Text = !Net.I.IsSolo ? (Host ? "" : $"Choix de l'hôte : {MissionProgress.Label(Missions.All[Net.I.LobbyMission])} · {Difficulties.Names[(int)Net.I.LobbyDifficulty]}") : "";

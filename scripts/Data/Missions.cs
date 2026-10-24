@@ -27,9 +27,9 @@ public record MissionDef(
     MapId Map = MapId.City,
     ObjectiveDef Objective = null);
 
-public enum MapId { City, Port, Suburb, Business, Industrial }
+public enum MapId { City, Port, Suburb, Business, Industrial, Desert }
 
-public enum Weather { Clear, Rain, Storm }
+public enum Weather { Clear, Rain, Storm, Sandstorm }
 
 public static class Missions
 {
@@ -296,5 +296,39 @@ public static class Missions
                     new WaveDef("beach", 0, "Un marcheur de combat sur l'autre rive du canal ! Ses obus font sauter les cuves, visez les genoux.", (EnemyType.Walker, 1), (EnemyType.Scavenger, 6)),
                     new WaveDef("west", 8, null, (EnemyType.RedAnt, 10), (EnemyType.Centipede, 1))),
             }, Weather.Storm, MapId.Industrial),
+        // Base militaire du désert.
+        new(17, "Fort de sable",
+            "La base aérienne du désert est tombée, mais son poste de commandement tient encore sur le tarmac, entre les abris bétonnés et la tour de contrôle : il relaie les frappes de toute la région. Protégez-le jusqu'à la dernière vague. Le parc est plein : trois chars et deux hélicoptères attendent un équipage devant le parc automobile et sur les hélisurfaces. Gardez vos distances avec les soutes à munitions et le dépôt de carburant : ils sautent.",
+            MissionGoal.Defense, TimeOfDay.Day, 0.003f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 3, "Contacts au nord, ils traversent la piste vers le poste !", (EnemyType.BlackAnt, 18))),
+                new PhaseDef(6, 0,
+                    new WaveDef("east", 0, "Fourmis rouges à l'est, elles arrivent du dépôt de carburant !", (EnemyType.RedAnt, 8), (EnemyType.BlackAnt, 12)),
+                    new WaveDef("west", 6, "Fourmis acides entre les casernements, elles visent le poste de loin !", (EnemyType.AcidAnt, 10))),
+                new PhaseDef(6, 0,
+                    new WaveDef("beach", 0, "Elles forcent la porte sud par la route du désert !", (EnemyType.BlackAnt, 14), (EnemyType.Scavenger, 5)),
+                    new WaveDef("north", 8, "Guêpes au-dessus de la piste !", (EnemyType.Wasp, 14))),
+                new PhaseDef(5, 0,
+                    new WaveDef("north", 0, "Dernière vague : un marcheur de combat sort des dunes avec toute la colonie. Visez les genoux !", (EnemyType.Walker, 1), (EnemyType.RedAnt, 10)),
+                    new WaveDef("east", 4, null, (EnemyType.BlackAnt, 14)),
+                    new WaveDef("west", 8, "Des araignées sur le toit du grand hangar !", (EnemyType.Spider, 8))),
+            }, Weather.Clear, MapId.Desert, new ObjectiveDef(StructureKind.CommandPost, 0f, -62f, 16000f)),
+        new(18, "Vent de sable",
+            "Une tempête de sable recouvre la base et la colonie en profite pour creuser ses nids au cœur du site : derrière le grand hangar, au pied du dépôt de carburant, au nord de la piste et près du radôme. Détruisez-les tous. La visibilité tombe à une centaine de mètres : restez groupés, repérez les nids au radar et ne tirez pas à l'aveugle vers les soutes à munitions.",
+            MissionGoal.DestroyNests, TimeOfDay.Day, 0.004f, 4,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("center", 3, "Nids repérés dans la base. Visez-les aux explosifs !", (EnemyType.BlackAnt, 14), (EnemyType.RedAnt, 6))),
+                new PhaseDef(0, 60,
+                    new WaveDef("west", 0, "Araignées dans les casernements, elles sortent de la tempête !", (EnemyType.Spider, 12))),
+                new PhaseDef(0, 120,
+                    new WaveDef("east", 0, "Essaim de guêpes au-dessus du dépôt de carburant !", (EnemyType.Wasp, 14), (EnemyType.AcidAnt, 8))),
+                new PhaseDef(0, 180,
+                    new WaveDef("north", 0, "Mille-pattes et charognards sur la piste !", (EnemyType.Centipede, 2), (EnemyType.Scavenger, 6), (EnemyType.RedAnt, 8)),
+                    new WaveDef("beach", 8, "D'autres arrivent par la route du désert !", (EnemyType.BlackAnt, 12))),
+            }, Weather.Sandstorm, MapId.Desert),
     };
 }

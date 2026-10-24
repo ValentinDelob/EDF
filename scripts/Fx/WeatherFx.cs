@@ -21,6 +21,7 @@ public partial class WeatherFx : Node3D
 
     public override void _Ready()
     {
+        if (_weather == Weather.Sandstorm) { BuildSandstorm(); return; } // WeatherFx.Sand.cs
         var pm = new ParticleProcessMaterial
         {
             EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box,
@@ -60,6 +61,7 @@ public partial class WeatherFx : Node3D
     {
         var dt = (float)delta;
         var cam = GetViewport().GetCamera3D();
+        if (_rain == null) { ProcessSandstorm(dt, cam); return; }
         if (cam != null) _rain.GlobalPosition = cam.GlobalPosition + Vector3.Up * 30f;
         if (_flash == null) return;
         _nextLightning -= dt;

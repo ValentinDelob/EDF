@@ -1,5 +1,16 @@
 # Journal des versions
 
+## Non publié
+
+- **Nouvelle carte « Base militaire du désert »** : base aérienne fortifiée submergée par l'invasion. Piste en béton qui file jusqu'à l'horizon (un avion de transport écrasé y brûle encore), voie de circulation et tarmac ; grand hangar cintré ouvert (épave d'avion de transport à l'intérieur, voûte crevée), hangar à charpente, deux abris bétonnés (chasseur calciné), tour de contrôle et sa vigie vitrée ; casernements préfabriqués et réfectoire, trois soutes à munitions enterrées, parc automobile, dépôt de carburant dans sa cuvette de merlons, radôme éventré, pylône de transmissions, hélisurfaces. Rempart de gabions percé de brèches, douze miradors, murs en T, postes de combat en sacs de sable, poste de contrôle à la porte sud et route du désert au-delà. Dunes qui envahissent la base, affleurements de grès, cratères, épaves de chars, de blindés et de camions calcinés. Au loin : champ de dunes, mesas, station radar.
+- **Véhicules abondants** : trois chars et deux hélicoptères pilotables en plus de ceux du point de départ (devant le parc automobile et sur les hélisurfaces). Synchronisés en LAN comme les autres.
+- **Tout se casse** : hangars, abris, tour de contrôle, casernements, radôme et atelier s'effondrent ; gabions, murs en T, miradors (ils basculent d'un bloc), véhicules et caisses sont destructibles ; les soutes à munitions et les cuves du dépôt brûlent puis explosent (souffle énorme, réactions en chaîne).
+- **Combat vertical** : escaliers jusqu'au balcon de la vigie (21 m), au toit du hangar à charpente, à la terrasse du radôme, au toit de l'auvent du parc automobile et au plancher des miradors ; on grimpe sur les buttes des soutes et les merlons ; les insectes escaladent hangars, abris, tour, rempart et dunes.
+- **Tempête de sable** (nouvelle météo) : brouillard brun qui s'épaissit par rafales, filets de sable chassés à l'horizontale, nappes de poussière au ras du sol, soleil réduit à une tache.
+- **Deux missions** : « Fort de sable » (jour : défendre le poste de commandement installé sur le tarmac, un marcheur de combat en dernière vague) et « Vent de sable » (tempête de sable : détruire quatre nids dans une visibilité d'une centaine de mètres).
+- Lumière du désert : soleil plus haut et plus franc, brume beige ; le gris de l'invasion reste.
+- Tests : `--desprobe` (parcours des escaliers et des buttes avec la vraie physique, explosion d'une soute et d'une cuve).
+
 ## v0.9.1 — Performances (300 ennemis)
 
 - **Performances avec beaucoup d'insectes** (objectif : 300 ennemis à 60 images par seconde) : sur la ville avec 300 fourmis, de ~30 à ~55 images par seconde (150 fourmis : de ~50 à ~80), « Tours de verre » de ~30 à ~58 (150 : de ~53 à ~80), « Acier » (marcheurs et drones) de ~28 à ~50 (150 : de ~49 à ~74). Rendu, comportement et réseau inchangés.
