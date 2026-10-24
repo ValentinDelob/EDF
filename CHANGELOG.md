@@ -1,6 +1,6 @@
 # Journal des versions
 
-## Non publié
+## v0.9.1 — Performances (300 ennemis)
 
 - **Performances avec beaucoup d'insectes** (objectif : 300 ennemis à 60 images par seconde) : sur la ville avec 300 fourmis, de ~30 à ~55 images par seconde (150 fourmis : de ~50 à ~80), « Tours de verre » de ~30 à ~58 (150 : de ~53 à ~80), « Acier » (marcheurs et drones) de ~28 à ~50 (150 : de ~49 à ~74). Rendu, comportement et réseau inchangés.
   - Les insectes sont fusionnés en deux maillages animés par os au lieu d'une vingtaine de pièces chacun : moins de mises à jour et d'appels de dessin, animation calculée sans passer par le moteur.
