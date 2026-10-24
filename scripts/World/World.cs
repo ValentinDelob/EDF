@@ -88,7 +88,7 @@ public partial class World : Node3D
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
         Decor = Destructibles.Begin(this);
-        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
         Decor.EndBuild();
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
@@ -1044,6 +1044,7 @@ public partial class World : Node3D
         if (id < 0 || id >= Buildings.Count) return;
         var b = Buildings[id];
         if (b.Destroyed) return;
+        if (b.Standing) { var panel = b.HostStandingDamage(dmg); if (panel > 0) Net.I.BroadcastBuildingStage(id, panel, at); return; } // tour ≥ 20 étages : façade seulement
         b.Health -= dmg;
         if (b.Health <= 0) { Net.I.BroadcastBuildingDestroyed(id); return; }
         var stage = b.StageFor(b.Health / b.MaxHealth);

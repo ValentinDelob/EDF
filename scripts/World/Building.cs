@@ -3,7 +3,7 @@ using Godot;
 namespace Rempart;
 
 /// <summary>Typologie d'immeuble (choisit les détails : balcons, couronnement, équipements de toit).</summary>
-public enum BuildingKind { Office, Residential, Tower, Industrial, House }
+public enum BuildingKind { Office, Residential, Tower, Industrial, House, Skyscraper, Parking }
 
 /// <summary>Usage d'un bâtiment de type <see cref="BuildingKind.House"/> (banlieue pavillonnaire).</summary>
 public enum HouseUse { Home, Garage, Church, Belfry, Gym, Market, Hall }
@@ -28,6 +28,15 @@ public struct BuildingStyle
     public Color WallColor;
     public Color RoofColor;
     public Color TrimColor;   // volets, porte, portail
+
+    // Quartier d'affaires (voir Building.Tower.cs).
+    public Vector2 Above;     // emprise (largeur, profondeur) du volume en retrait posé sur ce toit (zéro : aucun)
+    public bool Lobby;        // tour : hall vitré au pied (piliers, bandeau de transfert, auvent)
+    public bool Helipad;      // tour : hélisurface sur le toit (toit dégagé)
+    public bool Fins;         // tour : montants verticaux saillants sur le mur-rideau
+    public int Core;          // tour : noyau béton apparent sur un côté (1 = +Z, 2 = -Z, 3 = +X, 4 = -X ; 0 : aucun)
+    public bool FireEscape;   // bureaux : escalier de secours extérieur jusqu'au toit (côté Facing)
+    public int Levels;        // parking : nombre de niveaux au-dessus du rez-de-chaussée
 }
 
 /// <summary>Immeuble destructible : s'effondre (enfoncement + poussière + débris) à 0 PV.</summary>
@@ -92,7 +101,23 @@ public partial class Building : StaticBody3D
             b.AddDetailCollision();
             return b;
         }
-        b.Visual = new MeshInstance3D { Mesh = style.Kind == BuildingKind.Industrial ? BuildPlainMesh(size, facade, roof, Tint(id)) : BuildMesh(size, facade, roof, style, rng, Tint(id)) };
+        if (style.Kind == BuildingKind.Parking)
+        {
+            // Parking à étages ouvert : pas de volume plein, la collision suit dalles, rampes, poteaux et garde-corps.
+            b.Visual = new MeshInstance3D { Mesh = BuildParkingMesh(size, style, Tint(id)) };
+            b.AddChild(b.Visual);
+            b.AddDetailCollision();
+            return b;
+        }
+        b.Visual = new MeshInstance3D
+        {
+            Mesh = style.Kind switch
+            {
+                BuildingKind.Industrial => BuildPlainMesh(size, facade, roof, Tint(id)),
+                BuildingKind.Skyscraper => BuildSkyscraperMesh(size, facade, style, rng, Tint(id)),
+                _ => BuildMesh(size, facade, roof, style, rng, Tint(id)),
+            },
+        };
         b.AddChild(b.Visual);
         b.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = new Vector3(0, size.Y / 2, 0) });
         b.AddDetailCollision();
@@ -254,6 +279,7 @@ public partial class Building : StaticBody3D
 
         if (style.Kind == BuildingKind.Residential) BuildBalconies(kit, sides, h, baseY, style, rng);
         BuildRoofTop(kit, s, style, rng);
+        if (style.FireEscape) BuildFireEscape(kit, s, style);
         return kit.Commit();
     }
 

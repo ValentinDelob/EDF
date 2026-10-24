@@ -25,7 +25,7 @@ public record MissionDef(
     Weather Weather = Weather.Clear,
     MapId Map = MapId.City);
 
-public enum MapId { City, Port, Suburb }
+public enum MapId { City, Port, Suburb, Business }
 
 public enum Weather { Clear, Rain, Storm }
 
@@ -144,5 +144,37 @@ public static class Missions
                     new WaveDef("north", 0, "Dernière vague : fourmis rouges en masse depuis la forêt, des spécimens d'élite repérés !", (EnemyType.RedAnt, 14), (EnemyType.BlackAnt, 10)),
                     new WaveDef("west", 5, null, (EnemyType.RedAnt, 8), (EnemyType.Spider, 6))),
             }, Weather.Clear, MapId.Suburb),
+        new(8, "Tours de verre",
+            "Le quartier d'affaires est tombé. Des guêpes nichent entre les tours et les fourmis escaladent les façades pour déloger nos tireurs des toits. Tenez les hauteurs : le parking à étages, les escaliers de secours et le viaduc de l'autoroute dominent le parvis.",
+            MissionGoal.Exterminate, TimeOfDay.Day, 0.0025f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Fourmis sur l'avenue nord ! Elles remontent vers le parvis.", (EnemyType.BlackAnt, 18)),
+                    new WaveDef("east", 8, "Guêpes entre les tours à l'est !", (EnemyType.Wasp, 10))),
+                new PhaseDef(6, 0,
+                    new WaveDef("west", 0, "Fourmis rouges à l'ouest, elles grimpent aux façades !", (EnemyType.RedAnt, 12), (EnemyType.BlackAnt, 10)),
+                    new WaveDef("north", 6, "Nouvel essaim au-dessus des toits !", (EnemyType.Wasp, 14))),
+                new PhaseDef(6, 0,
+                    new WaveDef("south", 0, "Fourmis acides sous le viaduc, au sud !", (EnemyType.AcidAnt, 12), (EnemyType.BlackAnt, 10)),
+                    new WaveDef("beach", 6, "Araignées sur l'autoroute ! Elles sautent de pile en pile.", (EnemyType.Spider, 8))),
+                new PhaseDef(5, 0,
+                    new WaveDef("east", 0, "Dernière vague : guêpes et fourmis rouges en masse, ne lâchez pas les toits !", (EnemyType.Wasp, 18), (EnemyType.RedAnt, 10)),
+                    new WaveDef("west", 6, null, (EnemyType.BlackAnt, 14), (EnemyType.Scavenger, 5))),
+            }, Weather.Clear, MapId.Business),
+        new(9, "Panne générale",
+            "Le réseau électrique a lâché : le quartier d'affaires est plongé dans le noir, sous la pluie. La colonie a creusé ses nids au pied des tours. Détruisez-les à la lueur des incendies et méfiez-vous des araignées qui guettent depuis les façades.",
+            MissionGoal.DestroyNests, TimeOfDay.Night, 0.01f, 4,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("center", 3, "Nids repérés au pied des tours. Visez-les aux explosifs !", (EnemyType.BlackAnt, 14), (EnemyType.RedAnt, 6))),
+                new PhaseDef(0, 60,
+                    new WaveDef("east", 0, "Araignées sur les façades à l'est !", (EnemyType.Spider, 12))),
+                new PhaseDef(0, 120,
+                    new WaveDef("north", 0, "Essaim de guêpes sur l'avenue nord !", (EnemyType.Wasp, 14), (EnemyType.AcidAnt, 8))),
+                new PhaseDef(0, 180,
+                    new WaveDef("west", 0, "Mille-pattes et charognards à l'ouest, ils sortent du métro !", (EnemyType.Centipede, 2), (EnemyType.Scavenger, 6), (EnemyType.RedAnt, 8))),
+            }, Weather.Rain, MapId.Business),
     };
 }
