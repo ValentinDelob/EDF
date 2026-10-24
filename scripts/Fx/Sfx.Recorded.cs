@@ -29,7 +29,13 @@ public partial class Sfx
         ("zap", 4, 0f),
         ("plasma", 3, 0f),
         ("hammer", 4, 3f),
+        ("jet_start", 1, 0f),
+        ("jet_stop", 1, 0f),
+        ("jet_boost", 1, 0f),
     };
+
+    /// <summary>Boucles enregistrées (lues par <see cref="Loop"/>).</summary>
+    private static readonly string[] RecordedLoops = { "jet_loop" };
 
     private readonly Dictionary<string, float> _gain = new();
 
@@ -52,6 +58,23 @@ public partial class Sfx
             _variants[name] = list.ToArray();
             _sounds[name] = list[0];
             _gain[name] = gain;
+        }
+        LoadRecordedLoops();
+    }
+
+    private void LoadRecordedLoops()
+    {
+        foreach (var name in RecordedLoops)
+        {
+            var path = $"res://assets/sfx/{name}_0.wav";
+            if (!ResourceLoader.Exists(path) || GD.Load<AudioStreamWav>(path) is not { } file) continue;
+            var data = file.Data;
+            _loops[name] = new AudioStreamWav
+            {
+                Format = file.Format, MixRate = file.MixRate, Stereo = file.Stereo, Data = data,
+                LoopMode = AudioStreamWav.LoopModeEnum.Forward, LoopBegin = 0, LoopEnd = data.Length / 2,
+            };
+            file.Dispose();
         }
     }
 

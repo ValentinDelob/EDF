@@ -133,7 +133,6 @@ public partial class Sfx : Node
         vars["grunt"] = Enumerable.Range(0, 3).Select(i => Make(0.3f + 0.04f * i, Grunt(rng, i))).ToArray();
         snd["grunt"] = vars["grunt"][0];
         snd["whistle"] = Make(2.0f, t => Mathf.Sin(t * Mathf.Tau * (1600f - 500f * t)) * 0.2f * Env(t, 0.3f, 1.9f));
-        snd["jet"] = Make(0.5f, t => Noise(rng) * 0.25f * Env(t, 0.05f, 0.45f));
         snd["dash"] = Make(0.4f, t => Noise(rng) * 0.5f * Env(t, 0.005f, 0.35f) + Thump(t, 70f, 0.1f) * 0.4f);
         snd["collapse"] = Make(3.5f, Explosion(rng, 0.6f, 0.15f));
         snd["heal"] = Make(0.6f, t => Mathf.Sin(t * Mathf.Tau * (440f + 220f * t)) * 0.2f * Env(t, 0.05f, 0.55f));

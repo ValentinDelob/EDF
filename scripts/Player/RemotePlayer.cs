@@ -60,6 +60,8 @@ public partial class RemotePlayer : Node3D
         if ((flags & 16) != 0) _recoil = 0.6f;
     }
 
+    private JetpackAudio _jet;
+
     public override void _Process(double delta)
     {
         var dt = (float)delta;
@@ -75,6 +77,11 @@ public partial class RemotePlayer : Node3D
         _recoil = Mathf.MoveToward(_recoil, 0, dt * 4f);
         Model.Grabbed = grabbed;
         Model.Animate(dt, speed, _pitch, !grabbed && (_flags & 4) != 0, (_flags & 64) != 0, Downed, (_flags & 8) != 0, _recoil);
+        if ((_flags & 64) != 0 || _jet != null)
+        {
+            if (_jet == null) { _jet = new JetpackAudio { Position = new Vector3(0, 1.2f, 0) }; AddChild(_jet); }
+            _jet.Tick((_flags & 64) != 0 && !Downed, _netVel.Y, dt);
+        }
         _label.Text = Downed ? $"{PlayerName}  [À TERRE — E]" : grabbed ? $"{PlayerName}  [SAISI]" : PlayerName;
         _label.Modulate = Downed || grabbed ? new Color(1f, 0.4f, 0.3f) : new Color(0.6f, 1f, 0.7f);
     }

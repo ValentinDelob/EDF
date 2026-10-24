@@ -61,7 +61,7 @@ public partial class Player : CharacterBody3D
     private float _lastFireTime = -10f;
     private float _netTimer;
     private float _beamSoundT;
-    private float _jetSoundT;
+    private JetpackAudio _jetAudio;
     private float _stepT;
 
     private const float Gravity = 24f;
@@ -179,6 +179,15 @@ public partial class Player : CharacterBody3D
         if (!before && w.Reloading) Sfx.Ui("reload", -4f);
     }
 
+    private JetpackAudio Jet
+    {
+        get
+        {
+            if (_jetAudio == null) { _jetAudio = new JetpackAudio { Position = new Vector3(0, 1.2f, 0) }; AddChild(_jetAudio); }
+            return _jetAudio;
+        }
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         var dt = (float)delta;
@@ -263,8 +272,6 @@ public partial class Player : CharacterBody3D
                     v.Y = Mathf.MoveToward(v.Y, 10f, 45f * dt);
                     Energy -= 26f * dt;
                     speed = 11f;
-                    _jetSoundT -= dt;
-                    if (_jetSoundT <= 0) { _jetSoundT = 0.25f; Sfx.At("jet", GlobalPosition, -6f); }
                 }
                 else if (!onFloor) speed = 10f;
                 if (!Overheated && (sprintPressed || dodgePressed) && Energy > 15 && wish.LengthSquared() > 0.01f)
@@ -272,7 +279,7 @@ public partial class Player : CharacterBody3D
                     _dashTime = 0.35f;
                     _dashDir = wish.Normalized();
                     Energy -= 15;
-                    Sfx.Ui("dash", -6f, 1.3f);
+                    Jet.Boost();
                 }
                 if (Energy <= 0 && !Overheated) { Overheated = true; Energy = 0; Sfx.Ui("empty", 0, 0.6f); }
                 var regen = Flying ? 0 : (onFloor ? 34f : 16f);
@@ -352,6 +359,8 @@ public partial class Player : CharacterBody3D
     public override void _Process(double delta)
     {
         var dt = (float)delta;
+        // Hors du chemin de déplacement (véhicule, saisie, à terre) pour que la flamme s'éteigne toujours.
+        if (Def.Id == SoldierClass.Airborne) Jet.Tick(Flying && Vehicle == null && !Downed && GrabbedBy == null, Velocity.Y, dt);
         // Caméra au stick droit de la manette.
         if (!World.Paused && !World.Ended)
         {
@@ -768,7 +777,7 @@ public partial class Player : CharacterBody3D
                 if (AbilityCooldown > 0 || IsOnFloor()) return;
                 AbilityCooldown = AbilityMaxCooldown;
                 _diving = true;
-                Sfx.Ui("dash", 0f, 0.7f);
+                Jet.Boost(0f, 0.8f);
                 break;
             case SoldierClass.Support:
                 if (CallCredits < CallCost) { Sfx.Ui("empty"); return; }

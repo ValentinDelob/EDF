@@ -1,6 +1,7 @@
 # Prépare les sons d'armes à partir des banques CC0 (Free Firearm Sound Library, Kenney Sci-Fi Sounds, explosions OGA).
 # Usage : uv run --with numpy --with soundfile --with scipy python tools/make_sfx.py <banques extraites> <user://audio_dump (--dump-audio)> assets/sfx
 # Les comptes de variantes et les gains de lecture sont recopiés dans scripts/Fx/Sfx.Recorded.cs.
+# Le dossier de dump doit contenir les sons synthétisés d'origine (calage du volume) : sans lui, les volumes changent.
 import sys, os, json
 import numpy as np, soundfile as sf
 from scipy.signal import resample_poly, butter, sosfilt
@@ -127,3 +128,32 @@ finish("laser", [ken(f"laserLarge_00{i}") for i in range(5)])
 finish("zap", [mix((ken(f"laserSmall_00{i}"), 1.0), (ken(f"forceField_00{i}")[: int(0.35 * SR)], 0.6)) for i in range(4)])
 finish("plasma", [ken(f"laserLarge_00{i}", 0.7) for i in range(3)])
 finish("hammer", [mix((ken(f"impactMetal_00{i}"), 1.0), (low[i % 2][: int(0.6 * SR)], 0.8)) for i in range(4)])
+
+# --- Jetpack (Kenney thrusterFire : flamme de propulseur continue) ---
+def loopable(x, length, xf=0.5):
+    """Boucle sans couture : la fin (xf s) est fondue enchaînée dans le début."""
+    n, f = int(length * SR), int(xf * SR)
+    y = x[: n + f].copy()
+    w = np.linspace(0, 1, f)
+    y[:f] = y[:f] * w + y[n:n + f] * (1 - w)
+    return y[:n]
+
+flame = mix((ken("thrusterFire_001"), 1.0), (ken("thrusterFire_003")[int(0.7 * SR):], 0.6))
+turb = lp(hp(ken("spaceEngineSmall_000"), 300), 4000)
+core = mix((hp(flame, 60), 1.0), (turb, 0.18))
+jet_loop = loopable(core[int(0.3 * SR):], 3.6)
+# Allumage : souffle qui monte en 0,25 s, claquement grave, puis la flamme.
+ign = core[: int(1.0 * SR)].copy()
+ign *= np.minimum(1, np.linspace(0, 4, len(ign))) ** 1.5
+ign = mix((ign, 1.0), (pitch(ken("forceField_000"), 0.55)[: int(0.8 * SR)], 0.5), (low[0][: int(0.5 * SR)], 0.35))
+ign[-int(0.4 * SR):] *= np.linspace(1, 0, int(0.4 * SR)) ** 2
+# Coupure : la flamme s'éteint en 0,45 s avec un souffle qui descend.
+stop = pitch(core[int(1.0 * SR): int(1.6 * SR)], 0.8)
+stop *= np.linspace(1, 0, len(stop)) ** 2.5
+# Poussée (dash, piqué) : rafale courte et forte.
+boost = mix((hp(core[int(0.5 * SR): int(1.1 * SR)], 120), 1.0), (pitch(ken("forceField_002"), 0.7)[: int(0.6 * SR)], 0.6))
+boost *= np.minimum(1, np.linspace(0, 12, len(boost))) * np.linspace(1, 0, len(boost)) ** 1.6
+for name, clip, peak in [("jet_loop", jet_loop, 0.5), ("jet_start", ign, 0.7), ("jet_stop", stop, 0.5), ("jet_boost", boost, 0.8)]:
+    clip = clip * peak / np.abs(clip).max()
+    sf.write(os.path.join(OUT, f"{name}_0.wav"), clip, SR, subtype="PCM_16")
+    print(f"{name}: {len(clip) / SR:.2f}s")
