@@ -63,6 +63,9 @@ public partial class Player : CharacterBody3D
     private const float Gravity = 24f;
 
     public float CallCost => 300f;
+
+    /// <summary>Distance de la caméra à l'épaule : vue rapprochée (le Grenadier, plus massif, un peu plus loin).</summary>
+    private static float CamDistance(SoldierClass cls, bool aiming) => aiming ? 1.7f : cls == SoldierClass.Heavy ? 3.5f : 2.9f;
     public WeaponState Weapon => Weapons.Count > 0 ? Weapons[Mathf.Clamp(Current, 0, Weapons.Count - 1)] : null;
 
     public static Player Create(World world, SoldierClass cls, List<WeaponInstance> loadout, float maxArmor)
@@ -82,7 +85,7 @@ public partial class Player : CharacterBody3D
         p.AddChild(p._camYaw);
         p._camPitch = new Node3D();
         p._camYaw.AddChild(p._camPitch);
-        p._arm = new SpringArm3D { SpringLength = cls == SoldierClass.Heavy ? 5f : 4.2f, CollisionMask = 1, Margin = 0.3f, Position = new Vector3(0.85f, 0.15f, 0) };
+        p._arm = new SpringArm3D { SpringLength = CamDistance(cls, false), CollisionMask = 1, Margin = 0.3f, Position = new Vector3(0.85f, 0.15f, 0) };
         p._arm.AddExcludedObject(p.GetRid());
         p._camPitch.AddChild(p._arm);
         p.Camera = new Camera3D { Current = true, Fov = Settings.I.Fov, Far = 3000f, Near = 0.08f };
@@ -343,7 +346,7 @@ public partial class Player : CharacterBody3D
         // Caméra : visée, tremblement
         var zoom = Aiming ? (Vehicle != null ? Vehicle.AimZoom : Weapon != null && Weapon.W.T.Zoom > 1 ? Weapon.W.T.Zoom : 1.4f) : 1f;
         Camera.Fov = Mathf.Lerp(Camera.Fov, Settings.I.Fov / zoom, Mathf.Clamp(dt * 12f, 0, 1));
-        _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Aiming ? 2.4f : (Def.Id == SoldierClass.Heavy ? 5f : 4.2f), Mathf.Clamp(dt * 10f, 0, 1));
+        _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, CamDistance(Def.Id, Aiming), Mathf.Clamp(dt * 10f, 0, 1));
         _arm.Position = _arm.Position.Lerp(new Vector3(0.85f, 0.15f + (Vehicle?.CameraLift ?? 0f), 0), Mathf.Clamp(dt * 4f, 0, 1));
         _shake = Mathf.MoveToward(_shake, 0, dt * 2.5f);
         Camera.HOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f;
