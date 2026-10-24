@@ -87,6 +87,7 @@ public sealed class RuinKit
     /// <summary>MeshKit du secteur contenant <paramref name="p"/> pour une couche donnée.</summary>
     public MeshKit Kit(Layer layer, Vector3 p)
     {
+        _pendingProp = -1;
         var key = (layer, Mathf.FloorToInt(p.X / Cell), Mathf.FloorToInt(p.Z / Cell));
         if (_kits.TryGetValue(key, out var k)) return k;
         k = new MeshKit();
@@ -106,7 +107,12 @@ public sealed class RuinKit
     }
 
     /// <summary>Instance d'un maillage partagé (MultiMesh par secteur de 64 m).</summary>
-    public void Inst(Mesh mesh, Transform3D xf, bool shadows = true, float range = 300f, Color? color = null)
+    /// <remarks>
+    /// Un maillage d'une famille destructible (<see cref="Props.KindOf"/>) est enregistré auprès de
+    /// <see cref="Destructibles"/> (sauf poteaux et arbres déjà couchés) ; la boîte de collision posée juste après
+    /// par <see cref="Box"/> / <see cref="BoxOnGround"/> lui est rattachée.
+    /// </remarks>
+    public int Inst(Mesh mesh, Transform3D xf, bool shadows = true, float range = 300f, Color? color = null)
     {
         var key = (mesh, Mathf.FloorToInt(xf.Origin.X / Cell), Mathf.FloorToInt(xf.Origin.Z / Cell), shadows);
         if (!_inst.TryGetValue(key, out var b))
@@ -114,10 +120,21 @@ public sealed class RuinKit
             b = (new List<Transform3D>(), new List<Color>(), range);
             _inst[key] = b;
             _instOrder.Add(key);
+            _slots[key] = new InstSlot { Origin = new Vector3((key.Item2 + 0.5f) * Cell, 0, (key.Item3 + 0.5f) * Cell) };
         }
+        var index = b.xf.Count;
         b.xf.Add(xf);
         b.col.Add(color ?? Colors.White);
+        var id = Destructibles.Register(mesh, Props.KindOf(mesh), xf, color);
+        if (id >= 0) Destructibles.BindSlot(id, _slots[key], index);
+        _pendingProp = id;
+        return id;
     }
+
+    private readonly Dictionary<(Mesh, int, int, bool), InstSlot> _slots = new();
+
+    /// <summary>Accessoire destructible posé par le dernier <see cref="Inst"/> (reçoit la boîte suivante), -1 sinon.</summary>
+    private int _pendingProp = -1;
 
     /// <summary>Repère posé au sol : lacet, puis tangage/roulis éventuels.</summary>
     public static Transform3D At(Vector3 p, float yaw, float pitch = 0, float roll = 0, float scale = 1f) =>
@@ -126,16 +143,24 @@ public sealed class RuinKit
     // ───────────────────────── Collisions ─────────────────────────
 
     /// <summary>Boîte de collision (centre et orientation donnés par <paramref name="xf"/>).</summary>
-    public void Box(Transform3D xf, Vector3 size) =>
-        Body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Transform = xf });
+    public void Box(Transform3D xf, Vector3 size)
+    {
+        var cs = new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Transform = xf };
+        if (_pendingProp >= 0) Destructibles.AddShape(_pendingProp, cs);
+        else Body.AddChild(cs);
+        _pendingProp = -1;
+    }
 
     /// <summary>Boîte posée au sol (base à y = p.Y), tournée d'un lacet.</summary>
     public void BoxOnGround(Vector3 p, float yaw, Vector3 size) =>
         Box(new Transform3D(new Basis(Vector3.Up, yaw), p + Vector3.Up * (size.Y / 2)), size);
 
     /// <summary>Enveloppe convexe (points en coordonnées monde).</summary>
-    public void Convex(Vector3[] pts) =>
+    public void Convex(Vector3[] pts)
+    {
+        _pendingProp = -1;
         Body.AddChild(new CollisionShape3D { Shape = new ConvexPolygonShape3D { Points = pts } });
+    }
 
     // ───────────────────────── Marques au sol ─────────────────────────
 
@@ -159,6 +184,7 @@ public sealed class RuinKit
     /// <summary>Foyer : flammes, braises, colonne de fumée et (dans la limite par carte) lumière vacillante.</summary>
     public void Fire(Vector3 p, float scale, bool light = true)
     {
+        _pendingProp = -1;
         // De jour, la lueur d'un foyer est imperceptible : les lumières sont réservées aux cartes de nuit.
         var withLight = light && Night && Lights < MaxLights;
         if (withLight) Lights++;
@@ -169,6 +195,7 @@ public sealed class RuinKit
     /// <summary>Fumée seule (épave ou gravats qui couvent).</summary>
     public void Smolder(Vector3 p, float scale)
     {
+        _pendingProp = -1;
         Root.AddChild(RuinFire.SmokeColumn(p, scale, scale >= 2f));
     }
 
@@ -331,6 +358,7 @@ public sealed class RuinKit
                 mm.SetInstanceTransform(i, new Transform3D(xfs[i].Basis, xfs[i].Origin - origin));
                 if (colored) mm.SetInstanceColor(i, cols[i]);
             }
+            _slots[key].Mm = mm;
             Root.AddChild(new MultiMeshInstance3D
             {
                 Multimesh = mm,
@@ -341,6 +369,7 @@ public sealed class RuinKit
         }
         _inst.Clear();
         _instOrder.Clear();
+        _slots.Clear();
     }
 }
 

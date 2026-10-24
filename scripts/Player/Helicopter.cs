@@ -435,7 +435,11 @@ public partial class Helicopter : Vehicle
                 Net.I.SendDamageEnemy(e.Id, dmg, end, false);
                 _world.LocalHitFx(e, end, true, dmg);
             }
-            else Effects.Sparks(_world, end, (Vector3)hit["normal"]);
+            else
+            {
+                Effects.Sparks(_world, end, (Vector3)hit["normal"]);
+                _world.Decor?.LocalHit(hit, 13f * DamageScale(p), from);
+            }
         }
         Effects.Tracer(_world.FxRoot, from, end, new Color(1f, 0.75f, 0.35f), 0.05f);
         Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.7f, 0.3f), 0.35f);

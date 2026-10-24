@@ -79,6 +79,7 @@ public partial class Tank : Vehicle
     public override string EnterHint =>
         $"Char de combat : clic gauche canon, clic droit mitrailleuse, [{UiKit.KeyName("reload")}] recharger. Munitions limitées : arrêtez-vous au point de départ pour réarmer.";
     public override string WreckedHint => "Char détruit ! Évacuation.";
+    protected override int CrushStrength => 3;
 
     /// <summary>Simulation par le conducteur local : déplacement, tourelle, tir.</summary>
     public override void DriveTick(Player p, float dt, float camYaw, float camPitch)
@@ -100,6 +101,8 @@ public partial class Tank : Vehicle
         CheckWrecked();
         // Écrase les petits insectes sur son passage.
         if (Mathf.Abs(_speed) > 4f) _world.TankCrush(this, GlobalPosition + fwd * 3.6f * Mathf.Sign(_speed), 3f, Mathf.Abs(_speed) * 6f * dt * 10f);
+        // Renverse le mobilier, aplatit voitures et fourgons (signalé à l'hôte).
+        if (Mathf.Abs(_speed) > 1.5f) _world.Decor?.LocalCrush(GlobalPosition + fwd * 3.2f * Mathf.Sign(_speed), 2.2f, CrushStrength, GlobalPosition);
 
         // Tourelle : suit la caméra.
         var localYaw = Mathf.Wrap(camYaw + Mathf.Pi - Rotation.Y, -Mathf.Pi, Mathf.Pi);
@@ -168,7 +171,11 @@ public partial class Tank : Vehicle
                 Net.I.SendDamageEnemy(e.Id, dmg, end, false);
                 _world.LocalHitFx(e, end, true, dmg);
             }
-            else Effects.Sparks(_world, end, (Vector3)hit["normal"]);
+            else
+            {
+                Effects.Sparks(_world, end, (Vector3)hit["normal"]);
+                _world.Decor?.LocalHit(hit, 14f * p.DamageMul, from);
+            }
         }
         Effects.Tracer(_world.FxRoot, from, end, new Color(1f, 0.75f, 0.35f), 0.05f);
         Sfx.Ui("minigun", -6f);

@@ -105,6 +105,9 @@ public partial class Player : CharacterBody3D
         return p;
     }
 
+    /// <summary>Inclinaison de la caméra (tests : cadrage des captures).</summary>
+    public void SetPitch(float pitch) => _pitch = Mathf.Clamp(pitch, -1.35f, 1.2f);
+
     public void SetYaw(float yaw)
     {
         _yaw = yaw;
@@ -569,7 +572,8 @@ public partial class Player : CharacterBody3D
                 else
                 {
                     Effects.Sparks(World, end, (Vector3)hit["normal"]);
-                    if (col is Building b && !b.Destroyed) Net.I.SendBuildingDamage(b.Id, ws.W.Damage * 0.06f);
+                    if (col is Building b && !b.Destroyed) Net.I.SendBuildingDamage(b.Id, ws.W.Damage * 0.06f, end);
+                    else World.Decor?.LocalHit(col, shape, ws.W.Damage * Mathf.Clamp(1.2f - muzzle.DistanceTo(end) / ws.W.Range, 0.5f, 1f) * DamageMul, muzzle);
                 }
             }
             if (i < 3 || i % 3 == 0)
@@ -643,7 +647,8 @@ public partial class Player : CharacterBody3D
         }
         else if (_beamAccum >= 0.1f)
         {
-            if (col is Building b && !b.Destroyed) Net.I.SendBuildingDamage(b.Id, ws.W.Damage * 0.1f * 0.3f);
+            if (col is Building b && !b.Destroyed) Net.I.SendBuildingDamage(b.Id, ws.W.Damage * 0.1f * 0.3f, end);
+            else World.Decor?.LocalHit(hit, ws.W.Damage * 0.1f * DamageMul, muzzle);
             Effects.Sparks(World, end, -dir);
             _beamAccum = 0;
             _beamDamage = 0;

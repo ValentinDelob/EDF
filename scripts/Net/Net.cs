@@ -574,18 +574,48 @@ public partial class Net : Node
 
     // ---------- Décor ----------
 
-    public void SendBuildingDamage(int id, float dmg) => ToHost(MethodName.BuildingDamage, id, dmg);
+    public void SendBuildingDamage(int id, float dmg, Vector3 at) => ToHost(MethodName.BuildingDamage, id, dmg, at);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void BuildingDamage(int id, float dmg)
+    private void BuildingDamage(int id, float dmg, Vector3 at)
     {
-        if (IsHost) W?.HostBuildingDamage(id, dmg);
+        if (IsHost) W?.HostBuildingDamage(id, dmg, at);
     }
 
     public void BroadcastBuildingDestroyed(int id) => ToAll(MethodName.BuildingDestroyed, id);
 
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void BuildingDestroyed(int id) => W?.OnBuildingDestroyed(id);
+
+    /// <summary>Palier de dégâts d'un immeuble (1 à 3) et point d'impact sur la façade.</summary>
+    public void BroadcastBuildingStage(int id, int stage, Vector3 at) => ToAll(MethodName.BuildingStage, id, stage, at);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void BuildingStage(int id, int stage, Vector3 at) => W?.OnBuildingStage(id, stage, at);
+
+    // Accessoires destructibles : identifiants dans l'ordre de génération (voir Destructibles).
+
+    public void SendPropDamage(int id, float dmg, int type, Vector3 from) => ToHost(MethodName.PropDamage, id, dmg, type, from);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void PropDamage(int id, float dmg, int type, Vector3 from)
+    {
+        if (IsHost) W?.Decor?.HostDamage(id, dmg, (PropHit)type, from, Sender);
+    }
+
+    public void SendPropCrush(int id, int strength, Vector3 from) => ToHost(MethodName.PropCrush, id, strength, from);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void PropCrush(int id, int strength, Vector3 from)
+    {
+        if (IsHost) W?.Decor?.HostCrush(id, strength, from, Sender);
+    }
+
+    /// <summary>Événement d'accessoire : code (8 bits) | direction (8 bits) &lt;&lt; 8 | amplitude (8 bits) &lt;&lt; 16.</summary>
+    public void BroadcastPropEvent(int id, int packed) => ToAll(MethodName.PropEvent, id, packed);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void PropEvent(int id, int packed) => W?.Decor?.OnEvent(id, packed);
 
     // ---------- Mission ----------
 

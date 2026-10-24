@@ -19,7 +19,31 @@ public static partial class Props
         build(kit);
         m = kit.Commit();
         Cache[key] = m;
+        if (KindFor(key) is var kind and not PropKind.None) Kinds[m] = kind;
         return m;
+    }
+
+    /// <summary>Famille destructible de chaque modèle en cache (voir <see cref="Destructibles"/>).</summary>
+    private static readonly Dictionary<Mesh, PropKind> Kinds = new();
+
+    /// <summary>Famille destructible d'un maillage d'accessoire (None : décor indestructible ou traversable).</summary>
+    public static PropKind KindOf(Mesh m) => m != null && Kinds.TryGetValue(m, out var k) ? k : PropKind.None;
+
+    private static PropKind KindFor(string key)
+    {
+        // Les clés sont des préfixes stables (voir les fabriques ci-dessous).
+        if (key.StartsWith("veh")) return key.StartsWith("vehVan") ? PropKind.Van : key.StartsWith("vehTruck") ? PropKind.Truck : PropKind.Car;
+        if (key.StartsWith("wreck") || key == "armytruck") return PropKind.Wreck;
+        if (key.StartsWith("contwreck")) return PropKind.Container;
+        if (key.StartsWith("lamp") || key.StartsWith("tl") || key.StartsWith("pole") || key == "stop") return PropKind.Pole;
+        if (key.StartsWith("conifer") && !key.StartsWith("coniferfar") || key.StartsWith("broadleaf") && !key.StartsWith("broadleaffar")
+            || key.StartsWith("gardentree") || key.StartsWith("deadtree") || key.StartsWith("burntpalm")) return PropKind.Tree;
+        if (key.StartsWith("busstop") || key == "shed") return PropKind.Shelter;
+        if (key is "jersey" || key.StartsWith("barrier") || key == "hesco") return PropKind.Barrier;
+        if (key is "bench" or "swing" or "trampoline" or "goal" or "sofa" or "lounger") return PropKind.Furniture;
+        if (key is "bin" or "bollard" or "hydrant" or "barricade" or "cone" or "mailbox" or "gchair" or "gtable" or "fencepanel"
+            || key.StartsWith("wbin") || key.StartsWith("drum")) return PropKind.Small;
+        return PropKind.None;
     }
 
     private static readonly Color PoleGray = new(0.2f, 0.21f, 0.22f);
@@ -577,6 +601,9 @@ public static partial class Props
 /// <summary>
 /// Regroupe les instances d'accessoires identiques en MultiMesh, par cellule de 100 m,
 /// avec une distance de visibilité (pas d'ombres portées pour les petits objets).
+/// Les accessoires d'une famille destructible (<see cref="Props.KindOf"/>) sont enregistrés auprès de
+/// <see cref="Destructibles"/> : identifiant dans l'ordre de pose, emplacement dans le MultiMesh (masqué à la
+/// destruction) et forme de collision propre. Les autres gardent la collision fusionnée par cellule.
 /// </summary>
 public class PropScatter
 {
@@ -589,6 +616,7 @@ public class PropScatter
         public bool Shadows;
         public float Range;
         public Vector3 Origin;
+        public readonly InstSlot Slot = new();
         public readonly List<Transform3D> Xf = new();
         public readonly List<Color> Colors = new();
     }
@@ -600,9 +628,10 @@ public class PropScatter
 
     /// <summary>
     /// Pose une instance. Si le maillage a des triangles solides (<see cref="MeshKit.Record"/>), ils rejoignent la
-    /// collision fusionnée de la cellule (<paramref name="solid"/> = false : décor traversable).
+    /// collision fusionnée de la cellule (<paramref name="solid"/> = false : décor traversable), ou la forme propre
+    /// de l'accessoire s'il est destructible. Renvoie l'identifiant destructible (-1 sinon).
     /// </summary>
-    public void Add(Mesh mesh, Vector3 pos, float yaw, Color? color = null, float range = 160f, bool shadows = false, float scale = 1f, bool solid = true)
+    public int Add(Mesh mesh, Vector3 pos, float yaw, Color? color = null, float range = 160f, bool shadows = false, float scale = 1f, bool solid = true)
     {
         var cx = Mathf.FloorToInt(pos.X / Cell);
         var cz = Mathf.FloorToInt(pos.Z / Cell);
@@ -614,15 +643,26 @@ public class PropScatter
                 Mesh = mesh, Colored = color.HasValue, Shadows = shadows, Range = range,
                 Origin = new Vector3((cx + 0.5f) * Cell, 0, (cz + 0.5f) * Cell),
             };
+            b.Slot.Origin = b.Origin;
             _batches[key] = b;
         }
-        b.Xf.Add(new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), pos - b.Origin));
+        var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
+        var index = b.Xf.Count;
+        b.Xf.Add(new Transform3D(basis, pos - b.Origin));
         b.Colors.Add(color ?? Colors.White);
+        var xf = new Transform3D(basis, pos);
+        var id = Destructibles.Register(mesh, Props.KindOf(mesh), xf, color);
+        if (id >= 0)
+        {
+            Destructibles.BindSlot(id, b.Slot, index);
+            if (solid) Destructibles.AddMeshShape(id);
+            return id;
+        }
         var faces = solid ? MeshKit.FacesOf(mesh) : System.Array.Empty<Vector3>();
-        if (faces.Length == 0) return;
+        if (faces.Length == 0) return -1;
         if (!_solids.TryGetValue((cx, cz), out var list)) _solids[(cx, cz)] = list = new List<Vector3>();
-        var xf = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), pos);
         foreach (var f in faces) list.Add(xf * f);
+        return -1;
     }
 
     public void Flush(Node3D root)
@@ -641,6 +681,7 @@ public class PropScatter
                 mm.SetInstanceTransform(i, b.Xf[i]);
                 if (b.Colored) mm.SetInstanceColor(i, b.Colors[i]);
             }
+            b.Slot.Mm = mm;
             root.AddChild(new MultiMeshInstance3D
             {
                 Multimesh = mm,
