@@ -1,5 +1,9 @@
 # Journal des versions
 
+## v0.7.4 — Jetpack discret
+
+- **Son du jetpack adouci** : bourdonnement grave et constant (plus de pulsation, d'étincelles ni d'éclats), allumage et coupure en fondu, poussée en simple souffle feutré ; volume nettement plus bas et portée réduite pour les coéquipiers.
+
 ## v0.7.3 — Jetpack à énergie
 
 - **Son du jetpack refait façon « ailes d'énergie »** : plus de flamme. Bourdonnement électrique pulsé, grave et propre, avec un scintillement cristallin et de petites étincelles ; montée en régime à l'allumage, descente à la coupure, éclat d'énergie pour la poussée et le piqué.

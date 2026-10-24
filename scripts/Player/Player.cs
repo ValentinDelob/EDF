@@ -777,7 +777,7 @@ public partial class Player : CharacterBody3D
                 if (AbilityCooldown > 0 || IsOnFloor()) return;
                 AbilityCooldown = AbilityMaxCooldown;
                 _diving = true;
-                Jet.Boost(0f, 0.8f);
+                Jet.Boost(-5f, 0.85f);
                 break;
             case SoldierClass.Support:
                 if (CallCredits < CallCost) { Sfx.Ui("empty"); return; }

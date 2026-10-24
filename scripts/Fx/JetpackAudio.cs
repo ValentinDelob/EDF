@@ -3,7 +3,7 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Son du jetpack (Aéroporté) : allumage, flamme continue en boucle dont le volume et la hauteur suivent la poussée,
+/// Son du jetpack (Aéroporté), volontairement discret : allumage, bourdonnement continu en boucle (volume et hauteur suivent la poussée),
 /// puis extinction. Attaché au soldat (joueur local ou coéquipier) ; lu en 3D.
 /// </summary>
 public partial class JetpackAudio : Node3D
@@ -14,7 +14,7 @@ public partial class JetpackAudio : Node3D
 
     public override void _Ready()
     {
-        _loop = new AudioStreamPlayer3D { Bus = "Sfx", MaxDistance = 160f, UnitSize = 10f, VolumeDb = -80f };
+        _loop = new AudioStreamPlayer3D { Bus = "Sfx", MaxDistance = 80f, UnitSize = 8f, VolumeDb = -80f };
         AddChild(_loop);
     }
 
@@ -26,14 +26,14 @@ public partial class JetpackAudio : Node3D
         {
             _on = true;
             _airTime = 0;
-            Sfx.At("jet_start", GlobalPosition, -4f, 1f, 120);
+            Sfx.At("jet_start", GlobalPosition, -10f, 1f, 120);
             if (_loop.Stream == null) _loop.Stream = Sfx.Loop("jet_loop");
             if (_loop.Stream != null && !_loop.Playing) _loop.Play((float)GD.RandRange(0, 3.0));
         }
         else if (!thrust && _on)
         {
             _on = false;
-            if (_airTime > 0.2f) Sfx.At("jet_stop", GlobalPosition, -5f, 1f, 120);
+            if (_airTime > 0.2f) Sfx.At("jet_stop", GlobalPosition, -11f, 1f, 120);
         }
         if (_on) _airTime += dt;
         // Montée rapide du souffle à l'allumage, retombée plus douce à la coupure.
@@ -44,11 +44,11 @@ public partial class JetpackAudio : Node3D
             return;
         }
         if (!_loop.Playing && _loop.Stream != null) _loop.Play();
-        _loop.VolumeDb = Mathf.LinearToDb(_level) - 3f;
-        // La flamme monte légèrement dans les aigus quand on grimpe vite.
-        _loop.PitchScale = 0.92f + 0.08f * _level + Mathf.Clamp(climb / 10f, 0f, 1f) * 0.06f;
+        _loop.VolumeDb = Mathf.LinearToDb(_level) - 10f;
+        // Le bourdonnement monte à peine dans les aigus quand on grimpe vite.
+        _loop.PitchScale = 0.96f + 0.04f * _level + Mathf.Clamp(climb / 10f, 0f, 1f) * 0.02f;
     }
 
     /// <summary>Rafale de poussée (dash, piqué).</summary>
-    public void Boost(float volumeDb = -2f, float pitch = 1f) => Sfx.At("jet_boost", GlobalPosition, volumeDb, pitch, 80);
+    public void Boost(float volumeDb = -8f, float pitch = 1f) => Sfx.At("jet_boost", GlobalPosition, volumeDb, pitch, 80);
 }
