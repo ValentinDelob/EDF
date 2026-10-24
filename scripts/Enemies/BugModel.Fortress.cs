@@ -107,7 +107,7 @@ public partial class BugModel
     private void BuildFortress()
     {
         _pivotY = 0f;
-        _bodyPivot = new Node3D();
+        _bodyPivot = new Bone();
         AddChild(_bodyPivot);
         var armor = new Color(0.52f, 0.53f, 0.56f);
         var dark = new Color(0.25f, 0.26f, 0.28f);
@@ -259,9 +259,9 @@ public partial class BugModel
         Ik(FortLf, FortLt, FortReach, -(_pivotY + hipPos.Y) + drop, out var e0, out var k0);
         var tau = -gamma - (e0 + k0);
         var sideKey = side > 0 ? "R" : "L";
-        var hip = new Node3D { Position = hipPos, Rotation = new Vector3(0, -Mathf.DegToRad(fwd) * side, 0) };
+        var hip = new Bone { Position = hipPos, Rotation = new Vector3(0, -Mathf.DegToRad(fwd) * side, 0) };
         _bodyPivot.AddChild(hip);
-        var fem = new Node3D();
+        var fem = new Bone();
         hip.AddChild(fem);
         Part(fem, "femur" + sideKey, m =>
         {
@@ -280,7 +280,7 @@ public partial class BugModel
             m.Torus(new Vector3(3.2f, 0, 0), new Basis(Vector3.Back, Mathf.Pi / 2), 1.9f, 0.14f, 16, 4, Colors.White);
             m.Box(new Transform3D(Basis.Identity, new Vector3(FortLf * 0.5f, 1.92f, 0)), new Vector3(FortLf * 0.26f, 0.05f, 0.16f), Colors.White);
         });
-        var knee = new Node3D { Position = new Vector3(FortLf * side, 0, 0) };
+        var knee = new Bone { Position = new Vector3(FortLf * side, 0, 0) };
         fem.AddChild(knee);
         Part(knee, "tibia" + sideKey, m =>
         {

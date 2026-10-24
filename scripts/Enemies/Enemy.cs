@@ -8,8 +8,10 @@ public enum EnemyState : byte { Emerging = 0, Moving = 1, Attacking = 2, Dead = 
 /// <summary>
 /// Ennemi. Sur l'hôte, l'IA le pilote ; sur les clients, il interpole les instantanés reçus.
 /// Formes de collision : 0 = corps, 1 = tête (point faible).
+/// Corps statique déplacé par position : aucun corps physique ne heurte les ennemis (ils ne sont que la cible des tirs
+/// et des rayons) ; un corps cinématique coûtait un pas de physique pour chacun, à chaque image.
 /// </summary>
-public partial class Enemy : CharacterBody3D
+public partial class Enemy : StaticBody3D
 {
     public int Id;
     public EnemyDef Def;
@@ -171,6 +173,65 @@ public partial class Enemy : CharacterBody3D
 
     private void AnimateModel(float dt, float speed, float attack)
     {
+        Perf.Begin(Perf.S.Anim);
+        // Niveau de détail de l'animation (visuel seulement) : les insectes lointains ou hors champ s'animent moins souvent,
+        // avec le temps cumulé (la démarche reste continue). Jamais pour ceux dont les formes de collision suivent le modèle.
+        _animDt += dt;
+        var step = AnimStep();
+        if (step <= 1 || (int)((Engine.GetProcessFrames() + (ulong)Id) % (ulong)step) == 0)
+        {
+            AnimateModelCore(_animDt, speed, attack);
+            _animDt = 0f;
+            Perf.Counters[step <= 1 ? 0 : 1]++;
+        }
+        Perf.End(Perf.S.Anim);
+    }
+
+    private float _animDt;
+
+    /// <summary>Caméra de l'image en cours : position et plans du champ de vision (calculés une fois par image).</summary>
+    private static ulong _viewFrame = ulong.MaxValue;
+    private static Vector3 _viewPos;
+    private static readonly Plane[] _viewPlanes = new Plane[6];
+    private static bool _viewOk;
+
+    private static void UpdateView(Node from)
+    {
+        var frame = Engine.GetProcessFrames();
+        if (frame == _viewFrame) return;
+        _viewFrame = frame;
+        _viewOk = false;
+        if (from.GetViewport()?.GetCamera3D() is not { } cam) return;
+        _viewPos = cam.GlobalPosition;
+        var planes = cam.GetFrustum();
+        if (planes.Count != 6) return;
+        for (var i = 0; i < 6; i++) _viewPlanes[i] = planes[i];
+        _viewOk = true;
+    }
+
+    /// <summary>
+    /// Une image sur N : 1 près de la caméra (moins de 60 m) et dans le champ ; 2 jusqu'à 150 m ; 3 au-delà ;
+    /// 4 hors du champ de vision (le corps garde son ombre, les pattes n'en projettent pas).
+    /// </summary>
+    private int AnimStep()
+    {
+        if (!AnimLod) return 1;
+        UpdateView(this);
+        if (!_viewOk) return 1;
+        var p = GlobalPosition;
+        var d2 = p.DistanceSquaredTo(_viewPos);
+        var r = 4f * Def.Size;
+        if (d2 < r * r * 4f) return 1;
+        foreach (var pl in _viewPlanes)
+            if (pl.DistanceTo(p) > r) return 4;
+        return d2 < 60f * 60f ? 1 : d2 < 150f * 150f ? 2 : 3;
+    }
+
+    /// <summary>Cadence réduite permise : insectes cuits sans forme de collision recalée sur le modèle (ni mille-pattes, ni saisie).</summary>
+    private bool AnimLod => Model.Baked && _segShapes == null && !Grabbing && !_headMoved && State != EnemyState.Dead && !Frozen;
+
+    private void AnimateModelCore(float dt, float speed, float attack)
+    {
         if (IsMachine)
         {
             Model.AnimateMachine(dt, speed, attack);
@@ -208,7 +269,19 @@ public partial class Enemy : CharacterBody3D
     /// <summary>Fige l'IA (mode vitrine pour contrôler les modèles).</summary>
     public static bool Frozen;
 
+    /// <summary>
+    /// Position pour la séparation entre voisins (<see cref="World.Separation"/>) : relevée à la reconstruction de la grille
+    /// puis à la fin du tic de l'ennemi, soit la position que lirait le moteur, sans un appel par voisin.
+    /// </summary>
+    public Vector3 SepPos;
+
     public void HostTick(float dt)
+    {
+        HostTickCore(dt);
+        SepPos = GlobalPosition;
+    }
+
+    private void HostTickCore(float dt)
     {
         if (State == EnemyState.Dead) return;
         if (Frozen && State != EnemyState.Emerging) { AnimateModel(dt, 2f, Mathf.Max(0, Mathf.Sin(Time.GetTicksMsec() / 600f))); return; }
@@ -382,7 +455,9 @@ public partial class Enemy : CharacterBody3D
             }
         }
         // Séparation entre ennemis.
+        Perf.Begin(Perf.S.Separation);
         var sep = _world.Separation(this, 3.2f * Def.Size);
+        Perf.End(Perf.S.Separation);
         var move = desired + sep * 2.2f;
         if (move.LengthSquared() > 1) move = move.Normalized();
         _moveDir = _moveDir.Lerp(move, Mathf.Clamp(dt * 6f, 0, 1));
@@ -390,7 +465,9 @@ public partial class Enemy : CharacterBody3D
         if (climbs)
         {
             var dir = SurfaceDir(_moveDir, _surfN);
+            Perf.Begin(Perf.S.Climb);
             ClimbStep(dir, dir == Vector3.Zero ? 0f : speed * dt * Mathf.Min(_moveDir.Length() * 1.5f, 1f), dt);
+            Perf.End(Perf.S.Climb);
             // Sur une paroi, le corps regarde où il marche (vers le haut quand il escalade).
             OrientOnSurface(attacking || dist < 20 && _up.Y > 0.7f || dir == Vector3.Zero ? toGoal3 : dir, dt);
         }

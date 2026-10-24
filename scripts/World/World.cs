@@ -236,14 +236,22 @@ public partial class World : Node3D
 
     public override void _Process(double delta)
     {
-        var dt = (float)delta;
+        Perf.Begin(Perf.S.World);
+        ProcessWorld((float)delta);
+        Perf.End(Perf.S.World);
+    }
+
+    private void ProcessWorld(float dt)
+    {
         if (!Ended) Elapsed += dt;
         if (Input.IsActionJustPressed("debug_screenshot")) Screenshot.Take(GetViewport(), "capture");
 
-        if (Net.I.IsHost) { HostProcess(dt); Allies.HostTick(dt); }
+        if (Net.I.IsHost) { HostProcess(dt); Perf.Begin(Perf.S.Allies); Allies.HostTick(dt); Perf.End(Perf.S.Allies); }
         else
         {
+            Perf.Begin(Perf.S.EnemyClient);
             foreach (var e in EnemiesById.Values) e.ClientTick(dt);
+            Perf.End(Perf.S.EnemyClient);
             Allies.ClientTick(dt);
         }
         UpdateGrabs(); // victimes des fourmis rouges : dans les mandibules animées de cette image
@@ -253,7 +261,9 @@ public partial class World : Node3D
             var cp = cam.GlobalPosition;
             // Point suivi : le soldat (ou son véhicule), sinon un point devant la caméra.
             var focus = LocalPlayer != null && IsInstanceValid(LocalPlayer) ? LocalPlayer.GlobalPosition + Vector3.Up * 1.3f : cp - cam.GlobalBasis.Z * 3f;
+            Perf.Begin(Perf.S.CamFade);
             foreach (var e in EnemiesById.Values) e.CameraFade(cp, focus);
+            Perf.End(Perf.S.CamFade);
         }
 
         if (LocalPlayer != null && !LocalPlayer.Downed) LocalPickupCheck();
@@ -262,24 +272,35 @@ public partial class World : Node3D
 
     private void HostProcess(float dt)
     {
+        Perf.Begin(Perf.S.EnemyHost);
         foreach (var e in EnemiesById.Values.ToList()) e.HostTick(dt);
+        Perf.End(Perf.S.EnemyHost);
         _flowTimer -= dt;
         if (_flowTimer <= 0)
         {
             _flowTimer = 0.5f;
             // Les insectes convergent vers les soldats et vers l'objectif (structure défendue, camions du convoi).
+            Perf.Begin(Perf.S.Flow);
             Flow.Compute(Objective != null ? AlivePlayerPositions().Concat(Objective.FlowTargets()) : AlivePlayerPositions());
-            RebuildSpatialHash();
+            Perf.End(Perf.S.Flow);
         }
-        else RebuildSpatialHash();
+        Perf.Begin(Perf.S.Hash);
+        RebuildSpatialHash();
+        Perf.End(Perf.S.Hash);
+        Perf.Begin(Perf.S.Director);
         _director?.Tick(dt);
+        Perf.End(Perf.S.Director);
+        Perf.Begin(Perf.S.Decor);
         Decor?.HostTick(dt);
+        Perf.End(Perf.S.Decor);
 
         _snapshotTimer -= dt;
         if (_snapshotTimer <= 0 && !Net.I.IsSolo)
         {
             _snapshotTimer = 1f / 15f;
+            Perf.Begin(Perf.S.Snapshot);
             SendSnapshots();
+            Perf.End(Perf.S.Snapshot);
         }
         _objectiveTimer -= dt;
         if (_objectiveTimer <= 0)
@@ -581,7 +602,8 @@ public partial class World : Node3D
         foreach (var e in EnemiesById.Values)
         {
             if (e.State == EnemyState.Dead) continue;
-            var k = HashKey(e.GlobalPosition);
+            e.SepPos = e.GlobalPosition;
+            var k = HashKey(e.SepPos);
             if (!_hash.TryGetValue(k, out var list)) _hash[k] = list = new List<Enemy>();
             list.Add(e);
         }
@@ -603,6 +625,8 @@ public partial class World : Node3D
     {
         var p = self.GlobalPosition;
         var push = Vector3.Zero;
+        // Au sol, écartement horizontal ; les grimpeurs (murs, toits) s'écartent en 3D.
+        var flat = !self.Def.Flying && !self.Climbs;
         var cx = Mathf.FloorToInt(p.X / HashCell);
         var cz = Mathf.FloorToInt(p.Z / HashCell);
         for (var dz = -1; dz <= 1; dz++)
@@ -613,9 +637,8 @@ public partial class World : Node3D
             foreach (var o in list)
             {
                 if (o == self) continue;
-                var d = p - o.GlobalPosition;
-                // Au sol, écartement horizontal ; les grimpeurs (murs, toits) s'écartent en 3D.
-                if (!self.Def.Flying && !self.Climbs) d.Y = 0;
+                var d = p - o.SepPos;
+                if (flat) d.Y = 0;
                 var r = radius + o.Def.Size * 1.3f;
                 var len = d.Length();
                 if (len < r && len > 0.001f) push += d / len * (1f - len / r);

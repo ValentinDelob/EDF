@@ -78,7 +78,7 @@ public partial class BugModel
     private void BuildWalker()
     {
         _pivotY = WHipY;
-        _bodyPivot = new Node3D { Position = new Vector3(0, WHipY, 0) };
+        _bodyPivot = new Bone { Position = new Vector3(0, WHipY, 0) };
         AddChild(_bodyPivot);
 
         // Bassin : caisson central, tambours de hanche, jupes de blindage, couronne de la taille.

@@ -23,7 +23,7 @@ public partial class BugModel
 
     private class CentiSeg
     {
-        public Node3D Node, Legs;
+        public Bone Node, Legs;
         public float Scale, Dist;
     }
 
@@ -52,14 +52,14 @@ public partial class BugModel
             if (k > 0) dist += CentiSpacing * (sc + prevSc) / 2f;
             prevSc = sc;
             var tail = k == CentiSegments - 1;
-            var node = new Node3D { Position = new Vector3(0, CentiPivot * sc, -dist), Scale = Vector3.One * sc };
+            var node = new Bone { Position = new Vector3(0, CentiPivot * sc, -dist), Scale = Vector3.One * sc };
             AddChild(node);
             Part(node, tail ? "tail" : "seg", m => BuildCentiSegment(m, tail));
-            Node3D legs = null;
+            Bone legs = null;
             if (!tail)
             {
                 // Les deux pattes d'un segment forment une seule pièce : le lacet les fait alterner.
-                legs = new Node3D();
+                legs = new Bone();
                 node.AddChild(legs);
                 Part(legs, "legs", BuildCentiLegs, false, 90f);
             }
@@ -67,18 +67,18 @@ public partial class BugModel
         }
 
         // Tête : bouclier céphalique aplati, ocelles, pièces buccales ; forcipules et antennes articulées.
-        _head = new Node3D { Position = new Vector3(0, CentiPivot, 0) };
+        _head = new Bone { Position = new Vector3(0, CentiPivot, 0) };
         AddChild(_head);
         Part(_head, "head", BuildCentiHead);
-        _mandL = new Node3D { Position = new Vector3(0.2f, -0.13f, 0.36f) };
-        _mandR = new Node3D { Position = new Vector3(-0.2f, -0.13f, 0.36f) };
+        _mandL = new Bone { Position = new Vector3(0.2f, -0.13f, 0.36f) };
+        _mandR = new Bone { Position = new Vector3(-0.2f, -0.13f, 0.36f) };
         _head.AddChild(_mandL);
         _head.AddChild(_mandR);
         foreach (var (mand, s) in new[] { (_mandL, 1f), (_mandR, -1f) })
             Part(mand, s > 0 ? "forcR" : "forcL", m => { m.Mirror = s < 0; BuildForcipule(m); }, true, 70f);
         foreach (var s in new[] { 1f, -1f })
         {
-            var a = new Node3D { Position = new Vector3(0.13f * s, 0.06f, 0.6f) };
+            var a = new Bone { Position = new Vector3(0.13f * s, 0.06f, 0.6f) };
             _head.AddChild(a);
             Part(a, s > 0 ? "antR" : "antL", m => { m.Mirror = s < 0; BuildCentiAntenna(m); }, false, 70f);
             _antennae.Add(a);

@@ -17,7 +17,7 @@ public partial class BugModel
         _flying = true;
         Scale = Vector3.One * 0.9f;
         var ch = Chitin();
-        _bodyPivot = new Node3D();
+        _bodyPivot = new Bone();
         AddChild(_bodyPivot);
 
         // Mésosome noir marqué de jaune, pétiole très fin (taille de guêpe).
@@ -70,7 +70,7 @@ public partial class BugModel
         }, false, 80f);
 
         // Gastre rayé (tergites noirs bordés de jaune, encoche dorsale) et dard.
-        _gaster = new Node3D { Position = new Vector3(0, -0.1f, -0.8f), RotationDegrees = new Vector3(-20, 0, 0) };
+        _gaster = new Bone { Position = new Vector3(0, -0.1f, -0.8f), RotationDegrees = new Vector3(-20, 0, 0) };
         _bodyPivot.AddChild(_gaster);
         Part(_gaster, "gaster", m =>
         {
@@ -106,7 +106,7 @@ public partial class BugModel
         });
 
         // Tête : face jaune, gros yeux réniformes, ocelles, mandibules, antennes coudées.
-        _head = new Node3D { Position = new Vector3(0, 0.05f, 0.62f) };
+        _head = new Bone { Position = new Vector3(0, 0.05f, 0.62f) };
         _bodyPivot.AddChild(_head);
         Part(_head, "head", m =>
         {
@@ -146,7 +146,7 @@ public partial class BugModel
         foreach (var s in new[] { 1f, -1f })
             for (var k = 0; k < 2; k++)
             {
-                var hinge = new Node3D { Position = new Vector3(0.3f * s, 0.38f - k * 0.04f, 0.2f - k * 0.3f) };
+                var hinge = new Bone { Position = new Vector3(0.3f * s, 0.38f - k * 0.04f, 0.2f - k * 0.3f) };
                 _bodyPivot.AddChild(hinge);
                 var sc = k == 0 ? 1f : 0.66f;
                 Part(hinge, $"wing{k}{(s > 0 ? "R" : "L")}", m => { m.Mirror = s < 0; BuildWaspWing(m, sc, k == 1); }, false, 90f);
@@ -236,7 +236,7 @@ public partial class BugModel
         Scale = Vector3.One * 1.05f;
         _pivotY = 1.15f;
         var ch = Chitin();
-        _bodyPivot = new Node3D { Position = new Vector3(0, _pivotY, 0) };
+        _bodyPivot = new Bone { Position = new Vector3(0, _pivotY, 0) };
         AddChild(_bodyPivot);
         var zc = new[] { 0.45f, 0.2f, -0.05f, -0.28f };
 
@@ -261,7 +261,7 @@ public partial class BugModel
         });
 
         // Abdomen velu avec motif en chevrons (folium), filières.
-        _gaster = new Node3D { Position = new Vector3(0, 0.25f, -0.4f) };
+        _gaster = new Bone { Position = new Vector3(0, 0.25f, -0.4f) };
         _bodyPivot.AddChild(_gaster);
         Part(_gaster, "abdomen", m =>
         {
@@ -296,7 +296,7 @@ public partial class BugModel
         });
 
         // Tête : groupe de huit yeux luisants, chélicères à crochets, pédipalpes.
-        _head = new Node3D { Position = new Vector3(0, 0.12f, 0.78f) };
+        _head = new Bone { Position = new Vector3(0, 0.12f, 0.78f) };
         _bodyPivot.AddChild(_head);
         Part(_head, "head", m =>
         {
@@ -316,8 +316,8 @@ public partial class BugModel
                 m.Ellipsoid(new Vector3(0.24f * s, 0.15f, -0.02f), Vector3.One * 0.045f, 4, 6, Colors.White);
             }
         });
-        _mandL = new Node3D { Position = new Vector3(0.12f, -0.08f, 0.12f) };
-        _mandR = new Node3D { Position = new Vector3(-0.12f, -0.08f, 0.12f) };
+        _mandL = new Bone { Position = new Vector3(0.12f, -0.08f, 0.12f) };
+        _mandR = new Bone { Position = new Vector3(-0.12f, -0.08f, 0.12f) };
         _head.AddChild(_mandL);
         _head.AddChild(_mandR);
         foreach (var (mand, s) in new[] { (_mandL, 1f), (_mandR, -1f) })

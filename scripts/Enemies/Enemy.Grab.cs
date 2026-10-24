@@ -37,7 +37,7 @@ public partial class Enemy
     {
         get
         {
-            var socket = Model.GrabSocket != null ? Model.GrabSocket.GlobalPosition : Center + Basis.Z * (2.2f * Def.Size);
+            var socket = Model.GrabSocket != null ? Model.GrabSocketPosition : Center + Basis.Z * (2.2f * Def.Size);
             var hold = socket - Vector3.Up * 1.1f; // prise sous les côtes
             var k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp(_grabT / BugModel.GrabLift, 0f, 1f));
             return _grabFrom.Lerp(hold, k);
@@ -59,7 +59,7 @@ public partial class Enemy
     {
         if (Grabbing && Model.HeadCenter != null)
         {
-            _headShape.GlobalPosition = Model.HeadCenter.GlobalPosition;
+            _headShape.GlobalPosition = Model.HeadCenterPosition;
             _headMoved = true;
         }
         else
@@ -121,7 +121,7 @@ public partial class Enemy
         var bites = n - _grabBites;
         _grabBites = n;
         if (bites <= 0) return 0;
-        var at = Model.GrabSocket?.GlobalPosition ?? Center;
+        var at = Model.GrabSocket != null ? Model.GrabSocketPosition : Center;
         Sfx.At("crunch", at, 2f, (float)GD.RandRange(0.85, 1.1), 0);
         var local = GrabPeer != 0 && GrabPeer == Net.I.MyId && _world.LocalPlayer != null;
         if (local)
@@ -149,7 +149,7 @@ public partial class Enemy
         _attackAnim = 0f;
         _world.SetGrabVictim(this, peer, ally, true);
         Sfx.At("screech", Center, 6f, 0.75f, 0);
-        Sfx.At("crunch", Model.GrabSocket.GlobalPosition, 0f, 1.3f, 0);
+        Sfx.At("crunch", Model.GrabSocketPosition, 0f, 1.3f, 0);
         if (Screenshot.CmdArg("grab") != null) GD.Print($"[grab] fourmi {Id} saisit {(peer != 0 ? $"le joueur {peer}" : $"l'allié {ally}")} (t = {Time.GetTicksMsec() / 1000f:0.0} s)");
     }
 

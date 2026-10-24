@@ -47,9 +47,12 @@ public partial class Enemy
             _world.AddChild(_caster);
         }
         // Le monde est à l'origine : la position locale est la position globale.
+        Perf.Counters[3]++;
+        Perf.Begin(Perf.S.Ray);
         _caster.Position = from;
         _caster.TargetPosition = to - from;
         _caster.ForceRaycastUpdate();
+        Perf.End(Perf.S.Ray);
         point = to;
         normal = Vector3.Up;
         if (!_caster.IsColliding()) return false;

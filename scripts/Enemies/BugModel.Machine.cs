@@ -17,9 +17,9 @@ public partial class BugModel
         var hullC = new Color(0.42f, 0.44f, 0.47f);
         var darkC = new Color(0.1f, 0.1f, 0.12f);
         var groove = new Color(0.03f, 0.03f, 0.035f);
-        _bodyPivot = new Node3D();
+        _bodyPivot = new Bone();
         AddChild(_bodyPivot);
-        _head = new Node3D();
+        _head = new Bone();
         _bodyPivot.AddChild(_head);
         var arms = new Vector3[4];
         for (var i = 0; i < 4; i++)
@@ -74,7 +74,7 @@ public partial class BugModel
         });
         foreach (var d in arms)
         {
-            var rotor = new Node3D { Position = d * 1.6f + new Vector3(0, 0.12f, 0) };
+            var rotor = new Bone { Position = d * 1.6f + new Vector3(0, 0.12f, 0) };
             _bodyPivot.AddChild(rotor);
             Part(rotor, "rotor", m =>
             {

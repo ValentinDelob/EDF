@@ -57,7 +57,7 @@ public partial class BugModel
     private void BuildTripod()
     {
         _pivotY = TBodyY;
-        _bodyPivot = new Node3D { Position = new Vector3(0, TBodyY, 0) };
+        _bodyPivot = new Bone { Position = new Vector3(0, TBodyY, 0) };
         AddChild(_bodyPivot);
 
         Part(_bodyPivot, "hull", BuildTripodHull);
@@ -253,9 +253,9 @@ public partial class BugModel
     {
         var a = TLegAngles[i];
         var d = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
-        var hip = new Node3D { Position = d * THipR + new Vector3(0, THipY, 0) };
+        var hip = new Bone { Position = d * THipR + new Vector3(0, THipY, 0) };
         _bodyPivot.AddChild(hip);
-        var fem = new Node3D();
+        var fem = new Bone();
         hip.AddChild(fem);
         var alongX = new Basis(Vector3.Forward, Vector3.Up, Vector3.Right); // Z local le long de +X : plaques le long de l'os
         Part(fem, "femur", m =>
@@ -276,7 +276,7 @@ public partial class BugModel
             m.Use(MachRed());
             m.Ellipsoid(new Vector3(TLf, 0, 1.08f), new Vector3(0.2f, 0.2f, 0.05f), 2, 6, Colors.White);
         }, true, 260f);
-        var knee = new Node3D { Position = new Vector3(TLf, 0, 0) };
+        var knee = new Bone { Position = new Vector3(TLf, 0, 0) };
         fem.AddChild(knee);
         Part(knee, "tibia", m =>
         {

@@ -36,7 +36,7 @@ public partial class BugModel
     private void BuildDropShip()
     {
         _flying = true;
-        _bodyPivot = new Node3D();
+        _bodyPivot = new Bone();
         AddChild(_bodyPivot);
         Part(_bodyPivot, "hull", BuildShipHull, true, 0f);
 
