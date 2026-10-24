@@ -689,8 +689,11 @@ public partial class SoldierModel : Node3D
 
     // ───────────────────────── Animation ─────────────────────────
 
-    private float _aimBlend, _airBlend, _flyBlend, _land, _airTime, _fireHold, _freeL, _downBlend;
+    private float _aimBlend, _airBlend, _flyBlend, _land, _airTime, _fireHold, _freeL, _downBlend, _grabBlend;
     private bool _wasAir;
+
+    /// <summary>Pris dans les mandibules d'une fourmi : jambes qui pendent et se débattent, bassin ballotté.</summary>
+    public bool Grabbed;
 
     /// <summary>
     /// speed : vitesse horizontale (m/s) ; aimPitch : radians ; airborne/flying/downed : états.
@@ -702,6 +705,8 @@ public partial class SoldierModel : Node3D
 
         _downBlend = Mathf.MoveToward(_downBlend, downed ? 1f : 0f, dt * 4f);
         if (downed) { speed = 0; airborne = false; flying = false; aiming = false; recoil = 0; }
+        _grabBlend = Mathf.MoveToward(_grabBlend, Grabbed && !downed ? 1f : 0f, dt * 6f);
+        if (_grabBlend > 0f) { speed = 0; airborne = false; flying = false; }
 
         // Tir récent : l'arme reste épaulée un instant même sans visée.
         if (recoil > 0.02f) _fireHold = 0.8f;
@@ -752,7 +757,16 @@ public partial class SoldierModel : Node3D
         // À terre.
         thL = Mathf.Lerp(thL, -0.15f, _downBlend); knL = Mathf.Lerp(knL, 0.35f, _downBlend);
         thR = Mathf.Lerp(thR, 0.05f, _downBlend); knR = Mathf.Lerp(knR, 0.7f, _downBlend);
-        var spread = 0.035f + 0.04f * stance;
+        // Saisi : jambes pendantes qui battent l'air (pédalage désordonné).
+        var gb = Mathf.SmoothStep(0, 1, _grabBlend);
+        if (gb > 0f)
+        {
+            var k1 = Mathf.Sin(_t * 8.5f);
+            var k2 = Mathf.Sin(_t * 7.1f + 2f);
+            thL = Mathf.Lerp(thL, -0.15f + k1 * 0.55f, gb); knL = Mathf.Lerp(knL, 0.55f + Mathf.Max(0, -k1) * 1.1f, gb);
+            thR = Mathf.Lerp(thR, 0.05f + k2 * 0.55f, gb); knR = Mathf.Lerp(knR, 0.55f + Mathf.Max(0, -k2) * 1.1f, gb);
+        }
+        var spread = 0.035f + 0.04f * stance + 0.12f * gb;
         _legL.Rotation = new Vector3(thL, 0, spread);
         _legR.Rotation = new Vector3(thR, 0, -spread);
         _shinL.Rotation = new Vector3(knL, 0, 0);
@@ -768,6 +782,8 @@ public partial class SoldierModel : Node3D
         var hipsRoll = s * 0.035f * gaitW;
         var hipsPos = new Vector3(0, hipsY, 0).Lerp(new Vector3(0, 0.25f, 0), _downBlend);
         var hipsRot = new Vector3(0, hipsYaw, hipsRoll).Lerp(new Vector3(-1.4f, 0, 0), _downBlend);
+        // Saisi : bassin ballotté (le corps se tord pour se dégager).
+        hipsRot += new Vector3(0.28f + Mathf.Sin(_t * 5.3f) * 0.14f, Mathf.Sin(_t * 3.7f) * 0.22f, Mathf.Sin(_t * 15.1f) * 0.22f + Mathf.Sin(_t * 6.1f) * 0.12f) * gb;
         if (dt >= 0.5f) { _hips.Position = hipsPos; _hips.Rotation = hipsRot; }
         else
         {

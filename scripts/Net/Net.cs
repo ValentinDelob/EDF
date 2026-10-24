@@ -459,6 +459,12 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void EnemyAttack(int id, int kind, Vector3 target) => W?.OnEnemyAttack(id, kind, target);
 
+    /// <summary>Saisie d'une fourmi rouge, décidée par l'hôte : victime (joueur ou allié PNJ), ou fin de saisie (0, 0).</summary>
+    public void BroadcastGrab(int id, long peer, int ally) => ToAll(MethodName.EnemyGrab, id, peer, ally);
+
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void EnemyGrab(int id, long peer, int ally) => W?.OnGrab(id, peer, ally);
+
     public void DamagePlayer(long peer, float dmg, Vector3 from)
     {
         if (peer == MyId) W?.OnLocalPlayerDamaged(dmg, from);

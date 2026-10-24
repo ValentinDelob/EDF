@@ -60,7 +60,15 @@ public partial class Ally : Node3D
         to.Y = 0;
         var dist = to.Length();
         var speed = dist > 12 ? 8.5f : 5.5f;
-        if (dist > 0.5f)
+        // Saisi par une fourmi rouge : immobile (World.UpdateGrabs), il tire sur elle.
+        var held = GrabbedBy != null && IsInstanceValid(GrabbedBy) ? GrabbedBy : null;
+        if (held != null)
+        {
+            _speed = 0;
+            _target = held;
+            _retarget = 0.5f;
+        }
+        else if (dist > 0.5f)
         {
             var dir = dist < 14f ? to / dist : w.Flow.Direction(pos);
             if (dir == Vector3.Zero) dir = to / dist;
@@ -70,7 +78,7 @@ public partial class Ally : Node3D
         }
         else _speed = 0;
         // Téléportation de secours si le groupe est distancé.
-        if (Leader != 0 && w.PlayerPosition(Leader, out var lp2) && lp2.DistanceTo(pos) > 80f) GlobalPosition = lp2 + _formation;
+        if (held == null && Leader != 0 && w.PlayerPosition(Leader, out var lp2) && lp2.DistanceTo(pos) > 80f) GlobalPosition = lp2 + _formation;
 
         if (_retarget <= 0 || _target == null || !IsInstanceValid(_target) || _target.State == EnemyState.Dead)
         {
@@ -94,7 +102,22 @@ public partial class Ally : Node3D
         }
         else if (_speed > 0.1f) _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(to.X, to.Z), Mathf.Clamp(dt * 6f, 0, 1));
         Model.Rotation = new Vector3(0, _yaw, 0);
+        Model.Grabbed = held != null;
         Model.Animate(dt, _speed, _pitch, false, false, false, _target != null, _recoil);
+    }
+
+    /// <summary>Fourmi rouge qui tient ce soldat (null sinon) ; sa position est imposée par World.UpdateGrabs.</summary>
+    public Enemy GrabbedBy;
+
+    /// <summary>Libéré : retombe au sol (les alliés marchent toujours au niveau de la rue).</summary>
+    public void Release(Enemy e)
+    {
+        if (GrabbedBy != e) return;
+        GrabbedBy = null;
+        Model.Grabbed = false;
+        var y = GlobalPosition.Y;
+        if (y > 0.05f) CreateTween().TweenProperty(this, "global_position:y", 0f, Mathf.Clamp(Mathf.Sqrt(2f * y / 24f), 0.15f, 1.2f))
+            .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
     }
 
     public void Shot(World w, Vector3 from, Vector3 to)
@@ -131,7 +154,8 @@ public partial class Ally : Node3D
         _yaw = Mathf.LerpAngle(_yaw, _netYaw, Mathf.Clamp(dt * 10f, 0, 1));
         _recoil = Mathf.MoveToward(_recoil, 0, dt * 4f);
         Model.Rotation = new Vector3(0, _yaw, 0);
-        Model.Animate(dt, _speed, _pitch, false, false, false, true, _recoil);
+        Model.Grabbed = GrabbedBy != null && IsInstanceValid(GrabbedBy);
+        Model.Animate(dt, Model.Grabbed ? 0f : _speed, _pitch, false, false, false, true, _recoil);
     }
 
     public void Kill(World w)

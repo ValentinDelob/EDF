@@ -164,6 +164,11 @@ public partial class BugModel
         _head.AddChild(_mandR);
         foreach (var (mand, s) in new[] { (_mandL, 1f), (_mandR, -1f) })
             Part(mand, s > 0 ? "mandR" : "mandL", m => { m.Mirror = s < 0; BuildMandible(m, bodyC.Darkened(0.25f)); }, true, 70f);
+        // Prise des mandibules (fourmi rouge) : la victime saisie est tenue entre les deux lames, à mi-longueur.
+        GrabSocket = new Node3D { Name = "GrabSocket", Position = new Vector3(0, -0.34f, 1.2f) };
+        _head.AddChild(GrabSocket);
+        HeadCenter = new Node3D { Name = "HeadCenter", Position = new Vector3(0, 0.03f, 0.42f) };
+        _head.AddChild(HeadCenter);
         foreach (var s in new[] { 1f, -1f })
         {
             var a = new Node3D { Position = new Vector3(0.17f * s, 0.22f, 0.72f) };

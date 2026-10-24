@@ -358,6 +358,7 @@ public static class AutoTest
         Player.God = Screenshot.CmdArg("god") != null;
         Player.BotHoldFire = Screenshot.CmdArg("holdfire") != null;
         RoofTest(app);
+        GrabTest(app);
         if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
         if (Screenshot.CmdArg("class") is { } cc && int.TryParse(cc, out var ccls)) Profile.I.Data.SelectedClass = (SoldierClass)ccls;
         var mission0 = int.TryParse(Screenshot.CmdArg("mission") ?? "0", out var mm) ? mm : 0;
@@ -682,6 +683,58 @@ public static class AutoTest
             };
         }
         Try();
+    }
+
+    /// <summary>
+    /// --grab[=client|ally] : une fourmi rouge sort de terre à ~9 m devant le soldat (bot immobile) et le saisit ; une nouvelle
+    /// apparaît 4 s après la mort de la précédente. =client : devant le soldat du client (avec --autohost, vue de la victime
+    /// côté client) ; =ally : devant un soldat allié (les insectes ignorent sinon les alliés pendant ce test).
+    /// Journal « [grab] » : début et fin de chaque saisie. Avec --god --holdfire, la saisie dure indéfiniment (captures).
+    /// </summary>
+    private static void GrabTest(App app)
+    {
+        if (Screenshot.CmdArg("grab") is not { } mode) return;
+        Player.BotStill = true;
+        Enemy.IgnoreAllies = mode != "ally";
+        var nextAt = 0f;
+        void Tick()
+        {
+            app.GetTree().CreateTimer(0.5f).Timeout += () =>
+            {
+                var w = app.CurrentWorld;
+                if (w == null || w.LocalPlayer == null || !GodotObject.IsInstanceValid(w.LocalPlayer)) { Tick(); return; }
+                if (!Net.I.IsHost || w.Elapsed < 3f) { Tick(); return; }
+                if (w.EnemiesById.Values.Any(e => e.Def.Type == EnemyType.RedAnt && e.State != EnemyState.Dead)) { nextAt = w.Elapsed + 4f; Tick(); return; }
+                if (w.Elapsed < nextAt) { Tick(); return; }
+                Node3D victim = w.LocalPlayer;
+                var face = w.LocalPlayer.AimForward;
+                if (mode == "client" && w.Remotes.Count > 0)
+                {
+                    var r = w.Remotes.Values.First();
+                    victim = r;
+                    face = new Vector3(Mathf.Sin(r.Model.Rotation.Y), 0, Mathf.Cos(r.Model.Rotation.Y));
+                }
+                else if (mode == "ally" && w.Allies.ById.Values.FirstOrDefault(a => !a.Dead) is { } al)
+                {
+                    victim = al;
+                    face = new Vector3(Mathf.Sin(al.Model.Rotation.Y), 0, Mathf.Cos(al.Model.Rotation.Y));
+                }
+                face.Y = 0;
+                face = face.LengthSquared() > 0.01f ? face.Normalized() : Vector3.Forward;
+                var at = victim.GlobalPosition;
+                var p = new Vector3(at.X, 0, at.Z) + face * 9f;
+                // =ally : le soldat (observateur) recule derrière l'allié, que la fourmi visera en premier.
+                if (victim is Ally) w.LocalPlayer.GlobalPosition = new Vector3(at.X, 0.5f, at.Z) - face * 16f + new Vector3(face.Z, 0, -face.X) * 6f;
+                var ant = w.HostSpawnEnemy(EnemyType.RedAnt, p);
+                ant.Rotation = new Vector3(0, Mathf.Atan2(at.X - p.X, at.Z - p.Z), 0);
+                // --holdfire : personne ne doit l'abattre (saisie durable pour les captures).
+                if (Player.BotHoldFire) ant.MaxHealth = ant.Health = 1e6f;
+                GD.Print($"[grab] fourmi rouge {ant.Id} ({ant.Health:0} PV) apparue à 9 m de {victim.Name} (t = {Time.GetTicksMsec() / 1000f:0.0} s)");
+                nextAt = w.Elapsed + 4f;
+                Tick();
+            };
+        }
+        Tick();
     }
 
     private static void ScheduleShots(App app, string dir, string prefix)

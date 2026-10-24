@@ -12,6 +12,8 @@ public partial class RemotePlayer : Node3D
     public float Health = 1;
     public float MaxHealth = 1;
     public bool Downed;
+    /// <summary>Fourmi rouge qui tient ce coéquipier (null sinon).</summary>
+    public Enemy GrabbedBy;
     private Vector3 _netPos;
     private Vector3 _netVel;
     private float _netYaw;
@@ -63,14 +65,18 @@ public partial class RemotePlayer : Node3D
         var dt = (float)delta;
         // Extrapolation légère + lissage.
         _netPos += _netVel * dt;
+        var grabbed = GrabbedBy != null && IsInstanceValid(GrabbedBy);
+        if (!grabbed) GrabbedBy = null;
+        // Saisi : la position vient des mandibules de la fourmi affichée ici (World.UpdateGrabs), pas du réseau.
         var p = Position;
-        Position = p.DistanceSquaredTo(_netPos) > 100 ? _netPos : p.Lerp(_netPos, Mathf.Clamp(dt * 14f, 0, 1));
+        if (!grabbed) Position = p.DistanceSquaredTo(_netPos) > 100 ? _netPos : p.Lerp(_netPos, Mathf.Clamp(dt * 14f, 0, 1));
         Model.Rotation = new Vector3(0, Mathf.LerpAngle(Model.Rotation.Y, _netYaw, Mathf.Clamp(dt * 12f, 0, 1)), 0);
-        var speed = new Vector3(_netVel.X, 0, _netVel.Z).Length();
+        var speed = grabbed ? 0f : new Vector3(_netVel.X, 0, _netVel.Z).Length();
         _recoil = Mathf.MoveToward(_recoil, 0, dt * 4f);
-        Model.Animate(dt, speed, _pitch, (_flags & 4) != 0, (_flags & 64) != 0, Downed, (_flags & 8) != 0, _recoil);
-        _label.Text = Downed ? $"{PlayerName}  [À TERRE — E]" : PlayerName;
-        _label.Modulate = Downed ? new Color(1f, 0.4f, 0.3f) : new Color(0.6f, 1f, 0.7f);
+        Model.Grabbed = grabbed;
+        Model.Animate(dt, speed, _pitch, !grabbed && (_flags & 4) != 0, (_flags & 64) != 0, Downed, (_flags & 8) != 0, _recoil);
+        _label.Text = Downed ? $"{PlayerName}  [À TERRE — E]" : grabbed ? $"{PlayerName}  [SAISI]" : PlayerName;
+        _label.Modulate = Downed || grabbed ? new Color(1f, 0.4f, 0.3f) : new Color(0.6f, 1f, 0.7f);
     }
 
     public Vector3 MuzzlePosition => Model.Muzzle.GlobalPosition;

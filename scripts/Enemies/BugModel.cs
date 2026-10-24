@@ -341,6 +341,7 @@ public partial class BugModel : Node3D
             var bob = (1f - Mathf.Abs(Mathf.Sin(_gait))) * 0.06f * amp;
             _bodyPivot.Position = new Vector3(0, _pivotY + bob + lunge * 0.15f, lunge * 0.6f);
             _bodyPivot.Rotation = new Vector3(lunge * 0.18f + Mathf.Sin(_gait * 2f) * 0.015f * amp, 0, Mathf.Sin(_gait) * 0.03f * amp);
+            if (GrabT >= 0) GrabBody();
         }
         foreach (var l in _legs)
         {
@@ -368,9 +369,11 @@ public partial class BugModel : Node3D
             _mandL.RotationDegrees = new Vector3(0, open, 0);
             _mandR.RotationDegrees = new Vector3(0, -open, 0);
         }
+        if (GrabT >= 0) GrabHead();
         if (_gaster != null)
         {
-            if (Type == EnemyType.AcidAnt)
+            if (GrabT >= 0) _gaster.RotationDegrees = new Vector3(-12f * GrabBlend + Mathf.Sin(_t * 7f) * 4f, Mathf.Sin(_t * 5.3f) * 5f * GrabBlend, 0);
+            else if (Type == EnemyType.AcidAnt)
             {
                 // Le gastre se replie sous le corps et pompe l'acide.
                 _gaster.RotationDegrees = new Vector3(-attack * 70f, 0, 0);

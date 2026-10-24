@@ -55,7 +55,11 @@ public partial class Hud : CanvasLayer
         _root.AddChild(_armor);
         _root.AddChild(_radar);
         _root.AddChild(_weapons);
+        _grab = new HudGrab { World = World };
+        _root.AddChild(_grab);
     }
+
+    private HudGrab _grab;
 
     /// <summary>Assombrissement radial des bords (maquette) + voile rouge des dégâts / armure basse.</summary>
     private static ShaderMaterial VignetteMaterial()
@@ -127,6 +131,7 @@ void fragment() {
             _armor.Layout(s, screen);
             _radar.Layout(s, screen);
             _weapons.Layout(s, screen);
+            _grab.Center(s, screen);
             _markers.S = _reticle.S = s;
             _damageArc.Scale = new Vector2(s, s);
         }
@@ -134,7 +139,9 @@ void fragment() {
 
         var mat = (ShaderMaterial)_vignette.Material;
         var lowHp = p.Downed ? 0.9f : Mathf.Clamp(1f - p.Health / p.MaxHealth - 0.6f, 0, 0.4f) * 1.6f;
-        mat.SetShaderParameter("strength", Mathf.Max(p.DamageFlash, lowHp));
+        // Saisi par une fourmi : voile rouge qui pulse (en plus du flash de chaque morsure).
+        var held = p.GrabbedBy != null && !p.Downed ? 0.24f + 0.1f * Mathf.Sin(Time.GetTicksMsec() * 0.007f) : 0f;
+        mat.SetShaderParameter("strength", Mathf.Max(Mathf.Max(p.DamageFlash, lowHp), held));
 
         UpdateScoreboard();
 

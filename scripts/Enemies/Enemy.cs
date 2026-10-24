@@ -115,7 +115,8 @@ public partial class Enemy : CharacterBody3D
         else
         {
             e.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.8f, 1.5f, 4.0f) * s }, Position = new Vector3(0, 1.1f, -0.7f) * s });
-            e.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = 0.6f * s }, Position = new Vector3(0, 1.25f, 1.35f) * s });
+            e._headShape = new CollisionShape3D { Shape = new SphereShape3D { Radius = 0.6f * s }, Position = new Vector3(0, 1.25f, 1.35f) * s };
+            e.AddChild(e._headShape);
         }
         e.Position = pos;
         e._yaw = yaw;
@@ -158,6 +159,7 @@ public partial class Enemy : CharacterBody3D
         if (IsFortress) Model.AnimateFortress(dt, speed, attack);
         else Model.Animate(dt, speed, attack);
         if (_segShapes != null) SyncSegmentShapes();
+        if (_headShape != null && (Grabbing || _headMoved)) SyncHeadShape();
     }
 
     /// <summary>Recale les formes de collision sur les segments affichés (hôte et clients : les tirs touchent tout le corps).</summary>
@@ -200,6 +202,12 @@ public partial class Enemy : CharacterBody3D
         _attackCd -= dt;
         _specialCd -= dt;
         _attackAnim = Mathf.Max(0, _attackAnim - dt * 3f);
+        if (Grabbing)
+        {
+            HostTickGrab(dt);
+            AnimateModel(dt, _speedNow, 0f);
+            return;
+        }
         if (!_world.NearestPlayer(GlobalPosition, out var peer, out var target))
         {
             _speedNow = Mathf.Lerp(_speedNow, 0, dt * 4);
@@ -215,7 +223,7 @@ public partial class Enemy : CharacterBody3D
 
         // Les soldats alliés plus proches que le joueur deviennent la cible.
         Ally ally = null;
-        if (!Def.Boss)
+        if (!Def.Boss && !IgnoreAllies)
         {
             var a = _world.Allies?.Nearest(GlobalPosition, 45f);
             if (a != null && a.GlobalPosition.DistanceTo(GlobalPosition) < target.DistanceTo(GlobalPosition) * 0.85f)
@@ -380,6 +388,8 @@ public partial class Enemy : CharacterBody3D
         }
         if (attacking && _attackCd <= 0)
         {
+            // Fourmi rouge : la morsure devient une saisie (la victime reste prise dans les mandibules).
+            if (CanGrab && HostTryGrab(peer, ally)) { State = EnemyState.Attacking; return; }
             _attackCd = Def.AttackCooldown * (float)GD.RandRange(0.85, 1.15);
             _attackAnim = 1f;
             if (ally != null)
@@ -499,7 +509,8 @@ public partial class Enemy : CharacterBody3D
         _fwd = Basis.Z;
         _yaw = Mathf.Atan2(_fwd.X, _fwd.Z);
         _attackAnim = Mathf.Max(0, _attackAnim - dt * 3f);
-        AnimateModel(dt, _speedNow, _attackAnim);
+        if (Grabbing) TickGrabFx(dt);
+        AnimateModel(dt, _speedNow, Grabbing ? 0f : _attackAnim);
     }
 
     public void PlayAttack() => _attackAnim = 1f;
@@ -509,6 +520,8 @@ public partial class Enemy : CharacterBody3D
     public void Die()
     {
         if (State == EnemyState.Dead) return;
+        // La victime retombe avant que le cadavre ne bascule.
+        ReleaseGrab();
         State = EnemyState.Dead;
         CollisionLayer = 0;
         if (IsFortress) { FortressDie(); return; }
@@ -571,8 +584,11 @@ public partial class Enemy : CharacterBody3D
             var a = inv * cam;
             var b = inv * focus;
             // Caméra dans l'emprise des pattes, ou corps (thorax, gastre, tête) entre la caméra et le soldat.
+            // La fourmi qui tient le soldat local : il est contre sa tête (le segment la traverse toujours) ;
+            // seuls le thorax et le gastre comptent (caméra derrière la fourmi), la tête reste opaque et visable.
+            var holdsMe = GrabPeer != 0 && GrabPeer == Net.I.MyId;
             fade = Mathf.Abs(a.X) < 2.4f * s && a.Y > -0.5f * s && a.Y < 2.6f * s && a.Z > -3.3f * s && a.Z < 2.5f * s
-                || SegmentHitsBox(a, b, new Vector3(-1.1f, 0.4f, -3.1f) * s, new Vector3(1.1f, 2.2f, 2.3f) * s);
+                || SegmentHitsBox(a, b, new Vector3(-1.1f, 0.4f, -3.1f) * s, new Vector3(1.1f, 2.2f, holdsMe ? 0.5f : 2.3f) * s);
         }
         if (fade == _camFaded) return;
         _camFaded = fade;

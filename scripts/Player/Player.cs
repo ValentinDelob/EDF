@@ -34,6 +34,10 @@ public partial class Player : CharacterBody3D
     public bool SecondChanceUsed;
     public float DownedTime;
     public Vehicle Vehicle;
+    /// <summary>Fourmi rouge qui tient le soldat dans ses mandibules (null sinon) : ni déplacement, ni saut, ni véhicule ; la visée et le tir restent possibles.</summary>
+    public Enemy GrabbedBy;
+    private Vector3 _camLag;
+    private float _camHeight;
     /// <summary>Mode automatique pour les tests : vise et tire seul sur l'ennemi le plus proche.</summary>
     public static bool Bot;
     /// <summary>Test : le soldat ne subit aucun dégât (--god), pour des mesures de performance stables.</summary>
@@ -81,7 +85,8 @@ public partial class Player : CharacterBody3D
         p.Model = SoldierModel.Create(cls);
         p.AddChild(p.Model);
 
-        p._camYaw = new Node3D { Position = new Vector3(0, cls == SoldierClass.Heavy ? 1.9f : 1.65f, 0) };
+        p._camHeight = cls == SoldierClass.Heavy ? 1.9f : 1.65f;
+        p._camYaw = new Node3D { Position = new Vector3(0, p._camHeight, 0) };
         p.AddChild(p._camYaw);
         p._camPitch = new Node3D();
         p._camYaw.AddChild(p._camPitch);
@@ -119,7 +124,7 @@ public partial class Player : CharacterBody3D
             _pitch = Mathf.Clamp(_pitch, -1.35f, 1.2f);
         }
         if (Downed) return;
-        if (e.IsActionPressed("interact"))
+        if (e.IsActionPressed("interact") && GrabbedBy == null)
         {
             if (Vehicle != null)
             {
@@ -187,6 +192,34 @@ public partial class Player : CharacterBody3D
                 Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, 128, Health, Current, Vehicle.Velocity);
             }
             return;
+        }
+        if (GrabbedBy != null)
+        {
+            // Pris dans les mandibules : la position est imposée par la fourmi (World.UpdateGrabs) ; à terre, elle lâche prise.
+            if (!IsInstanceValid(GrabbedBy) || GrabbedBy.State == EnemyState.Dead || Downed)
+            {
+                var e = GrabbedBy;
+                if (IsInstanceValid(e) && e.GrabPeer == Net.I.MyId) e.ReleaseGrab();
+                else OnReleased(e);
+            }
+            else
+            {
+                Velocity = Vector3.Zero;
+                _dodgeTime = Mathf.Min(_dodgeTime, 0f);
+                _dashTime = 0f;
+                _diving = false;
+                Flying = false;
+                if (Def.Id == SoldierClass.Airborne) Energy = Mathf.Min(100f, Energy + 16f * dt);
+                _netTimer -= dt;
+                if (_netTimer <= 0)
+                {
+                    _netTimer = 0.05f;
+                    var gflags = 4 | (Aiming ? 8 : 0) | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0)
+                                 | ((int)Model.Style & 7) << 8 | (Weapon != null && Weapon.Reloading ? 1 << 11 : 0);
+                    Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, gflags, Health, Current, Vector3.Zero);
+                }
+                return;
+            }
         }
 
         var input = Vector2.Zero;
@@ -346,8 +379,14 @@ public partial class Player : CharacterBody3D
         // Caméra : visée, tremblement
         var zoom = Aiming ? (Vehicle != null ? Vehicle.AimZoom : Weapon != null && Weapon.W.T.Zoom > 1 ? Weapon.W.T.Zoom : 1.4f) : 1f;
         Camera.Fov = Mathf.Lerp(Camera.Fov, Settings.I.Fov / zoom, Mathf.Clamp(dt * 12f, 0, 1));
-        _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, CamDistance(Def.Id, Aiming), Mathf.Clamp(dt * 10f, 0, 1));
-        _arm.Position = _arm.Position.Lerp(new Vector3(0.85f, 0.15f + (Vehicle?.CameraLift ?? 0f), 0), Mathf.Clamp(dt * 4f, 0, 1));
+        // Saisi par une fourmi : la caméra recule et s'élève (la fourmi entière reste lisible) et amortit les secousses de la tête.
+        var grabbed = GrabbedBy != null && IsInstanceValid(GrabbedBy);
+        _camLag = grabbed ? _camLag.Lerp(GlobalPosition, Mathf.Clamp(dt * 4f, 0, 1)) : GlobalPosition;
+        _camYaw.Position = new Vector3(0, _camHeight, 0) + (_camLag - GlobalPosition);
+        var camDist = grabbed ? (Aiming ? 3.4f : 5.6f) : CamDistance(Def.Id, Aiming);
+        _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, camDist, Mathf.Clamp(dt * (grabbed ? 4f : 10f), 0, 1));
+        // Épaule décalée de côté : la tête de la fourmi et la victime se lisent de trois quarts, pas l'une derrière l'autre.
+        _arm.Position = _arm.Position.Lerp(new Vector3(grabbed ? 1.7f : 0.85f, 0.15f + (Vehicle?.CameraLift ?? 0f) + (grabbed ? 0.3f : 0f), 0), Mathf.Clamp(dt * 4f, 0, 1));
         _shake = Mathf.MoveToward(_shake, 0, dt * 2.5f);
         Camera.HOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f;
         Camera.VOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f + _recoil * 0.02f;
@@ -357,11 +396,18 @@ public partial class Player : CharacterBody3D
         var firing = Time.GetTicksMsec() / 1000f - _lastFireTime < 0.8f;
         float targetYaw;
         if (Aiming || firing || Flying) targetYaw = _yaw + Mathf.Pi;
+        else if (grabbed)
+        {
+            // Pris dans les mandibules : face à la tête de la fourmi.
+            var toAnt = GrabbedBy.HeadPoint - GlobalPosition;
+            targetYaw = toAnt.X * toAnt.X + toAnt.Z * toAnt.Z > 0.01f ? Mathf.Atan2(toAnt.X, toAnt.Z) : _modelYaw;
+        }
         else if (horiz.LengthSquared() > 0.5f) targetYaw = Mathf.Atan2(horiz.X, horiz.Z);
         else targetYaw = _modelYaw;
         _modelYaw = Mathf.LerpAngle(_modelYaw, targetYaw, Mathf.Clamp(dt * 12f, 0, 1));
         Model.Rotation = new Vector3(0, _modelYaw, 0);
-        Model.Animate(dt, horiz.Length(), _pitch, !IsOnFloor(), Flying, Downed, Aiming, _recoil);
+        Model.Grabbed = grabbed;
+        Model.Animate(dt, grabbed ? 0f : horiz.Length(), _pitch, !grabbed && !IsOnFloor(), Flying, Downed, Aiming, _recoil);
 
         Model.Visible = Vehicle == null;
         if (Weapon != null)
@@ -385,7 +431,37 @@ public partial class Player : CharacterBody3D
         if (canAct && Weapon != null) HandleFire(dt);
         else _beamActive = false;
         if (Downed) HandleDowned(dt);
-        else HandleRevive(dt);
+        else if (!grabbed) HandleRevive(dt);
+        else ReviveProgress = 0;
+    }
+
+    /// <summary>La fourmi rouge vient de saisir le soldat (tous les pairs : seulement le soldat local ici).</summary>
+    public void OnGrabbed(Enemy e)
+    {
+        GrabbedBy = e;
+        Velocity = Vector3.Zero;
+        _dodgeTime = Mathf.Min(_dodgeTime, 0f);
+        _dashTime = 0f;
+        _diving = false;
+        ReviveProgress = 0;
+        AddShake(0.6f);
+        DamageFlash = Mathf.Max(DamageFlash, 0.5f);
+        Sfx.Ui("grunt", -2f, 1.05f, 0);
+    }
+
+    /// <summary>Libéré (fourmi tuée, soldat à terre, fourmi retirée) : il retombe, légèrement écarté de la tête.</summary>
+    public void OnReleased(Enemy e)
+    {
+        if (GrabbedBy != e && e != null) return;
+        GrabbedBy = null;
+        var push = Vector3.Zero;
+        if (IsInstanceValid(e))
+        {
+            push = GlobalPosition - e.GlobalPosition;
+            push.Y = 0;
+            push = push.LengthSquared() > 0.01f ? push.Normalized() * 3f : Vector3.Zero;
+        }
+        Velocity = push + Vector3.Up * 2f;
     }
 
     // ------------------------------------------------------------------ Tir
@@ -814,12 +890,27 @@ public partial class Player : CharacterBody3D
     private void BotAim(float dt)
     {
         BotDodge(dt);
-        var e = World.NearestEnemy(GlobalPosition, 140f);
+        // Saisi : le bot tire sur la tête de la fourmi qui le tient (le seul moyen de se libérer).
+        var held = GrabbedBy != null && IsInstanceValid(GrabbedBy) ? GrabbedBy : null;
+        var e = held ?? World.NearestEnemy(GlobalPosition, 140f);
         _botFire = false;
         if (e == null) return;
-        var to = e.Center - _camYaw.GlobalPosition;
+        var to = (held != null ? held.HeadPoint : e.Center) - _camYaw.GlobalPosition;
         var yaw = Mathf.Atan2(-to.X, -to.Z);
-        var pitch = Mathf.Atan2(to.Y, new Vector2(to.X, to.Z).Length());
+        var flat = new Vector2(to.X, to.Z).Length();
+        if (held != null)
+        {
+            // Saisi, la caméra est décalée de côté (épaule à droite) : le rayon du réticule passe à côté du pivot ;
+            // on tourne vers la gauche de asin(décalage / distance) pour qu'il tombe sur la tête.
+            var side = _arm.Position.X;
+            if (flat > side + 0.1f)
+            {
+                yaw += Mathf.Asin(side / flat);
+                flat = Mathf.Sqrt(flat * flat - side * side);
+            }
+            to.Y -= _arm.Position.Y;
+        }
+        var pitch = Mathf.Atan2(to.Y, flat);
         _yaw = Mathf.LerpAngle(_yaw, yaw, Mathf.Clamp(dt * 5f, 0, 1));
         _pitch = Mathf.Lerp(_pitch, pitch, Mathf.Clamp(dt * 5f, 0, 1));
         _botFire = !BotHoldFire && Mathf.Abs(Mathf.AngleDifference(_yaw, yaw)) < 0.15f;

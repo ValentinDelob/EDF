@@ -124,6 +124,11 @@ public partial class Sfx : Node
         snd["spit"] = Make(0.35f, t => Noise(rng) * Env(t, 0.01f, 0.3f) * 0.45f * (0.5f + 0.5f * Mathf.Sin(t * 200f)));
         snd["buzz"] = Make(0.5f, t => Saw(t * 180f) * 0.18f * Env(t, 0.05f, 0.45f));
         snd["hurt"] = Make(0.25f, t => (Thump(t, 200f, 0.08f) + Noise(rng) * 0.2f) * Env(t, 0.002f, 0.2f));
+        // Saisie de la fourmi rouge : claquement de mandibules + craquement d'armure, râle d'effort de la victime.
+        vars["crunch"] = Enumerable.Range(0, 3).Select(i => Make(0.32f, Crunch(rng, i))).ToArray();
+        snd["crunch"] = vars["crunch"][0];
+        vars["grunt"] = Enumerable.Range(0, 3).Select(i => Make(0.3f + 0.04f * i, Grunt(rng, i))).ToArray();
+        snd["grunt"] = vars["grunt"][0];
         snd["whistle"] = Make(2.0f, t => Mathf.Sin(t * Mathf.Tau * (1600f - 500f * t)) * 0.2f * Env(t, 0.3f, 1.9f));
         snd["jet"] = Make(0.5f, t => Noise(rng) * 0.25f * Env(t, 0.05f, 0.45f));
         snd["dash"] = Make(0.4f, t => Noise(rng) * 0.5f * Env(t, 0.005f, 0.35f) + Thump(t, 70f, 0.1f) * 0.4f);
@@ -356,6 +361,52 @@ public partial class Sfx : Node
             ph += start * (1f - 0.8f * Mathf.Min(t / 0.5f, 1f)) / Rate;
             var squeal = 2f * (ph - Mathf.Floor(ph + 0.5f)) * 0.22f * Env(t, 0.01f, 0.45f + 0.1f * variant);
             return crunch + squeal + Thump(t, 70f, 0.06f) * 0.3f;
+        };
+    }
+
+    /// <summary>
+    /// Morsure de mandibules : double claquement sec de chitine (les deux lames qui se referment), tintement bref,
+    /// crépitement de plaques d'armure qui cèdent, coup sourd du corps serré.
+    /// </summary>
+    private static Func<float, float> Crunch(Random rng, int variant)
+    {
+        var clackF = new Svf();
+        var crackF = new Svf();
+        var crackle = 0f;
+        var hz = 2600f + 450f * variant;
+        var gap = 0.012f + 0.004f * variant;
+        return t =>
+        {
+            var n = Noise(rng);
+            clackF.Set(hz, 2.5f);
+            clackF.Run(n);
+            var clack = clackF.Band * 3.2f * (Mathf.Exp(-t / 0.004f) + (t > gap ? 0.75f * Mathf.Exp(-(t - gap) / 0.005f) : 0f));
+            var ping = Mathf.Sin(t * Mathf.Tau * (1700f + 160f * variant)) * Mathf.Exp(-t / 0.018f) * 0.3f;
+            if (t > 0.01f && rng.NextDouble() < 0.014 * Mathf.Exp(-t / 0.08f)) crackle = 0.6f + (float)rng.NextDouble() * 0.7f;
+            crackle *= 0.93f;
+            crackF.Set(1300f + 700f * Mathf.Sin(t * 37f + variant), 1.3f);
+            crackF.Run(n * crackle);
+            return clack + ping + crackF.Band * 2.4f + Thump(t, 75f + 10f * variant, 0.05f) * 0.6f;
+        };
+    }
+
+    /// <summary>Râle d'effort (voix grave étouffée) : onde en dents de scie dans deux formants « eu », souffle.</summary>
+    private static Func<float, float> Grunt(Random rng, int variant)
+    {
+        var f1 = new Svf();
+        var f2 = new Svf();
+        var ph = 0f;
+        var len = 0.3f + 0.04f * variant;
+        var pitch = 125f - 12f * variant;
+        return t =>
+        {
+            ph += pitch * (1f - 0.25f * t / len) * (1f + 0.04f * Mathf.Sin(t * 70f)) / Rate;
+            var src = 2f * (ph - Mathf.Floor(ph + 0.5f)) + Noise(rng) * 0.25f;
+            f1.Set(560f + 60f * variant, 4f);
+            f2.Set(1050f + 80f * variant, 5f);
+            f1.Run(src);
+            f2.Run(src);
+            return (f1.Band * 0.9f + f2.Band * 0.5f) * Env(t, 0.02f, len - 0.03f) * 0.9f;
         };
     }
 

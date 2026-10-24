@@ -238,6 +238,7 @@ public partial class World : Node3D
             foreach (var e in EnemiesById.Values) e.ClientTick(dt);
             Allies.ClientTick(dt);
         }
+        UpdateGrabs(); // victimes des fourmis rouges : dans les mandibules animées de cette image
         // Insectes géants : celui dans lequel entre la caméra devient translucide (le soldat et la visée restent lisibles).
         if (GetViewport().GetCamera3D() is { } cam)
         {
