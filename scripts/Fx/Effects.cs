@@ -225,6 +225,16 @@ public static class Effects
             Grad(new Color(0.3f, 0.3f, 0.3f, 0.7f), new Color(0.5f, 0.5f, 0.5f, 0)), 2.5f, 0.5f);
     }
 
+    private static StandardMaterial3D _signalMat;
+
+    /// <summary>Fumigène de signalisation (marqueur de largage) : bouffée colorée qui monte et grisonne.</summary>
+    public static void SignalSmoke(World world, Vector3 pos, Color c, float size, float life)
+    {
+        _signalMat ??= Billboard(new Color(1f, 1f, 1f, 0.85f), false, false);
+        Burst(world.FxRoot, pos, 6, life, _signalMat, size, Vector3.Up, 18, 1.5f, 3.5f, 0.9f,
+            Grad(new Color(c, 0.9f), new Color(c.Lerp(new Color(0.45f, 0.43f, 0.42f), 0.55f), 0.55f), new Color(0.5f, 0.5f, 0.5f, 0)), 3.2f, 0.35f);
+    }
+
     public static void Emerge(World world, Vector3 pos, float size)
     {
         Burst(world.FxRoot, pos, 16, 2.5f, DustMat, size * 2.5f, Vector3.Up, 50, 2f, 6f, -2f,

@@ -67,6 +67,7 @@ public partial class Turret : Node3D
         if (Owned)
         {
             Net.I.SendDamageEnemy(_target.Id, Damage, end, false);
+            _world.LocalPlayer?.EarnCredits(Damage); // la tourelle de l'Opérateur lui rapporte des crédits d'appel
             _world.LocalHitFx(_target, end);
         }
     }

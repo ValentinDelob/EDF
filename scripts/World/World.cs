@@ -366,7 +366,7 @@ public partial class World : Node3D
         var bestD = float.MaxValue;
         foreach (var v in Vehicles.Values)
         {
-            if (v.Wrecked || v.Driver != 0) continue;
+            if (v.Wrecked || v.Driver != 0 || v.Delivering) continue;
             var d = v.GlobalPosition.DistanceTo(pos);
             if (d <= v.InteractRadius && d < bestD) { best = v; bestD = d; }
         }

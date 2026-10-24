@@ -11,9 +11,11 @@ public class ProfileData
     /// <summary>
     /// 1 : rareté + 5 étoiles (1..5) ; 2 : étoiles par caractéristique (0..MaxStars), sans rareté ;
     /// 3 : un seul exemplaire par modèle d'arme, plus de crédits ni d'expérience de classe
-    /// (les anciens champs « Credits » et « ClassXp » sont simplement ignorés à la lecture).
+    /// (les anciens champs « Credits » et « ClassXp » sont simplement ignorés à la lecture) ;
+    /// 4 : le Grenadier blindé a quatre emplacements (deux jeux de deux armes) : son équipement est complété
+    /// avec les nouvelles armes de départ (MH-2 Enclume, MS-6 Essaim) sans toucher aux deux premiers emplacements.
     /// </summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
     public int Version { get; set; } = CurrentVersion;
     public SoldierClass SelectedClass { get; set; } = SoldierClass.Rifleman;
     public Dictionary<string, float> ArmorBonus { get; set; } = new();
@@ -175,6 +177,7 @@ public partial class Profile : Node
         }
         Migrate();
         EnsureStarterWeapons();
+        FillEquipped();
     }
 
     /// <summary>Mise à niveau d'un profil ancien : la rareté et les étoiles 1..5 deviennent des étoiles 0..MaxStars par caractéristique.</summary>
@@ -234,6 +237,36 @@ public partial class Profile : Node
             if (!Data.Equipped.ContainsKey(cls.ToString()))
                 Data.Equipped[cls.ToString()] = ids.Select(id => Data.Arsenal.First(w => w.TemplateId == id).Uid).ToList();
         }
+    }
+
+    /// <summary>
+    /// Complète les emplacements vides de chaque classe (migration version 4 : le Grenadier passe de 2 à 4 emplacements).
+    /// Les emplacements déjà occupés ne bougent pas ; les places libres reçoivent d'abord les armes de départ non équipées,
+    /// puis les autres armes de la classe (sans doublon). Idempotent ; sauvegarde seulement si quelque chose change.
+    /// </summary>
+    public void FillEquipped()
+    {
+        var changed = false;
+        foreach (var def in Classes.All)
+        {
+            var key = def.Id.ToString();
+            var list = Data.Equipped.TryGetValue(key, out var l) ? l : new List<string>();
+            // Références valides seulement (arme possédée, de la bonne classe, une seule fois).
+            var valid = list.Where(u => Data.Arsenal.Any(w => w.Uid == u && w.T.Class == def.Id)).Distinct().Take(def.WeaponSlots).ToList();
+            var starters = Weapons.StarterLoadout.TryGetValue(def.Id, out var ids) ? ids : Array.Empty<string>();
+            var candidates = starters.Select(id => Data.Arsenal.FirstOrDefault(w => w.TemplateId == id))
+                .Concat(Data.Arsenal.Where(w => w.T.Class == def.Id))
+                .Where(w => w != null && !valid.Contains(w.Uid)).Select(w => w.Uid).Distinct();
+            foreach (var u in candidates)
+            {
+                if (valid.Count >= def.WeaponSlots) break;
+                valid.Add(u);
+            }
+            if (valid.SequenceEqual(list)) continue;
+            Data.Equipped[key] = valid;
+            changed = true;
+        }
+        if (changed && !IsTestRun) Save();
     }
 
     public void ResetProfile()

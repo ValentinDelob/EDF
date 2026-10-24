@@ -32,14 +32,42 @@ public static class Classes
             "Piqué", "Vol au réacteur dorsal. Le piqué inflige des dégâts de zone à l'impact.",
             new Color(0.75f, 0.77f, 0.8f), new Color(0.2f, 0.35f, 0.6f), 2),
         new(SoldierClass.Support, "Opérateur d'appui", "Soutien et frappes", 200, 5.5f, 8f,
-            "Balise prioritaire", "Frappes d'artillerie, tourelles et champ de soin. Gagne des crédits d'appel.",
+            "Balise prioritaire", "Frappes d'artillerie, tourelles et champ de soin. Gagne des crédits d'appel : barrage d'artillerie ou véhicule (char, hélicoptère).",
             new Color(0.55f, 0.48f, 0.34f), new Color(0.75f, 0.55f, 0.15f), 3),
         new(SoldierClass.Heavy, "Grenadier blindé", "Ligne de front", 400, 4.2f, 18f,
-            "Ancrage", "Exosquelette : -50 % de dégâts et aucun recul pendant 8 s. Poussées propulsées.",
-            new Color(0.3f, 0.32f, 0.35f), new Color(0.75f, 0.2f, 0.12f), 2),
+            "Ancrage", "Exosquelette : -50 % de dégâts et aucun recul pendant 8 s. Poussées propulsées. Deux jeux de deux armes.",
+            new Color(0.3f, 0.32f, 0.35f), new Color(0.75f, 0.2f, 0.12f), 4),
     };
 
     public static ClassDef Get(SoldierClass c) => All[(int)c];
+
+    /// <summary>
+    /// Le Grenadier blindé porte deux jeux de deux armes (emplacements 1-2 = jeu 1, 3-4 = jeu 2) ;
+    /// les autres classes n'ont qu'un jeu.
+    /// </summary>
+    public static bool HasWeaponSets(SoldierClass c) => c == SoldierClass.Heavy;
+
+    /// <summary>Nombre d'armes par jeu (Grenadier blindé).</summary>
+    public const int SetSize = 2;
+}
+
+/// <summary>
+/// Appels de véhicule de l'Opérateur d'appui : les crédits d'appel se gagnent en infligeant des dégâts et repartent de zéro
+/// à chaque mission. L'entier du type circule sur le réseau (RPC VehicleCallRequest / VehicleCalled).
+/// </summary>
+public static class CallIns
+{
+    public const int Tank = 0, Heli = 1, Count = 2;
+    public static readonly string[] Names = { "Char", "Hélico" };
+    public static readonly float[] Costs = { 500f, 700f };
+    /// <summary>Plafond des crédits d'appel.</summary>
+    public const float Cap = 1000f;
+    /// <summary>Coût du barrage d'artillerie (capacité de classe).</summary>
+    public const float BarrageCost = 300f;
+    /// <summary>Durée d'appui sur la touche d'appel pour commander le véhicule (un appui bref change de véhicule).</summary>
+    public const float HoldTime = 0.6f;
+    /// <summary>Portée maximale du point d'appel (distance horizontale au soldat).</summary>
+    public const float Range = 80f;
 }
 
 public enum WeaponKind { Hitscan, Projectile, Beam, Melee, Airstrike, Turret, HealField }
@@ -163,7 +191,7 @@ public static class Weapons
         [SoldierClass.Rifleman] = new[] { "fa21", "lr4" },
         [SoldierClass.Airborne] = new[] { "lz1", "pl7" },
         [SoldierClass.Support] = new[] { "pdw5", "art1", "med3" },
-        [SoldierClass.Heavy] = new[] { "gt40", "cs90" },
+        [SoldierClass.Heavy] = new[] { "gt40", "cs90", "mh2", "ms6" }, // jeu 1 : mitrailleuse + canon ; jeu 2 : marteau + missiles
     };
 }
 

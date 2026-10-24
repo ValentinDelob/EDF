@@ -207,6 +207,11 @@ public partial class HudWeapons : HudBlock
     private readonly Entry _main = new();
     private readonly Entry[] _others = { new(), new(), new() };
     private int _otherCount;
+    /// <summary>Grenadier blindé : armes de l'autre jeu (bande compacte au-dessus de la pile), libellé « Jeu n · [touche] ».</summary>
+    private readonly Entry[] _alt = { new(), new() };
+    private int _altCount, _altSetKey = -1;
+    private string _altLabel = "";
+    private float _swap = 1f;
 
     public HudWeapons()
     {
@@ -304,11 +309,49 @@ public partial class HudWeapons : HudBlock
         }
     }
 
+    /// <summary>
+    /// Grenadier blindé : jeu actif en grand (arme tenue + l'autre arme du jeu en petite plaque, comme les autres classes),
+    /// l'autre jeu en bande compacte au-dessus (nom et munitions de ses deux armes, assombris).
+    /// </summary>
+    private void FromSets(Player p, WeaponState ws)
+    {
+        FromWeapon(_main, ws, false);
+        var cur = Mathf.Clamp(p.Current, 0, p.Weapons.Count - 1);
+        _main.SetSlot(cur);
+        var set = p.ActiveSet;
+        var start = set * Classes.SetSize;
+        _otherCount = 0;
+        for (var i = start; i < Mathf.Min(start + Classes.SetSize, p.Weapons.Count); i++)
+        {
+            if (i == cur) continue;
+            var e = _others[_otherCount++];
+            FromWeapon(e, p.Weapons[i], true);
+            e.SetSlot(i);
+        }
+        var other = (set + 1) % p.SetCount;
+        var ostart = other * Classes.SetSize;
+        for (var i = ostart; i < Mathf.Min(ostart + Classes.SetSize, p.Weapons.Count) && _altCount < _alt.Length; i++)
+        {
+            var e = _alt[_altCount++];
+            FromWeapon(e, p.Weapons[i], true);
+            e.Name = p.Weapons[i].W.T.Name;
+            e.SetSlot(i);
+        }
+        if (other != _altSetKey)
+        {
+            _altSetKey = other;
+            _altLabel = $"Jeu {other + 1}  [{UiKit.KeyName("weapon_set")}]";
+        }
+        _swap = p.SetSwapLeft > 0 ? p.SetSwapProgress : 1f;
+    }
+
     public override void _Process(double delta)
     {
         var p = World?.LocalPlayer;
         if (p == null || !IsVisibleInTree()) return;
+        _altCount = 0;
         if (p.Vehicle is { } veh) FromVehicle(veh);
+        else if (p.HasSets && p.Weapon is { } held) FromSets(p, held);
         else if (p.Weapon is { } ws)
         {
             FromWeapon(_main, ws, false);
@@ -361,6 +404,33 @@ public partial class HudWeapons : HudBlock
             Text(HudE.Mono, 16, e.Status, 40, 8, 140, HorizontalAlignment.Center, e.Reloading ? HudE.Reload : Colors.White, true, true, o);
             Tab(e.Ammo, 82, 25, 56, 11, 9, o);
             Text(HudE.Mono, 12, e.Slot, 186, 10, 0, HorizontalAlignment.Left, HudE.Label, false, true, o);
+            Shapes();
+        }
+
+        // Grenadier : l'autre jeu, en bande compacte assombrie au-dessus de la pile (touche de changement de jeu rappelée).
+        if (_altCount > 0)
+        {
+            const float ax = 190, aw = 209;
+            var swapping = _swap < 1f;
+            Text(HudE.Cond, 12, _altLabel, ax, 12, aw, HorizontalAlignment.Left, swapping ? HudE.Reload : HudE.Label, true, true);
+            if (swapping)
+            {
+                Shapes();
+                DrawRect(new Rect2(ax + 92, 17, aw - 92, 3), HudE.Line);
+                DrawRect(new Rect2(ax + 92, 17, (aw - 92) * _swap, 3), HudE.Reload);
+            }
+            for (var i = 0; i < _altCount; i++)
+            {
+                var e = _alt[i];
+                var y = 28f + 21f * i;
+                Shapes();
+                DrawRect(new Rect2(ax, y, aw, 18), new Color(HudE.Plate, 0.5f));
+                DrawRect(new Rect2(ax, y, aw, 18), new Color(HudE.Line, 0.8f), false, 1f);
+                DrawRect(new Rect2(ax, y, 3, 18), HudE.Line);
+                Text(HudE.Cond, 12, e.Name, ax + 9, y + 1, 120, HorizontalAlignment.Left, HudE.Pale, true, true);
+                Text(HudE.Mono, 12, e.Status, ax + 116, y + 2, 70, HorizontalAlignment.Right, e.Reloading ? HudE.Reload : HudE.Pale, true, true);
+                Text(HudE.Mono, 11, e.Slot, ax + 196, y + 3, 0, HorizontalAlignment.Left, HudE.Label, false, true);
+            }
             Shapes();
         }
 

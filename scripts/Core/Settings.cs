@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Rempart;
@@ -32,7 +33,9 @@ public partial class Settings : Node
         new("weapon_2", "Arme 2", "key:2"),
         new("weapon_3", "Arme 3", "key:3"),
         new("weapon_swap", "Arme suivante", "key:Q"),
+        new("weapon_set", "Jeu d'armes suivant", "key:X"),
         new("ability", "Capacité de classe", "key:F"),
+        new("call_vehicle", "Appeler un véhicule", "key:V"),
         new("grenade", "Équipement", "key:G"),
         new("interact", "Interagir / relever", "key:E"),
         new("scoreboard", "Tableau des scores", "key:Tab"),
@@ -201,6 +204,8 @@ public partial class Settings : Node
         ["aim"] = new InputEvent[] { new InputEventJoypadMotion { Axis = JoyAxis.TriggerLeft, AxisValue = 1 } },
         ["reload"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.X } },
         ["weapon_swap"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.Y } },
+        ["weapon_set"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.DpadRight } },
+        ["call_vehicle"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.DpadDown } },
         ["ability"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.RightShoulder } },
         ["grenade"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.LeftShoulder } },
         ["interact"] = new InputEvent[] { new InputEventJoypadButton { ButtonIndex = JoyButton.DpadUp } },
@@ -320,6 +325,10 @@ public partial class Settings : Node
         if (cfg.Load(FilePath) != Error.Ok) return;
         foreach (var a in Actions)
             _bindings[a.Id] = (string)cfg.GetValue("bindings", a.Id, a.DefaultBinding);
+        // Action ajoutée depuis la dernière sauvegarde : sa touche par défaut ne doit pas voler celle choisie pour une autre action.
+        foreach (var a in Actions)
+            if (!cfg.HasSectionKey("bindings", a.Id) && Actions.Any(o => o.Id != a.Id && _bindings[o.Id] == a.DefaultBinding))
+                _bindings[a.Id] = "";
         MouseSensitivity = (float)cfg.GetValue("mouse", "sensitivity", MouseSensitivity);
         AimSensitivity = (float)cfg.GetValue("mouse", "aim_sensitivity", AimSensitivity);
         InvertY = (bool)cfg.GetValue("mouse", "invert_y", InvertY);

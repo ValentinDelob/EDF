@@ -502,7 +502,7 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void VehicleSeatRequest(int id, bool enter)
     {
-        if (!IsHost || W == null || !W.Vehicles.TryGetValue(id, out var v) || v.Wrecked) return;
+        if (!IsHost || W == null || !W.Vehicles.TryGetValue(id, out var v) || v.Wrecked || v.Delivering) return;
         var who = Sender;
         // Une seule place par joueur : pas de second véhicule tant qu'on en conduit un.
         if (enter && v.Driver == 0 && !W.Vehicles.Values.Any(o => o.Driver == who)) ToAll(MethodName.VehicleDriver, id, who);
