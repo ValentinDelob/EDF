@@ -373,7 +373,8 @@ public class WeaponInstance
     }
 }
 
-public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede, Walker, Tripod, DropShip, Titan }
+public enum EnemyType { BlackAnt, RedAnt, AcidAnt, Wasp, Scavenger, Nest, Queen, Spider, Drone, Fortress, Centipede, Walker, Tripod, DropShip, Titan,
+    AlienTrooper, AlienGuard, AlienFlyer, Portal }
 
 public record EnemyDef(
     EnemyType Type,
@@ -429,6 +430,13 @@ public static class Enemies
         // Damage = un tic de 0,1 s du souffle de feu (piétinement, coup de queue et sol en feu en multiples) ; BaseSize règle
         // l'écrasement du mobilier (force 6) et l'éparpillement du butin. Plaques d'armure à briser : voir Enemy.Titan.cs.
         new(EnemyType.Titan, "Titan reptilien", 120000, 3.2f, 8, 95f, 11f, 10f, 1f, Ranged: true, Boss: true),
+        // Aliens (humanoïdes de 4 à 6 m construits en mètres, sans gigantisme ; voir Enemy.Aliens.cs) : fantassin
+        // (Damage = un trait d'énergie, rafales de quatre), garde (Damage = coup de bouclier ; son blaster en fait la moitié),
+        // volant (Damage = un trait laser) ; portail : structure qui fait passer des groupes d'aliens et de machines.
+        new(EnemyType.AlienTrooper, "Fantassin alien", 400, 5.2f, 6, 75f, 3.4f, 1.3f, 0.25f, Ranged: true),
+        new(EnemyType.AlienGuard, "Garde alien", 1200, 4.4f, 30, 6.5f, 2.4f, 1.5f, 0.25f),
+        new(EnemyType.AlienFlyer, "Volant alien", 300, 13f, 5, 65f, 2.8f, 1.2f, 0.25f, Flying: true, Ranged: true),
+        new(EnemyType.Portal, "Portail", 5000, 0, 0, 0, 0, 4f, 1f, Static: true),
     };
 
     public static EnemyDef Get(EnemyType t) => All[(int)t];

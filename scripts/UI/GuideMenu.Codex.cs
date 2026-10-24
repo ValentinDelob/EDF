@@ -29,6 +29,10 @@ public partial class GuideMenu
         EnemyType.Tripod => "Marcheur à trois pattes. Son rayon balaie le sol et rase les immeubles ; le tracé s'allume avant le tir. Visez le noyau lumineux sous la coque.",
         EnemyType.DropShip => "Vaisseau de largage qui dépose des fourmis par sa soute. Invulnérable soute fermée : tirez dans la soute quand elle s'ouvre.",
         EnemyType.Titan => "Reptile colossal de soixante mètres qui traverse les immeubles. Souffle de feu annoncé par sa gorge qui s'embrase, coup de queue contre qui le prend à revers. Brisez ses plaques d'armure et visez la chair à vif.",
+        EnemyType.AlienTrooper => "Humanoïde de cinq mètres armé d'un fusil à énergie. Se met à couvert derrière les immeubles et les véhicules, se relève pour tirer en rafales, puis replonge. Débusquez-le aux explosifs ou prenez-le à revers ; la tête encaisse double.",
+        EnemyType.AlienGuard => "Colosse cuirassé derrière un bouclier de tour qui arrête les balles. Charge et frappe au bouclier, qu'il abaisse un instant après la charge. Contournez-le : la cellule d'énergie dans son dos est son point faible.",
+        EnemyType.AlienFlyer => "Alien à réacteurs dorsaux. Tourne au-dessus des toits, passe en rase-mottes pour mitrailler au laser. Fragile : abattez-le pendant ses passes.",
+        EnemyType.Portal => "Anneau extraterrestre qui fait passer des escouades d'aliens et des machines tant qu'il tient. Les balles l'égratignent à peine : employez les explosifs.",
         _ => "Données en cours d'analyse.",
     };
 
@@ -50,7 +54,7 @@ public partial class GuideMenu
             }
             _col.AddChild(UiKit.Gap(10));
             _col.AddChild(UiE.Title(e.Name.ToUpperInvariant(), 20, UiE.Mint, UiE.CondSemi));
-            var kind = e.Boss ? "Boss" : e.Static ? "Structure" : e.Flying ? "Volant" : e.Type is EnemyType.Drone or EnemyType.Fortress or EnemyType.Walker or EnemyType.Tripod or EnemyType.DropShip ? "Machine" : "Insecte";
+            var kind = e.Boss ? "Boss" : e.Static ? "Structure" : e.Type is EnemyType.AlienTrooper or EnemyType.AlienGuard or EnemyType.AlienFlyer ? "Alien" : e.Flying ? "Volant" : e.Type is EnemyType.Drone or EnemyType.Fortress or EnemyType.Walker or EnemyType.Tripod or EnemyType.DropShip ? "Machine" : "Insecte";
             Para($"{kind} · {e.Health:0} PV · {(e.Ranged ? "attaque à distance" : "corps à corps")} · {kills} abattu{(kills > 1 ? "s" : "")}");
             Para(EnemyNotes(e.Type));
         }

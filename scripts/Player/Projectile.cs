@@ -2,7 +2,7 @@ using Godot;
 
 namespace Rempart;
 
-public enum ProjectileKind { Rocket = 0, Plasma = 1, Grenade = 2, Missile = 3, Shell = 4, Acid = 10, Stinger = 11, AcidBig = 12, Web = 13, Laser = 14, Bomb = 15 }
+public enum ProjectileKind { Rocket = 0, Plasma = 1, Grenade = 2, Missile = 3, Shell = 4, Acid = 10, Stinger = 11, AcidBig = 12, Web = 13, Laser = 14, Bomb = 15, Bolt = 16, HeavyBolt = 17 }
 
 /// <summary>
 /// Projectile simulé localement. S'il appartient au joueur local (ou à l'hôte pour les ennemis),
@@ -38,6 +38,8 @@ public partial class Projectile : Node3D
     /// <summary>Gravité des missiles en cloche de la forteresse (trajectoire calculée par le tireur).</summary>
     public const float BombGravity = 16f;
 
+    private static StandardMaterial3D _boltHalo;
+
     public static Projectile Spawn(World world, ProjectileKind kind, Vector3 from, Vector3 velocity, bool authoritative, float damage, float radius)
     {
         var p = new Projectile { Kind = kind, Velocity = velocity, Authoritative = authoritative, Damage = damage, Radius = radius, _world = world };
@@ -62,17 +64,40 @@ public partial class Projectile : Node3D
             case ProjectileKind.Web: color = new Color(0.92f, 0.92f, 0.88f); size = 0.5f; break;
             case ProjectileKind.Laser: color = new Color(1f, 0.15f, 0.1f); size = 0.12f; break;
             case ProjectileKind.Bomb: color = new Color(1f, 0.3f, 0.12f); size = 0.35f; break;
+            // Traits d’énergie des aliens : violet pâle, longs et vifs (bien visibles en rafale).
+            case ProjectileKind.Bolt: color = new Color(0.92f, 0.8f, 1f); size = 0.1f; break;
+            case ProjectileKind.HeavyBolt: color = new Color(0.88f, 0.7f, 1f); size = 0.26f; break;
             default: color = new Color(0.7f, 0.95f, 0.15f); size = 0.45f; break;
         }
         var glow = kind != ProjectileKind.Grenade;
         p.AddChild(new MeshInstance3D
         {
             Mesh = new SphereMesh { Radius = size, Height = size * 2, RadialSegments = 10, Rings = 5 },
-            MaterialOverride = glow ? Mats.Glow(color, enemyShot ? 2.5f : 5f) : Mats.Metal(color),
+            MaterialOverride = glow ? Mats.Glow(color, kind is ProjectileKind.Bolt or ProjectileKind.HeavyBolt ? 6f : enemyShot ? 2.5f : 5f) : Mats.Metal(color),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Scale = kind is ProjectileKind.Rocket or ProjectileKind.Missile or ProjectileKind.Shell or ProjectileKind.Stinger or ProjectileKind.Bomb ? new Vector3(1, 1, 4)
-                : kind == ProjectileKind.Laser ? new Vector3(1, 1, 10) : Vector3.One,
+                : kind == ProjectileKind.Laser ? new Vector3(1, 1, 10) : kind == ProjectileKind.Bolt ? new Vector3(1, 1, 16)
+                : kind == ProjectileKind.HeavyBolt ? new Vector3(1, 1, 5) : Vector3.One,
         });
+        if (kind is ProjectileKind.Bolt or ProjectileKind.HeavyBolt)
+        {
+            // Halo violet additif autour du cœur blanc des traits d'énergie des aliens.
+            _boltHalo ??= new StandardMaterial3D
+            {
+                AlbedoColor = new Color(BugModel.AlienEnergy, 0.45f),
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+                DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Disabled,
+            };
+            p.AddChild(new MeshInstance3D
+            {
+                Mesh = new SphereMesh { Radius = size * 2.6f, Height = size * 5.2f, RadialSegments = 8, Rings = 4 },
+                MaterialOverride = _boltHalo,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Scale = kind == ProjectileKind.Bolt ? new Vector3(1, 1, 7) : new Vector3(1, 1, 3),
+            });
+        }
         if (kind is ProjectileKind.Rocket or ProjectileKind.Missile or ProjectileKind.Plasma or ProjectileKind.Shell or ProjectileKind.Bomb)
         {
             p.AddChild(new OmniLight3D { LightColor = color, LightEnergy = 1.5f, OmniRange = 6f });
@@ -172,7 +197,8 @@ public partial class Projectile : Node3D
         var enemyShot = (int)Kind >= 10;
         if (enemyShot)
         {
-            if (Kind == ProjectileKind.Laser) Effects.Sparks(_world, pos, normal);
+            if (Kind is ProjectileKind.Laser or ProjectileKind.Bolt) Effects.Sparks(_world, pos, normal);
+            else if (Kind == ProjectileKind.HeavyBolt) Effects.Explosion(_world, pos + normal * 0.3f, 2.4f, ExplosionFx.Plasma);
             else if (Kind == ProjectileKind.Bomb) Effects.Explosion(_world, pos + normal * 0.3f, Radius * 0.8f, 0);
             else Effects.Goo(_world, pos, Kind == ProjectileKind.Web ? new Color(0.9f, 0.9f, 0.85f) : new Color(0.7f, 0.95f, 0.15f), Kind == ProjectileKind.AcidBig ? 2f : 0.8f, 8);
             // Gros jet d'acide : éclaboussure et gaz toxique (effet seul, sans feu).

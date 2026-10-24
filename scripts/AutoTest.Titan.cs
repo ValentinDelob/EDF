@@ -9,7 +9,7 @@ namespace Rempart;
 public static partial class AutoTest
 {
     /// <summary>
-    /// Avec un titan en jeu (mission 17, --machines=Titan ou --showcase=titan) :
+    /// Avec un titan en jeu (mission 19, --machines=Titan ou --showcase=titan) :
     /// --titan-act=breath@8,tail@14,roar@20,plate@24 : actions forcées aux instants de mission (hôte) ;
     /// --titan-plates=T : à partir de T s, tirs sur chaque plaque jusqu'à la briser, puis sur la plaie : vérifie que la
     /// plaque encaisse (titan à 25 %), qu'elle cède, puis que la chair à vif prend ×3 ; journal « [titan] plaques ok » ;

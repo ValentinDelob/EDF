@@ -63,6 +63,7 @@ public partial class Sfx : Node
                 BuildProps(snd);
                 BuildMachines(snd, loops);
                 BuildTitan(snd, loops);
+                BuildAliens(snd, vars, loops);
                 var ms = sw.ElapsedMilliseconds;
                 Callable.From(() => OnBuilt(snd, vars, loops, ms)).CallDeferred();
             }

@@ -30,7 +30,7 @@ public partial class Enemy
     public Vector3 LandingPoint;
 
     /// <summary>Insecte qui escalade les surfaces (pas les volants, ni le nid, ni les boss, ni les machines).</summary>
-    public bool Climbs => !Def.Flying && !Def.Static && !Def.Boss && !IsMachine;
+    public bool Climbs => !Def.Flying && !Def.Static && !Def.Boss && !IsMachine && !IsAlien;
 
     /// <summary>Hauteur des sondes au-dessus de la surface : en dessous, l'obstacle est enjambé ; au-dessus, c'est une paroi.</summary>
     private float ProbeH => 0.75f * Def.Size;

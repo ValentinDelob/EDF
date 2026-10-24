@@ -521,6 +521,13 @@ public partial class HudRadar : HudBlock
                     DrawArc(q, 7.5f, 0, Mathf.Tau, 20, HudE.Ink, 1f, true);
                     DrawArc(q, 11f, 0, Mathf.Tau, 24, new Color(HudE.Enemy, 0.8f), 1.5f, true);
                 }
+                else if (e.IsAlien)
+                {
+                    // Aliens humanoïdes : triangle pointe en haut, cerné.
+                    var pts = new[] { q + new Vector2(0, -4.8f), q + new Vector2(4.3f, 3.4f), q + new Vector2(-4.3f, 3.4f) };
+                    DrawColoredPolygon(pts, HudE.Enemy);
+                    DrawPolyline(new[] { pts[0], pts[1], pts[2], pts[0] }, HudE.Ink, 1f, true);
+                }
                 else if (e.IsBoss || e.IsStatic)
                 {
                     DrawCircle(q, 6f, HudE.Enemy);

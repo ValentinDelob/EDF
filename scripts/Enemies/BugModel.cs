@@ -47,6 +47,8 @@ public partial class BugModel : Node3D
             case EnemyType.Tripod: m.BuildTripod(); break;
             case EnemyType.DropShip: m.BuildDropShip(); break;
             case EnemyType.Titan: m.BuildTitan(); break;
+            case EnemyType.AlienTrooper or EnemyType.AlienGuard or EnemyType.AlienFlyer: m.BuildAlien(); break;
+            case EnemyType.Portal: m.BuildPortal(); break;
         }
         // Gigantisme : tout le modèle (et donc la foulée, voir Animate) suit EnemyDef.Giant.
         m.Scale *= Enemies.Get(type).Giant;
@@ -181,6 +183,23 @@ public partial class BugModel : Node3D
             if (GetParent() is Enemy { Elite: true }) ApplyMachineElite();
             return;
         }
+        if (IsAlienType)
+        {
+            // Variante élite des aliens : armure laquée rouge sang.
+            if (GetParent() is Enemy { Elite: true })
+            {
+                var armor = AlienArmor();
+                var elite = AlienArmorElite();
+                foreach (var node in FindChildren("*", "MeshInstance3D", true, false))
+                {
+                    var mi = (MeshInstance3D)node;
+                    if (mi.Mesh == null) continue;
+                    for (var s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+                        if (mi.Mesh.SurfaceGetMaterial(s) == armor) mi.SetSurfaceOverrideMaterial(s, elite);
+                }
+            }
+            return;
+        }
         if (GetParent() is Enemy { Elite: true })
         {
             var gold = Mats.Chitin(new Color(0.78f, 0.58f, 0.14f));
@@ -286,7 +305,7 @@ public partial class BugModel : Node3D
     /// <summary>Bref flash blanc à l'impact (retour visuel des tirs).</summary>
     public void Flash()
     {
-        if (Type is EnemyType.Queen or EnemyType.Nest or EnemyType.Titan || IsMachine) return; // cibles touchées en continu : pas de flash
+        if (Type is EnemyType.Queen or EnemyType.Nest or EnemyType.Titan or EnemyType.Portal || IsMachine) return; // cibles touchées en continu : pas de flash
         _flashMat ??= new StandardMaterial3D
         {
             AlbedoColor = new Color(1f, 0.55f, 0.3f, 0.16f),
