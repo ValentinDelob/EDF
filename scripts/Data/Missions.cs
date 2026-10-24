@@ -330,5 +330,23 @@ public static class Missions
                     new WaveDef("north", 0, "Mille-pattes et charognards sur la piste !", (EnemyType.Centipede, 2), (EnemyType.Scavenger, 6), (EnemyType.RedAnt, 8)),
                     new WaveDef("beach", 8, "D'autres arrivent par la route du désert !", (EnemyType.BlackAnt, 12))),
             }, Weather.Sandstorm, MapId.Desert),
+        // Titan reptilien (spécification §10.2).
+        new(19, "Le titan",
+            "Une créature reptilienne de soixante mètres est sortie des collines et marche droit sur le centre-ville. Rien ne l'arrête : les immeubles s'effondrent à son passage et son souffle de feu embrase des rues entières. Son dos et ses flancs sont cuirassés de plaques osseuses : brisez-les aux explosifs pour mettre la chair à vif, puis visez les plaies. Quand sa gorge s'embrase, quittez la ligne de feu ; et ne restez pas dans son dos, sa queue balaie tout.",
+            MissionGoal.Boss, TimeOfDay.Dusk, 0.006f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Contact colossal au nord : un titan reptilien ! Brisez ses plaques d'armure, visez la chair à vif.", (EnemyType.Titan, 1), (EnemyType.RedAnt, 8)),
+                    new WaveDef("east", 10, "Fourmis à l'est, elles fuient devant le titan !", (EnemyType.BlackAnt, 14))),
+                new PhaseDef(0, 55,
+                    new WaveDef("west", 0, "Fourmis acides et guêpes à l'ouest, elles suivent la bête !", (EnemyType.AcidAnt, 10), (EnemyType.Wasp, 10))),
+                new PhaseDef(0, 115,
+                    new WaveDef("beach", 0, "La colonie remonte de la plage, prise en tenaille !", (EnemyType.RedAnt, 10), (EnemyType.BlackAnt, 12))),
+                new PhaseDef(0, 180,
+                    new WaveDef("east", 0, "Escadrille de drones à l'est ! Ne quittez pas le titan des yeux.", (EnemyType.Drone, 10), (EnemyType.Spider, 6))),
+                new PhaseDef(0, 245,
+                    new WaveDef("north", 0, "Des mille-pattes surgissent des ruines au nord !", (EnemyType.RedAnt, 10), (EnemyType.Centipede, 2))),
+            }, Weather.Clear, MapId.City),
     };
 }

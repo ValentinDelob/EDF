@@ -512,6 +512,15 @@ public partial class HudRadar : HudBlock
                     DrawColoredPolygon(pts, HudE.Enemy);
                     DrawPolyline(new[] { pts[0], pts[1], pts[2], pts[3], pts[0] }, HudE.Ink, 1f, true);
                 }
+                else if (e.IsTitan)
+                {
+                    // Titan : grand disque cerclé d'un anneau, trait vers où il regarde (direction du souffle).
+                    var ahead = C + Rel(p, yaw, e.GlobalPosition + e.GlobalBasis.Z * 40f) * k - q;
+                    if (ahead.LengthSquared() > 0.01f) DrawLine(q, q + ahead.Normalized() * 15f, HudE.Enemy, 2f, true);
+                    DrawCircle(q, 7.5f, HudE.Enemy);
+                    DrawArc(q, 7.5f, 0, Mathf.Tau, 20, HudE.Ink, 1f, true);
+                    DrawArc(q, 11f, 0, Mathf.Tau, 24, new Color(HudE.Enemy, 0.8f), 1.5f, true);
+                }
                 else if (e.IsBoss || e.IsStatic)
                 {
                     DrawCircle(q, 6f, HudE.Enemy);

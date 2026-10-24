@@ -33,8 +33,9 @@ public static partial class AutoTest
             }
             app.GetTree().CreateTimer(0f).Timeout += Watch;
         }
-        var showcase = Screenshot.CmdArg("showcase") == "machines";
-        var arg = Screenshot.CmdArg("machines") ?? (showcase ? "Walker,Tripod,DropShip" : null);
+        var sc = Screenshot.CmdArg("showcase");
+        var showcase = sc is "machines" or "titan";
+        var arg = Screenshot.CmdArg("machines") ?? (sc == "titan" ? "Titan" : showcase ? "Walker,Tripod,DropShip" : null);
         if (arg == null) return;
         var tree = app.GetTree();
         var types = arg.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -68,7 +69,7 @@ public static partial class AutoTest
             for (var i = 0; i < types.Count; i++)
             {
                 var t = types[i];
-                var dist = (dist0 > 0 ? dist0 : t switch { EnemyType.Walker => 34f, EnemyType.Tripod => 58f, _ => 70f }) + (types.Count > 3 ? i * 6f : 0f);
+                var dist = (dist0 > 0 ? dist0 : t switch { EnemyType.Walker => 34f, EnemyType.Tripod => 58f, EnemyType.Titan => 100f, _ => 70f }) + (types.Count > 3 ? i * 6f : 0f);
                 var lat = types.Count == 1 ? 0f : t switch { EnemyType.Walker => -16f, EnemyType.Tripod => 22f, _ => -6f } + (i >= 3 ? (i - 2) * 14f : 0f);
                 var p = pp + f * dist + right * lat;
                 var e = w.HostSpawnEnemy(t, p);

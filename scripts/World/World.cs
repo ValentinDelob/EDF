@@ -118,6 +118,7 @@ public partial class World : Node3D
                 LocalPlayer.SetYaw(0);
                 PrewarmFade(LocalPlayer.Camera);
                 BugModel.PrewarmMachines(LocalPlayer.Camera, Mission);
+                BugModel.PrewarmTitan(LocalPlayer.Camera, Mission);
             }
             else if (Net.I.Players.TryGetValue(id, out var info))
             {
@@ -751,6 +752,8 @@ public partial class World : Node3D
         if (weak && e.Def.Type == EnemyType.Fortress) dmg *= 2.5f / 1.5f;
         // Machines : points faibles (genoux, noyau, soute ouverte) ; le vaisseau ignore le reste.
         if (e.IsMachine && (dmg = e.HostAdjustDamage(dmg, weak)) <= 0f) return;
+        // Titan : plaques d'armure (la plaque encaisse), chair à vif des plaques brisées.
+        if (e.IsTitan) dmg = e.TitanAdjustDamage(dmg, weak, at);
         e.Health -= dmg;
         if (by != Net.I.MyId) Net.I.BroadcastEnemyHit(id, at);
         if (e.Health <= 0)
@@ -809,6 +812,11 @@ public partial class World : Node3D
     {
         if (e.Invulnerable(weak)) damage = 0; // blindage du vaisseau : ni chiffre ni dégât
         if (e.IsMachine) e.HitSparks(at);
+        else if (e.IsTitan)
+        {
+            e.TitanHitFx(at);
+            damage *= e.TitanDisplayScale(at, weak);
+        }
         else if (e.Def.Type == EnemyType.Fortress) Effects.Sparks(this, at, Vector3.Up);
         else Effects.Goo(this, at, e.Def.Type == EnemyType.AcidAnt ? new Color(0.7f, 0.9f, 0.15f) : new Color(0.55f, 0.48f, 0.12f), 0.5f, 4);
         e.FlashHit();
@@ -834,7 +842,7 @@ public partial class World : Node3D
         // Butin : là où le corps tombe (au pied du mur, ou sur le toit).
         var ground = e.LandingPoint;
         var drops = 0;
-        if (e.Def.Boss) drops = 10;
+        if (e.Def.Boss) drops = e.IsTitan ? Rng.RandiRange(8, 10) : 10; // spécification §7.2 : 8 à 10 caisses, 5 armes garanties
         else if (e.Def.Type == EnemyType.Nest) drops = 4;
         else if (e.Elite) drops = 2;
         else if (Rng.Randf() < e.Def.DropChance) drops = 1;

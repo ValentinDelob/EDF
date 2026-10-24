@@ -341,9 +341,10 @@ public partial class BugModel
     public override void _Notification(int what)
     {
         if (what == NotificationEnterTree && _skinMeshes != null) Callable.From(AttachSkin).CallDeferred();
-        else if (what == NotificationPredelete && _rig != null)
+        else if (what == NotificationPredelete && (_rig != null || _skeleton.IsValid))
         {
-            if (IsInstanceValid(_rig)) _rig.Free();
+            // Le titan a son squelette de rendu sans armature hors scène (BugModel.Titan.Anim.cs).
+            if (_rig != null && IsInstanceValid(_rig)) _rig.Free();
             if (_skeleton.IsValid) RenderingServer.FreeRid(_skeleton);
         }
     }

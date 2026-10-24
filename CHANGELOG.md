@@ -10,6 +10,14 @@
 - **Deux missions** : « Fort de sable » (jour : défendre le poste de commandement installé sur le tarmac, un marcheur de combat en dernière vague) et « Vent de sable » (tempête de sable : détruire quatre nids dans une visibilité d'une centaine de mètres).
 - Lumière du désert : soleil plus haut et plus franc, brume beige ; le gris de l'invasion reste.
 - Tests : `--desprobe` (parcours des escaliers et des buttes avec la vraie physique, explosion d'une soute et d'une cuve).
+- **Nouveau boss : le titan reptilien.** Un kaiju de soixante mètres, cuirassé d'écailles sombres, hérissé d'épines dorsales dentelées, qui avance d'un pas lourd (pieds réellement posés au sol, bassin qui se balance, queue qui suit avec retard et fouette aux virages) et traverse la ville en droite ligne : les immeubles s'effondrent à son contact, voitures et mobilier sont écrasés, chaque pas fait trembler le sol et blesse qui se trouve dessous.
+  - **Souffle de feu** : sa gorge s'embrase entre les écailles et sa tête se cabre (le tracé du balayage s'allume au sol), puis un long jet de flammes balaie la cible en travers. Il s'arrête au premier obstacle, brûle soldats (véhicules compris), alliés, immeubles et mobilier, et laisse le sol en feu derrière lui.
+  - **Coup de queue** contre qui le prend à revers, **rugissement** qui fait trembler l'image à l'arrivée et quand il enrage.
+  - **Plaques d'armure à briser** : huit plaques osseuses (épaules, dos, flancs, hanches) encaissent les tirs (le titan ne prend que le quart des dégâts dessous). Brisées, elles tombent avec fracas, le titan titube et la chair à vif incandescente apparaît : dégâts ×3. La tête compte aussi comme point faible.
+  - **Phases** : à 50 % puis 20 % de sa vie, il enrage (plus rapide, souffles plus longs et plus fréquents, double balayage en fin de combat).
+  - Pas de barre de vie : l'état du combat se lit sur la bête (plaques arrachées, plaies, rugissements). Repère propre au radar (grand disque cerclé, trait vers où il regarde), fiche dans le bestiaire, sons synthétisés (rugissement, cri de douleur, râle, inspiration, grondement du jet, pas colossaux). Butin : 8 à 10 caisses dont 5 armes. Synchronisé en LAN (plaques brisées décidées par l'hôte).
+- **Nouvelle mission « Le titan »** (ville, crépuscule) : le titan descend des collines et marche sur le centre-ville, escorté de fourmis, de guêpes, de drones et de mille-pattes.
+- Tests : `--showcase=titan`, `--titan-act` (actions forcées), `--titan-plates` (test des plaques, vu du client en LAN), `--titan-hp`, `--titan-log`, `--titan-cam` (voir ARCHITECTURE.md › Tests automatisés).
 
 ## v0.9.1 — Performances (300 ennemis)
 
