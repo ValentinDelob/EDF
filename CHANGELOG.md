@@ -1,5 +1,9 @@
 # Journal des versions
 
+## v0.7.3 — Jetpack à énergie
+
+- **Son du jetpack refait façon « ailes d'énergie »** : plus de flamme. Bourdonnement électrique pulsé, grave et propre, avec un scintillement cristallin et de petites étincelles ; montée en régime à l'allumage, descente à la coupure, éclat d'énergie pour la poussée et le piqué.
+
 ## v0.7.2 — Jetpack
 
 - **Nouveau son de jetpack** (Aéroporté) : allumage avec souffle et claquement grave, flamme de propulseur continue sans coupure (fini les rafales hachées) dont la hauteur monte avec la vitesse de montée, extinction en douceur ; rafale dédiée pour la poussée et le piqué. Les coéquipiers entendent aussi le jetpack en LAN.
