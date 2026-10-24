@@ -86,12 +86,13 @@ public partial class Ally : Node3D
             var dir = dist < 14f ? to / dist : w.Flow.Direction(pos);
             if (dir == Vector3.Zero) dir = to / dist;
             var next = pos + dir * Mathf.Min(speed * dt, dist);
+            next.Y = w.Terrain != null ? w.GroundHeight(next) : next.Y; // relief : les alliés suivent le sol (ponts compris)
             if (!w.Flow.IsBlocked(next) || w.Flow.IsBlocked(pos)) GlobalPosition = next;
             _speed = speed;
         }
         else _speed = 0;
         // Téléportation de secours si le groupe est distancé.
-        if (held == null && Leader != 0 && w.PlayerPosition(Leader, out var lp2) && lp2.DistanceTo(pos) > 80f) GlobalPosition = lp2 + _formation;
+        if (held == null && Leader != 0 && w.PlayerPosition(Leader, out var lp2) && lp2.DistanceTo(pos) > 80f) GlobalPosition = w.OnGround(lp2 + _formation);
 
         if (_retarget <= 0 || _target == null || !IsInstanceValid(_target) || _target.State == EnemyState.Dead)
         {
@@ -128,8 +129,9 @@ public partial class Ally : Node3D
         if (GrabbedBy != e) return;
         GrabbedBy = null;
         Model.Grabbed = false;
-        var y = GlobalPosition.Y;
-        if (y > 0.05f) CreateTween().TweenProperty(this, "global_position:y", 0f, Mathf.Clamp(Mathf.Sqrt(2f * y / 24f), 0.15f, 1.2f))
+        var ground = World.GroundAt(GlobalPosition.X, GlobalPosition.Z);
+        var y = GlobalPosition.Y - ground;
+        if (y > 0.05f) CreateTween().TweenProperty(this, "global_position:y", ground, Mathf.Clamp(Mathf.Sqrt(2f * y / 24f), 0.15f, 1.2f))
             .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
     }
 
@@ -210,7 +212,7 @@ public class AllyManager
             var side = i % 2 == 0 ? -1f : 1f;
             var formation = new Vector3(side * (4f + (i / 2) * 2.5f), 0, 1f + (i / 2) * 1.5f);
             var id = _nextId++;
-            var pos = center + new Vector3(i * 1.8f - count, 0, (i % 2) * 1.5f);
+            var pos = _w.OnGround(center + new Vector3(i * 1.8f - count, 0, (i % 2) * 1.5f));
             Spawn(id, pos, formation);
             Net.I.BroadcastAllySpawn(id, pos, formation);
             members[i] = id;
@@ -296,7 +298,7 @@ public class AllyManager
         while (ms.Position < ms.Length)
         {
             var id = r.ReadInt32();
-            var pos = new Vector3(r.ReadSingle(), 0, r.ReadSingle());
+            var pos = _w.OnGround(new Vector3(r.ReadSingle(), 0, r.ReadSingle()));
             var yaw = r.ReadInt16() / 10000f;
             var pitch = r.ReadSByte() / 100f;
             var speed = r.ReadByte() / 20f;

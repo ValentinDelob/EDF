@@ -182,7 +182,8 @@ public partial class Projectile : Node3D
             return;
         }
         if (enemyShot && Authoritative && _world.HostProjectileHitsPlayer(this, from, to2)) { Impact(to2, Vector3.Up, null); return; }
-        if (to2.Y < -1f) { Impact(new Vector3(to2.X, 0, to2.Z), Vector3.Up, null); return; }
+        var floorY = World.GroundAt(to2.X, to2.Z);
+        if (to2.Y < floorY - 1f) { Impact(new Vector3(to2.X, floorY, to2.Z), Vector3.Up, null); return; }
         GlobalPosition = to2;
         if (Velocity.LengthSquared() > 0.01f && Kind != ProjectileKind.Grenade) LookAt(to2 + Velocity, Vector3.Up);
     }

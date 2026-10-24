@@ -48,6 +48,9 @@ public partial class CityCam : Camera3D
             return;
         }
         Position = _views[i].pos;
+        // « --citycam-ground » : hauteurs relatives au sol (cartes à relief).
+        if (Screenshot.CmdArg("citycam-ground") != null && World.Current != null)
+            Position = World.Current.OnGround(Position, Position.Y);
         RotationDegrees = _views[i].rot;
         if (!Current) MakeCurrent();
         // Capture une fois le point de vue stabilisé (ombres, LOD).

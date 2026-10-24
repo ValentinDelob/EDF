@@ -237,7 +237,7 @@ public partial class Enemy
         var want = Def.Speed * along * speedMul * (Mathf.Abs(dy) > 0.9f ? 0.3f : 1f);
         _speedNow = Mathf.MoveToward(_speedNow, want, dt * 2.5f);
         var next = pos + fwd * _speedNow * dt;
-        next.Y = 0;
+        next.Y = _world.GroundHeight(next);
         if (_world.Flow.IsBlocked(next) && !_world.Flow.IsBlocked(pos)) { next = pos; _speedNow = 0; _mStrafe = -_mStrafe; }
         GlobalPosition = next;
     }
@@ -792,7 +792,7 @@ public partial class Enemy
         {
             case EnemyType.Walker:
             {
-                LandingPoint = new Vector3(GlobalPosition.X, 0, GlobalPosition.Z);
+                LandingPoint = _world.OnGround(GlobalPosition);
                 Sfx.At("collapse", Center, 8f, 0.8f, 0);
                 for (var i = 0; i < 5; i++)
                 {
@@ -803,7 +803,7 @@ public partial class Enemy
                 {
                     var c = Model.WalkerTorso.Origin;
                     Effects.Explosion(_world, c, 11f, 0);
-                    Effects.Dust(_world, new Vector3(c.X, 0, c.Z), new Vector3(18f, 6f, 18f));
+                    Effects.Dust(_world, _world.OnGround(c), new Vector3(18f, 6f, 18f));
                     _world.ShakeCamera(c, 0.8f, 90f);
                 }));
                 tw.TweenInterval(10f);
@@ -812,7 +812,7 @@ public partial class Enemy
             }
             case EnemyType.Tripod:
             {
-                LandingPoint = new Vector3(GlobalPosition.X, 0, GlobalPosition.Z);
+                LandingPoint = _world.OnGround(GlobalPosition);
                 Effects.Explosion(_world, Model.TripodCore, 7f, 2);
                 Sfx.At("collapse", Center, 10f, 0.7f, 0);
                 for (var i = 0; i < 6; i++)
@@ -825,7 +825,7 @@ public partial class Enemy
                     var c = Model.TripodHull;
                     Effects.Explosion(_world, c, 16f, 0);
                     Effects.Explosion(_world, c + Vector3.Up * 3f, 9f, 2);
-                    Effects.Dust(_world, new Vector3(c.X, 0, c.Z), new Vector3(32f, 9f, 32f));
+                    Effects.Dust(_world, _world.OnGround(c), new Vector3(32f, 9f, 32f));
                     _world.ShakeCamera(c, 1f, 130f);
                 }));
                 tw.TweenInterval(11f);

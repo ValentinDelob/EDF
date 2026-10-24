@@ -90,7 +90,7 @@ public partial class World : Node3D
         BuildEnvironment();
         var buildClock = System.Diagnostics.Stopwatch.StartNew();
         Decor = Destructibles.Begin(this);
-        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
+        City = Mission.Map switch { MapId.Port => PortBuilder.Build(this, Mission.Time), MapId.Suburb => SuburbBuilder.Build(this, Mission.Time), MapId.Business => BusinessBuilder.Build(this, Mission.Time), MapId.Industrial => IndustrialBuilder.Build(this, Mission.Time), MapId.Desert => DesertBuilder.Build(this, Mission.Time), MapId.Forest => ForestBuilder.Build(this, Mission.Time), _ => CityBuilder.Build(this, Mission.Time) };
         Decor.EndBuild();
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[carte] {Mission.Map} construite en {buildClock.ElapsedMilliseconds} ms");
         Buildings.AddRange(City.Buildings);
@@ -139,8 +139,8 @@ public partial class World : Node3D
 
         Allies = new AllyManager(this);
         // Char de combat et hélicoptère d'attaque garés près du point de départ (mêmes identifiants chez tous les pairs).
-        AddVehicle(Tank.Create(this, 1, new Vector3(14, 0.3f, 22), Mathf.Pi));
-        AddVehicle(Helicopter.Create(this, 2, new Vector3(-16, 0.3f, 24), Mathf.Pi));
+        AddVehicle(Tank.Create(this, 1, OnGround(new Vector3(14, 0, 22), 0.3f), Mathf.Pi));
+        AddVehicle(Helicopter.Create(this, 2, OnGround(new Vector3(-16, 0, 24), 0.3f), Mathf.Pi));
         // Véhicules supplémentaires de la carte (base militaire) : identifiants 3, 4… dans l'ordre du générateur.
         for (var i = 0; i < City.Vehicles.Count; i++)
         {
@@ -152,8 +152,8 @@ public partial class World : Node3D
         {
             _director = new MissionDirector(this);
             // Escouades alliées : une près du point de départ, une en avant.
-            Allies.HostSpawnSquad(new Vector3(0, 0, 18), Mission.Index == 1 ? 4 : 3);
-            if (Mission.Index != 1) Allies.HostSpawnSquad(new Vector3(-25, 0, -25), 3);
+            Allies.HostSpawnSquad(OnGround(new Vector3(0, 0, 18)), Mission.Index == 1 ? 4 : 3);
+            if (Mission.Index != 1) Allies.HostSpawnSquad(OnGround(new Vector3(-25, 0, -25)), 3);
         }
         Hud.Briefing(Mission);
         Settings.I.Changed += ApplyGraphics;
@@ -195,6 +195,7 @@ public partial class World : Node3D
         };
         Grade.Apply(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         if (Mission.Map == MapId.Desert) DesertBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
+        if (Mission.Map == MapId.Forest) ForestBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         _env = new WorldEnvironment { Environment = env };
         AddChild(_env);
         AddChild(_sun);
@@ -218,6 +219,7 @@ public partial class World : Node3D
         env.VolumetricFogEnabled = q >= 2;
         env.VolumetricFogDensity = Mission.Time switch { TimeOfDay.Night => 0.012f, TimeOfDay.Dusk => 0.008f, _ => 0.005f };
         if (Mission.Map == MapId.Desert) env.VolumetricFogDensity *= DesertBuilder.VolumetricFactor(Mission.Weather);
+        if (Mission.Map == MapId.Forest) env.VolumetricFogDensity *= ForestBuilder.VolumetricFactor(Mission.Time);
         env.VolumetricFogAlbedo = env.FogLightColor;
         _sun.DirectionalShadowMaxDistance = q switch { 0 => 80f, 1 => 140f, 2 => 220f, _ => 320f };
         _sun.ShadowEnabled = true;
@@ -696,7 +698,7 @@ public partial class World : Node3D
     {
         var id = _nextEnemyId++;
         var yaw = Rng.RandfRange(-Mathf.Pi, Mathf.Pi);
-        if (Enemies.Get(type).Flying && !airdrop) pos.Y = Rng.RandfRange(25, 40);
+        if (Enemies.Get(type).Flying && !airdrop) pos.Y = GroundHeight(pos) + Rng.RandfRange(25, 40);
         // Largage par un vaisseau : signalé aux pairs par un cap décalé de +10 rad (voir Enemy.Create).
         if (airdrop) yaw += 10f;
         var hpMul = HealthMul;
@@ -1203,7 +1205,7 @@ public partial class World : Node3D
                 Vector3 p;
                 if (line) p = target + dir * ((idx - count / 2f) * radius * 0.7f);
                 else p = target + new Vector3(Rng.RandfRange(-radius, radius), 0, Rng.RandfRange(-radius, radius)) * 0.8f;
-                p.Y = 0.5f;
+                p.Y = GroundHeight(p) + 0.5f;
                 if (Net.I.IsHost) HostExplosion(p, radius, dmg, 0, from);
             };
         }

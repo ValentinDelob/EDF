@@ -64,7 +64,9 @@ public partial class World
             var hit = space.IntersectRay(ray);
             if (hit.Count == 0 || hit["collider"].AsGodotObject() is Building) return false;
             var ground = ((Vector3)hit["position"]).Y;
-            if (ground > 3f || ground < -2f) return false;
+            // Sol nu (relief compris), assez plat pour s'y poser (toujours vrai sur une carte plate).
+            var terrain = GroundHeight(c.X, c.Z);
+            if (ground > terrain + 3f || ground < terrain - 2f || GroundNormal(c.X, c.Z).Y < 0.94f) return false;
             query.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(dir.X, dir.Z)), new Vector3(c.X, ground + 0.9f + box.Size.Y / 2f, c.Z));
             if (space.IntersectShape(query, 1).Count > 0) return false;
             foreach (var v in Vehicles.Values)

@@ -92,15 +92,17 @@ public partial class Enemy
     private bool FixUnderground(float dt)
     {
         var p = GlobalPosition;
-        if (p.Y > -0.15f) { _undergroundT = 0; return false; }
+        // Niveau du sol : relief de la carte (sans les ponts), 0 sur les cartes plates.
+        var g = _world.TerrainHeight(p.X, p.Z);
+        if (p.Y > g - 0.15f) { _undergroundT = 0; return false; }
         _undergroundT -= dt;
         if (_undergroundT > 0) return false;
         _undergroundT = 0.1f;
         // Ciel dégagé au-dessus (hors du corps lui-même) : vrai creux, rien à corriger.
-        if (!Ray(p + Vector3.Up * 0.05f, p + Vector3.Up * Mathf.Max(3f, -p.Y + 1.5f), out _, out _)
-            && !Ray(new Vector3(p.X, 0.05f, p.Z), new Vector3(p.X, -0.05f, p.Z), out _, out _)) return false;
-        var top = new Vector3(p.X, Mathf.Max(p.Y, 0f) + 60f, p.Z);
-        var land = Ray(top, new Vector3(p.X, -40f, p.Z), out var lp, out var ln) && ln.Y > 0.5f ? lp : new Vector3(p.X, 0, p.Z);
+        if (!Ray(p + Vector3.Up * 0.05f, p + Vector3.Up * Mathf.Max(3f, g - p.Y + 1.5f), out _, out _)
+            && !Ray(new Vector3(p.X, g + 0.05f, p.Z), new Vector3(p.X, g - 0.05f, p.Z), out _, out _)) return false;
+        var top = new Vector3(p.X, Mathf.Max(p.Y, g) + 60f, p.Z);
+        var land = Ray(top, new Vector3(p.X, g - 40f, p.Z), out var lp, out var ln) && ln.Y > 0.5f ? lp : new Vector3(p.X, g, p.Z);
         GlobalPosition = land;
         _surfN = Vector3.Up;
         _up = Vector3.Up;
@@ -113,8 +115,11 @@ public partial class Enemy
     }
 
     /// <summary>Point sous le niveau du sol là où le sol existe (face cachée d'une dalle, d'une bordure, pied d'un mur enterré).</summary>
-    private bool UnderSlab(Vector3 pt) =>
-        pt.Y < -0.08f && Ray(new Vector3(pt.X, 0.1f, pt.Z), new Vector3(pt.X, -0.1f, pt.Z), out _, out _);
+    private bool UnderSlab(Vector3 pt)
+    {
+        var g = _world.TerrainHeight(pt.X, pt.Z);
+        return pt.Y < g - 0.08f && Ray(new Vector3(pt.X, g + 0.1f, pt.Z), new Vector3(pt.X, g - 0.1f, pt.Z), out _, out _);
+    }
 
     /// <summary>Avance d'un pas sur la surface (hôte) et recale position et normale.</summary>
     private void ClimbStep(Vector3 dir, float dist, float dt)
@@ -134,8 +139,13 @@ public partial class Enemy
                 _surfN = ln;
                 Sfx.At("hit", lp, -8f, 0.6f, 40);
             }
-            else GlobalPosition = drop.Y < -3f ? new Vector3(drop.X, 0, drop.Z) : drop;
-            if (GlobalPosition.Y <= 0 && _falling) { _falling = false; _surfN = Vector3.Up; GlobalPosition = GlobalPosition with { Y = 0 }; }
+            else
+            {
+                var gd = _world.TerrainHeight(drop.X, drop.Z);
+                GlobalPosition = drop.Y < gd - 3f ? new Vector3(drop.X, gd, drop.Z) : drop;
+            }
+            var gf = _world.TerrainHeight(GlobalPosition.X, GlobalPosition.Z);
+            if (GlobalPosition.Y <= gf && _falling) { _falling = false; _surfN = Vector3.Up; GlobalPosition = GlobalPosition with { Y = gf }; }
             return;
         }
 
@@ -144,13 +154,17 @@ public partial class Enemy
         // Sondes espacées selon la distance parcourue : ~0,6 m au sol, ~0,3 m sur les parois et les toits, × taille de l'insecte
         // (les sondes portent assez loin, en multiples de la taille, pour couvrir le chemin fait sans sonder).
         _probeDist += dist;
-        var flat = n.Y > 0.97f && _up.Y > 0.97f && p.Y < 0.6f;
+        // Niveau du sol (relief de la carte, 0 sur les cartes plates) sous le corps et sous le pas.
+        var g0 = _world.TerrainHeight(p.X, p.Z);
+        var flat = n.Y > 0.97f && _up.Y > 0.97f && p.Y < g0 + 0.6f;
         // Un pas qui descendrait sous le niveau du sol (descente d'un mur, d'une bordure) sonde tout de suite : sans cela
         // l'insecte continuait tout droit sous la dalle jusqu'au sondage suivant.
-        var crossesGround = p.Y >= -0.05f && (p + step).Y < -0.02f;
+        var q1 = p + step;
+        var crossesGround = p.Y >= g0 - 0.05f && q1.Y < _world.TerrainHeight(q1.X, q1.Z) - 0.02f;
         if (_probeDist < (flat ? 0.6f : 0.3f) * Mathf.Max(Def.Size, 1f) && dist > 0 && !crossesGround)
         {
-            GlobalPosition = p + step;
+            // Relief : au sol, l'insecte suit le terrain entre deux sondages (pas de dérive sous une pente douce).
+            GlobalPosition = flat && _world.Terrain != null ? q1 with { Y = _world.TerrainHeight(q1.X, q1.Z) } : q1;
             return;
         }
         var travelled = _probeDist;
@@ -212,8 +226,9 @@ public partial class Enemy
         // 4. Plus de surface : chute. Arrivé sous le sol (bas d'un mur descendu), on se pose sur le sol à la place.
         if (UnderSlab(q))
         {
-            var top = new Vector3(q.X, 2.5f, q.Z);
-            GlobalPosition = Ray(top, new Vector3(q.X, -0.2f, q.Z), out var gp, out var gn) && gn.Y > 0.5f ? gp : new Vector3(q.X, 0, q.Z);
+            var gq = _world.TerrainHeight(q.X, q.Z);
+            var top = new Vector3(q.X, gq + 2.5f, q.Z);
+            GlobalPosition = Ray(top, new Vector3(q.X, gq - 0.2f, q.Z), out var gp, out var gn) && gn.Y > 0.5f ? gp : new Vector3(q.X, gq, q.Z);
             SetSurface(Vector3.Up);
             _speedNow = dist / Mathf.Max(dt, 1e-4f);
             return;
@@ -318,7 +333,7 @@ public partial class Enemy
             if (e.State == EnemyState.Dead || !e.Climbs) continue;
             var up = e.Basis.Y;
             if (Mathf.Abs(up.Y) < 0.5f) walls++;
-            else if (e.GlobalPosition.Y > 2.5f) high++;
+            else if (e.GlobalPosition.Y - e._world.TerrainHeight(e.GlobalPosition.X, e.GlobalPosition.Z) > 2.5f) high++;
             if (e._falling) falling++;
             top = Mathf.Max(top, e.GlobalPosition.Y);
         }
@@ -331,6 +346,6 @@ public partial class Enemy
     private Vector3 GroundBelow(Vector3 from)
     {
         var start = from + _up * (0.6f * Def.Size) + Vector3.Up * 0.3f;
-        return Ray(start, start + Vector3.Down * 400f, out var p, out _) ? p : new Vector3(from.X, 0, from.Z);
+        return Ray(start, start + Vector3.Down * 400f, out var p, out _) ? p : _world.OnGround(from);
     }
 }

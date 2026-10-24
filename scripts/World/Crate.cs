@@ -62,7 +62,10 @@ public partial class Crate : Node3D
         to.Y = 0;
         var d = to.Length();
         if (d < 0.1f) return;
-        Position += to / d * Mathf.Min(d, (14f - d) * dt);
+        var np = Position + to / d * Mathf.Min(d, (14f - d) * dt);
+        // Glisse en suivant le relief (la caisse est toujours posée sur le terrain) ; sur une carte plate, hauteur inchangée.
+        if (World.Current?.Terrain != null) np.Y = World.GroundAt(np.X, np.Z) + 0.45f;
+        Position = np;
     }
 
     public override void _Process(double delta)
@@ -73,7 +76,9 @@ public partial class Crate : Node3D
         {
             _vel += Vector3.Down * 20f * dt;
             var p = Position + _vel * dt;
-            if (p.Y <= 0.45f) { p.Y = 0.45f; _landed = true; }
+            // Sol de la carte (relief de la vallée) ; 0 sur les cartes plates.
+            var floor = World.GroundAt(p.X, p.Z) + 0.45f;
+            if (p.Y <= floor) { p.Y = floor; _landed = true; }
             Position = p;
         }
         _body.Rotation = new Vector3(0, _t * 1.4f, 0);

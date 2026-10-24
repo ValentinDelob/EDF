@@ -8,6 +8,8 @@ namespace Rempart;
 public partial class Tank : Vehicle
 {
     private Node3D _hull, _turret, _barrel, _muzzle;
+    /// <summary>Pivot du visuel (caisse et tourelle) : incliné selon la pente du sol (relief), à plat sur les cartes plates.</summary>
+    private Node3D _tilt;
     private Node3D[] _wheels = new Node3D[6];
     private float _turretYaw, _barrelPitch;
     private float _speed;
@@ -36,8 +38,10 @@ public partial class Tank : Vehicle
         var paint = Mats.Painted(new Color(0.3f, 0.34f, 0.26f), 0.6f, 0.2f);
         var dark = Mats.Metal(new Color(0.12f, 0.12f, 0.12f), 0.6f);
         var track = Mats.Painted(new Color(0.08f, 0.08f, 0.08f), 0.9f);
+        _tilt = new Node3D { Name = "Tilt" };
+        AddChild(_tilt);
         _hull = new Node3D();
-        AddChild(_hull);
+        _tilt.AddChild(_hull);
         _hull.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(3.4f, 1.1f, 6.6f), Material = paint }, Position = new Vector3(0, 1.15f, 0) });
         _hull.AddChild(new MeshInstance3D { Mesh = new PrismMesh { Size = new Vector3(3.4f, 0.6f, 1.2f), Material = paint }, Position = new Vector3(0, 1.0f, 3.6f), RotationDegrees = new Vector3(90, 180, 0) });
         foreach (var s in new[] { -1f, 1f })
@@ -57,7 +61,7 @@ public partial class Tank : Vehicle
             }
         }
         _turret = new Node3D { Position = new Vector3(0, 1.75f, -0.3f) };
-        AddChild(_turret);
+        _tilt.AddChild(_turret);
         _turret.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 1.15f, BottomRadius = 1.4f, Height = 0.75f, RadialSegments = 10, Material = paint }, Position = new Vector3(0, 0.37f, 0) });
         _turret.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.6f, 0.5f, 1.2f), Material = paint }, Position = new Vector3(0, 0.45f, -1.1f) });
         _turret.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.25f, BottomRadius = 0.3f, Height = 0.3f, Material = dark }, Position = new Vector3(0.5f, 0.85f, -0.3f) }); // tourelleau
@@ -134,6 +138,18 @@ public partial class Tank : Vehicle
         _treads += _speed * dt;
         foreach (var w in _wheels) if (w != null) w.Rotation = new Vector3(_treads / 0.42f, 0, Mathf.Pi / 2);
         _hull.Rotation = new Vector3(Mathf.Clamp(-_speed * 0.004f, -0.05f, 0.05f), 0, 0);
+        // Relief : le visuel épouse la pente sous le char (la forme de collision reste droite).
+        if (_world?.Terrain != null && !Wrecked)
+        {
+            // Hauteurs sous les chenilles (avant / arrière à ±2,6 m, côtés à ±1,4 m) → normale dans le repère du char.
+            var p = GlobalPosition;
+            var fwd = GlobalBasis.Z * 2.6f;
+            var side = GlobalBasis.X * 1.4f;
+            var dz = _world.GroundHeight(p + fwd) - _world.GroundHeight(p - fwd);
+            var dx = _world.GroundHeight(p + side) - _world.GroundHeight(p - side);
+            var n = new Vector3(-dx / 2.8f, 1f, -dz / 5.2f).Normalized();
+            _tilt.Quaternion = _tilt.Quaternion.Slerp(new Quaternion(Vector3.Up, n), Mathf.Clamp(dt * 8f, 0, 1));
+        }
     }
 
     private void FireCannon(Player p)

@@ -146,7 +146,7 @@ public partial class MissionObjective : Node3D
         };
         g.MaxHealth = g.Health = Def.StructureHp * HpMul;
         AddChild(g);
-        g.Position = spot;
+        g.Position = W.OnGround(spot);
         g.Model = antenna ? ObjectiveModels.RelayAntenna(out g.Beacon) : ObjectiveModels.CommandPost(out g.Beacon);
         g.AddChild(g.Model);
         // Solide pour les soldats seulement (couche 6, comme les camions) : les tirs passent (les insectes collés à la structure
@@ -247,7 +247,10 @@ public partial class MissionObjective : Node3D
         return _route[^1];
     }
 
-    /// <summary>Le camion regarde le long d'une corde (virages adoucis aux carrefours).</summary>
+    /// <summary>
+    /// Le camion regarde le long d'une corde (virages adoucis aux carrefours) ; il roule sur le sol de la carte et se
+    /// cabre selon la pente (essieux à ±3 m), ponts compris. Carte plate : y = 0, à plat.
+    /// </summary>
     private void PlaceTruck(Guard g, float blend)
     {
         var p = RoutePoint(g.S);
@@ -258,8 +261,17 @@ public partial class MissionObjective : Node3D
             g.Yaw = blend >= 1f ? yaw : Mathf.LerpAngle(g.Yaw, yaw, blend);
         }
         if (g.Destroyed) return;
+        var pitch = 0f;
+        if (W.Terrain != null)
+        {
+            var fwd = new Vector3(Mathf.Sin(g.Yaw), 0, Mathf.Cos(g.Yaw)) * 3f;
+            var hf = W.GroundHeight(p + fwd);
+            var hb = W.GroundHeight(p - fwd);
+            p.Y = Mathf.Max(W.GroundHeight(p), (hf + hb) * 0.5f);
+            pitch = -Mathf.Atan2(hf - hb, 6f);
+        }
         g.Position = p;
-        g.Rotation = new Vector3(0, g.Yaw, 0);
+        g.Rotation = new Vector3(pitch, g.Yaw, 0);
     }
 
     /// <summary>Camion de tête (premier camion intact), ou null.</summary>
@@ -331,7 +343,7 @@ public partial class MissionObjective : Node3D
         foreach (var e in W.EnemiesById.Values)
         {
             if (e.State == EnemyState.Dead || e.Def.Flying || e.IsStatic) continue;
-            if (e.GlobalPosition.Y > 5f) continue; // sur un mur, un toit
+            if (e.GlobalPosition.Y - W.GroundHeight(e.GlobalPosition) > 5f) continue; // sur un mur, un toit
             if (Flat(e.GlobalPosition, front) < 2.2f * e.Def.Size + 2.5f) return true;
         }
         return false;

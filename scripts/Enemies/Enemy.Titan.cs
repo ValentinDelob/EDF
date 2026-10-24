@@ -267,7 +267,7 @@ public partial class Enemy
         var next = pos + fwd * _speedNow * dt;
         next.X = Mathf.Clamp(next.X, -205f, 205f);
         next.Z = Mathf.Clamp(next.Z, -205f, 135f);
-        next.Y = 0f;
+        next.Y = _world.GroundHeight(next);
         GlobalPosition = next;
 
         // Le corps traverse les immeubles ; les pieds font le reste (voir OnTitanStomp).
@@ -699,7 +699,7 @@ public partial class Enemy
         Model.TitanDeath(side);
         PlayVoice("titan_death", 8f);
         var body = GlobalTransform * new Vector3(side * 26f, 0, 2f);
-        LandingPoint = body with { Y = 0f };
+        LandingPoint = _world.OnGround(body);
         var tw = CreateTween();
         tw.TweenInterval(BugModel.TitanFallTime);
         tw.TweenCallback(Callable.From(() =>

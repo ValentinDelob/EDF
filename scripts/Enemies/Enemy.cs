@@ -136,7 +136,7 @@ public partial class Enemy : StaticBody3D
         e._fwd = new Vector3(Mathf.Sin(yaw), 0, Mathf.Cos(yaw));
         e._netPos = e._prevPos = pos;
         e._netRot = e.Quaternion;
-        e.LandingPoint = new Vector3(pos.X, 0, pos.Z);
+        e.LandingPoint = world.OnGround(pos);
         e._altitude = (float)GD.RandRange(12, 22);
         e._orbit = (float)GD.RandRange(0, Mathf.Tau);
         e._attackCd = (float)GD.RandRange(0.5, 1.5) * def.AttackCooldown;
@@ -376,7 +376,7 @@ public partial class Enemy : StaticBody3D
     private bool HostStuck(float dt)
     {
         var p = GlobalPosition;
-        if (p.Y < -3f || Mathf.Abs(p.X) > 450f || Mathf.Abs(p.Z) > 450f || !p.IsFinite())
+        if (p.Y < _world.GroundHeight(p) - 3f || Mathf.Abs(p.X) > 450f || Mathf.Abs(p.Z) > 450f || !p.IsFinite())
         {
             _stuckT += dt;
             return _stuckT > 1.5f;
@@ -498,7 +498,7 @@ public partial class Enemy : StaticBody3D
             var step = _moveDir * speed * dt;
             var next = pos + step;
             if (!Def.Boss && _world.Flow.IsBlocked(next) && !_world.Flow.IsBlocked(pos)) next = pos; // ne traverse pas les immeubles
-            next.Y = 0;
+            next.Y = _world.GroundHeight(next); // sol de la carte (relief, ponts), 0 sur les cartes plates
             _speedNow = (next - pos).Length() / Mathf.Max(dt, 0.0001f);
             GlobalPosition = next;
 
@@ -582,7 +582,7 @@ public partial class Enemy : StaticBody3D
         var desired = (to.LengthSquared() > 1 ? to.Normalized() : Vector3.Zero) + sep;
         _velocity = _velocity.Lerp(desired * Def.Speed, Mathf.Clamp(dt * 2f, 0, 1));
         var next = pos + _velocity * dt;
-        next.Y = Mathf.Max(next.Y, 2.5f + 2f * Def.Size);
+        next.Y = Mathf.Max(next.Y, _world.GroundHeight(next) + 2.5f + 2f * Def.Size);
         GlobalPosition = next;
         _speedNow = _velocity.Length();
         var look = target - next;
@@ -1027,7 +1027,7 @@ public partial class Enemy : StaticBody3D
             var c = Model.FortressHullCenter;
             Effects.Explosion(_world, c, 22f, 0);
             Effects.Explosion(_world, c + Vector3.Up * 5f, 15f, 2);
-            Effects.Dust(_world, new Vector3(c.X, 0, c.Z), new Vector3(46f, 14f, 46f));
+            Effects.Dust(_world, _world.OnGround(c), new Vector3(46f, 14f, 46f));
             _world.ShakeCamera(c, 1.2f, 160f);
         }));
         tw.TweenInterval(12f);

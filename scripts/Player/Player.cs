@@ -418,7 +418,7 @@ public partial class Player : CharacterBody3D
         }
 
         // Garde-fou : retour sur la carte si chute.
-        if (GlobalPosition.Y < -20f) GlobalPosition = new Vector3(0, 2, 0);
+        if (GlobalPosition.Y < World.GroundHeight(GlobalPosition) - 20f) GlobalPosition = World.OnGround(Vector3.Zero, 2f);
 
         // Envoi de l'état aux autres pairs (20 Hz).
         _netTimer -= dt;
@@ -833,7 +833,7 @@ public partial class Player : CharacterBody3D
         var fwd = -Camera.GlobalBasis.Z;
         fwd.Y = 0;
         var pos = GlobalPosition + fwd.Normalized() * 2.5f;
-        pos.Y = 0;
+        pos.Y = World.GroundHeight(pos);
         if (kind == 0) Net.I.SendDeploy(0, pos, _yaw, ws.W.Damage, ws.W.Range, 30f);
         else Net.I.SendDeploy(1, pos, 0, ws.W.Damage, ws.W.BlastRadius, 15f);
         Sfx.Ui(kind == 0 ? "reload" : "heal", 0f);

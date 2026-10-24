@@ -309,7 +309,7 @@ public partial class Enemy
         if (_aGroundT <= 0)
         {
             _aGroundT = 0.25f;
-            _aGroundY = Ray(next + Vector3.Up * 2.2f, next + Vector3.Down * 6f, out var gp, out var gn) && gn.Y > 0.5f ? gp.Y : 0f;
+            _aGroundY = Ray(next + Vector3.Up * 2.2f, next + Vector3.Down * 6f, out var gp, out var gn) && gn.Y > 0.5f ? gp.Y : _world.GroundHeight(next);
         }
         next.Y = Mathf.MoveToward(pos.Y, _aGroundY, dt * 7f);
         GlobalPosition = next;
@@ -487,7 +487,7 @@ public partial class Enemy
             var c = pos + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * r + dirT * Mathf.Min(10f, dist * 0.15f);
             var dT = new Vector2(c.X - flatT.X, c.Z - flatT.Z).Length();
             if (dT < 16f || dT > 70f || _world.Flow.IsBlocked(c)) continue;
-            c.Y = Ray(c + Vector3.Up * 3f, c + Vector3.Down * 6f, out var gp, out var gn) && gn.Y > 0.5f ? gp.Y : 0f;
+            c.Y = Ray(c + Vector3.Up * 3f, c + Vector3.Down * 6f, out var gp, out var gn) && gn.Y > 0.5f ? gp.Y : _world.GroundHeight(c);
             var chest = c + Vector3.Up * 2.5f * L;
             if (!Ray(eye, chest, out var hp, out _) || hp.DistanceTo(chest) > 8f) continue;
             var side = ((flatT - c) with { Y = 0 }).Normalized().Cross(Vector3.Up);

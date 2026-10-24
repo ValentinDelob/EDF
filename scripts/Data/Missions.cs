@@ -28,7 +28,7 @@ public record MissionDef(
     ObjectiveDef Objective = null,
     EnemyType NestType = EnemyType.Nest);
 
-public enum MapId { City, Port, Suburb, Business, Industrial, Desert }
+public enum MapId { City, Port, Suburb, Business, Industrial, Desert, Forest }
 
 public enum Weather { Clear, Rain, Storm, Sandstorm }
 
@@ -381,5 +381,45 @@ public static class Missions
                 new PhaseDef(0, 210,
                     new WaveDef("north", 0, "Un marcheur escorte une colonne sur l'avenue nord !", (EnemyType.Walker, 1), (EnemyType.AlienTrooper, 6))),
             }, Weather.Clear, MapId.Business, null, EnemyType.Portal),
+        // Vallée forestière (spécification §9.1 : relief, rivière, visibilité réduite).
+        new(22, "La vallée",
+            "Trois camions de pièces de rechange doivent remonter la vallée jusqu'à la centrale hydroélectrique, au pied du barrage : sans ses turbines, la base arrière reste dans le noir. La route franchit la rivière sur le vieux pont, longe la rive ouest puis repasse à gué. Restez au contact : sans soldat à moins de 40 m, les chauffeurs s'arrêtent, et dans la brume les insectes surgissent des sous-bois à quelques mètres de la route.",
+            MissionGoal.Escort, TimeOfDay.Day, 0.006f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("ahead", 6, "Contacts sur la route du pont ! Dégagez le passage du convoi !", (EnemyType.BlackAnt, 12))),
+                new PhaseDef(0, 40,
+                    new WaveDef("ahead", 0, "Fourmis rouges dans les fougères, au bord de la route !", (EnemyType.RedAnt, 6), (EnemyType.BlackAnt, 8)),
+                    new WaveDef("behind", 6, "Ça remonte la vallée derrière le dernier camion !", (EnemyType.BlackAnt, 8))),
+                new PhaseDef(0, 85,
+                    new WaveDef("ahead", 0, "Araignées dans les arbres au-dessus de la route !", (EnemyType.Spider, 8)),
+                    new WaveDef("ahead", 6, "Fourmis acides sur la rive ouest, elles visent les camions !", (EnemyType.AcidAnt, 8))),
+                new PhaseDef(0, 135,
+                    new WaveDef("ahead", 0, "Mille-pattes au gué ! Le convoi ne passera pas tant qu'ils barrent l'eau !", (EnemyType.Centipede, 2), (EnemyType.BlackAnt, 10))),
+                new PhaseDef(0, 190,
+                    new WaveDef("ahead", 0, "Essaim de guêpes au-dessus de la rivière !", (EnemyType.Wasp, 10)),
+                    new WaveDef("behind", 6, null, (EnemyType.RedAnt, 6))),
+                new PhaseDef(0, 240,
+                    new WaveDef("ahead", 0, "Dernier barrage devant la centrale ! Tenez la route jusqu'au pied du barrage !", (EnemyType.RedAnt, 10), (EnemyType.Spider, 6))),
+            }, Weather.Rain, MapId.Forest,
+            new ObjectiveDef(Route: ForestBuilder.ConvoyRoute, TruckSpeed: 4.2f)),
+        new(23, "Chasse de nuit",
+            "La nuit tombée, araignées et mille-pattes géants sont descendus des versants et chassent dans les sous-bois de la vallée. Débusquez-les tous. La brume noie les fonds et la pluie couvre leurs bruits : les araignées bondissent depuis les rochers et les arbres, les mille-pattes surgissent des fougères à quelques mètres. Restez groupés, tirez sur ce qui bouge au radar et ne vous enfoncez pas seuls dans la forêt.",
+            MissionGoal.Exterminate, TimeOfDay.Night, 0.009f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("west", 3, "Mouvements dans la forêt de la rive ouest… des araignées !", (EnemyType.Spider, 10))),
+                new PhaseDef(6, 0,
+                    new WaveDef("north", 0, "Mille-pattes dans la plaine, au pied du barrage !", (EnemyType.Centipede, 3), (EnemyType.BlackAnt, 10)),
+                    new WaveDef("east", 6, "Elles descendent du versant est par les rochers !", (EnemyType.Spider, 8))),
+                new PhaseDef(6, 0,
+                    new WaveDef("beach", 0, "D'autres arrivent par le gué sud !", (EnemyType.Spider, 10), (EnemyType.AcidAnt, 6)),
+                    new WaveDef("center", 8, "Mille-pattes sur la route de la vallée !", (EnemyType.Centipede, 2))),
+                new PhaseDef(5, 0,
+                    new WaveDef("north", 0, "Dernière vague : tout ce qui rampe dans la vallée converge vers vous !", (EnemyType.Spider, 14), (EnemyType.Centipede, 3)),
+                    new WaveDef("west", 5, null, (EnemyType.RedAnt, 8))),
+            }, Weather.Rain, MapId.Forest),
     };
 }
