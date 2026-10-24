@@ -58,6 +58,7 @@ public partial class Building
 
     private void StageFx(World w, int stage, Vector3 at)
     {
+        if (Standing) { StandingFx(w, stage, at); return; }
         var (p, n, along) = FacadePoint(at, stage);
         if (stage == 3)
         {

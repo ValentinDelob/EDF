@@ -6,6 +6,11 @@
 - **Visée assistée à la manette** (Options › Contrôles, 50 % par défaut) : le réticule freine sur les ennemis et s'en rapproche doucement quand on bouge ou qu'on vise ; sans effet au clavier et à la souris.
 - **Accessibilité** (Options › Jeu) : caisses pour daltoniens (orange / bleu ciel / magenta), intensité des secousses de caméra réglable, éclairs d'explosion atténuables. La caisse de soin devient cylindrique : chaque type de caisse se reconnaît aussi à sa forme.
 - **Encyclopédie** dans le Guide : bestiaire (espèces abattues au moins une fois, points de vie, comportement, nombre d'éliminations ; les autres restent « ? ? ? »), armes obtenues par classe et par catégorie, opérations réussies par difficulté.
+- **Nouvelle carte « Quartier d'affaires »** : grille dense de tours de bureaux (6 à 50 étages) en mur-rideau, béton et bandeaux techniques, grand parvis central avec bassin asséché, sculpture et deux tours d'angle, viaduc autoroutier au sud avec bretelle d'accès et une travée effondrée jusqu'à la chaussée, deux parkings à étages, entrée de métro, passerelles vitrées entre tours, hélisurfaces sur les toits. Au-delà des murs, la ligne d'horizon de tours prolonge le quartier sur environ 1,2 km².
+- **Combat vertical** : toits plats accessibles par les escaliers de secours (pavillons du parvis, bureaux bas), les rampes des parkings, la bretelle et la travée effondrée du viaduc, ou en vol (Aéroporté) ; les insectes grimpent aux façades et marchent sur les toits.
+- **Tours debout** : une tour de 20 étages et plus ne s'effondre jamais ; chaque impact arrache des panneaux de façade (vitres qui pleuvent, plaques qui tombent, cavité noircie, parfois un incendie d'étage). Les immeubles plus bas s'effondrent comme en ville.
+- Quartier envahi : tours éventrées et en feu, panaches noirs, terrains dévastés où la colonie a creusé ses nids, épaves dans les voies, carambolage, bus encastré, barrages militaires abandonnés avec mâts d'éclairage, cratères, verre et débris, toiles entre les tours. Mobilier et véhicules destructibles comme sur les autres cartes.
+- **Deux missions** : « Tours de verre » (jour : guêpes entre les tours, fourmis qui escaladent les façades) et « Panne générale » (nuit sous la pluie, réseau électrique coupé : détruire les nids au pied des tours).
 
 ## v0.7.4 — Jetpack discret
 
