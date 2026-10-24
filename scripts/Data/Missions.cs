@@ -27,7 +27,7 @@ public record MissionDef(
     MapId Map = MapId.City,
     ObjectiveDef Objective = null);
 
-public enum MapId { City, Port, Suburb, Business }
+public enum MapId { City, Port, Suburb, Business, Industrial }
 
 public enum Weather { Clear, Rain, Storm }
 
@@ -262,5 +262,39 @@ public static class Missions
                 new PhaseDef(5, 0,
                     new WaveDef("south", 0, "Ils traversent la rivière avec des marcheurs. Dernier effort !", (EnemyType.Tripod, 1), (EnemyType.Walker, 2), (EnemyType.BlackAnt, 14))),
             }, Weather.Storm, MapId.Suburb),
+        // Zone industrielle.
+        new(15, "La raffinerie",
+            "La colonie a envahi la zone industrielle et grouille dans le parc de cuves de la raffinerie. Exterminez toutes les vagues. Les citernes sont encore pleines : une cuve percée prend feu puis explose, et emporte tout ce qui l'entoure, insectes comme soldats. Servez-vous-en, mais jamais à côté.",
+            MissionGoal.Exterminate, TimeOfDay.Day, 0.003f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 2, "Fourmis dans le parc de cuves au nord ! Attention aux citernes : une balle perdue et tout saute.", (EnemyType.BlackAnt, 18)),
+                    new WaveDef("east", 8, "Guêpes au-dessus de la gare de triage !", (EnemyType.Wasp, 10))),
+                new PhaseDef(6, 0,
+                    new WaveDef("center", 0, "Fourmis rouges au pied des cuves ! Faites-les sauter avec, s'il le faut.", (EnemyType.RedAnt, 12), (EnemyType.BlackAnt, 10)),
+                    new WaveDef("west", 6, "Fourmis acides dans la cour des entrepôts, à l'ouest !", (EnemyType.AcidAnt, 10))),
+                new PhaseDef(6, 0,
+                    new WaveDef("south", 0, "Elles passent le canal par les ponts, au sud !", (EnemyType.BlackAnt, 14), (EnemyType.Spider, 8)),
+                    new WaveDef("north", 6, "Nouvel essaim au-dessus de la raffinerie !", (EnemyType.Wasp, 14))),
+                new PhaseDef(5, 0,
+                    new WaveDef("east", 0, "Dernière vague : la colonie remonte les voies ferrées, avec des mille-pattes !", (EnemyType.RedAnt, 12), (EnemyType.Centipede, 2), (EnemyType.BlackAnt, 12)),
+                    new WaveDef("center", 6, null, (EnemyType.Scavenger, 5), (EnemyType.AcidAnt, 8))),
+            }, Weather.Clear, MapId.Industrial),
+        new(16, "Nuit de soufre",
+            "L'orage s'abat sur la zone industrielle et la colonie en profite pour creuser ses nids au cœur du site : cour des entrepôts, gare de triage, station d'épuration, route nord. Détruisez-les tous. Les cuves en feu éclairent le terrain, mais la moindre étincelle peut embraser le parc de stockage. Un marcheur de combat a été signalé au sud.",
+            MissionGoal.DestroyNests, TimeOfDay.Dusk, 0.009f, 4,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("center", 3, "Nids repérés dans les cours du site. Visez-les aux explosifs !", (EnemyType.BlackAnt, 14), (EnemyType.RedAnt, 6))),
+                new PhaseDef(0, 60,
+                    new WaveDef("east", 0, "Araignées sur les wagons, à l'est !", (EnemyType.Spider, 12))),
+                new PhaseDef(0, 120,
+                    new WaveDef("north", 0, "Essaim de guêpes sur la raffinerie, gare aux sphères de gaz !", (EnemyType.Wasp, 14), (EnemyType.AcidAnt, 8))),
+                new PhaseDef(0, 180,
+                    new WaveDef("beach", 0, "Un marcheur de combat sur l'autre rive du canal ! Ses obus font sauter les cuves, visez les genoux.", (EnemyType.Walker, 1), (EnemyType.Scavenger, 6)),
+                    new WaveDef("west", 8, null, (EnemyType.RedAnt, 10), (EnemyType.Centipede, 1))),
+            }, Weather.Storm, MapId.Industrial),
     };
 }

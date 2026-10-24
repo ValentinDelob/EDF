@@ -4,7 +4,7 @@ using Godot;
 namespace Rempart;
 
 /// <summary>Famille d'accessoire destructible (comportement, points de vie, résistance à l'écrasement).</summary>
-public enum PropKind : byte { None, Small, Furniture, Pole, Tree, Shelter, Barrier, Car, Van, Truck, Wreck, Container }
+public enum PropKind : byte { None, Small, Furniture, Pole, Tree, Shelter, Barrier, Car, Van, Truck, Wreck, Container, Tank }
 
 /// <summary>Origine des dégâts infligés à un accessoire.</summary>
 public enum PropHit : byte { Bullet = 0, Blast = 1, Crush = 2 }
@@ -99,6 +99,7 @@ public partial class Destructibles : Node3D
         new(380, 0.8f, 1f, 4),    // Truck
         new(500, 0.05f, 0.6f, 3), // Wreck : épave calcinée (aplatie)
         new(1e9f, 0f, 1f, 5),     // Container : poussé par les explosions
+        new(600, 0.7f, 1f, 99),   // Tank : cuve qui fuit, s'enflamme puis explose (Destructibles.Tanks.cs)
     };
 
     private World _world;
@@ -376,6 +377,7 @@ public partial class Destructibles : Node3D
         }
         if (e.State >= 3 || mul <= 0) return;
         if (by != 0) e.LastBy = by;
+        if (e.Kind == PropKind.Tank) { HostDamageTank(e, dmg * mul, from); return; }
         e.Hp -= dmg * mul;
         if (e.IsVehicle)
         {
@@ -467,7 +469,8 @@ public partial class Destructibles : Node3D
             var (id, at) = _explodeAt[i];
             if (_clock < at) continue;
             _explodeAt.RemoveAt(i);
-            HostExplodeVehicle(_all[id]);
+            if (_all[id].Kind == PropKind.Tank) HostExplodeTank(_all[id]);
+            else HostExplodeVehicle(_all[id]);
         }
         _crushT -= dt;
         if (_crushT > 0) return;
@@ -587,6 +590,7 @@ public partial class Destructibles : Node3D
         var op = packed & 0xFF;
         var dir = DirOf((packed >> 8) & 0xFF);
         var amount = ((packed >> 16) & 0xFF) * 0.05f;
+        if (e.Kind == PropKind.Tank) { OnTankEvent(e, op, dir); return; }
         switch (op)
         {
             case OpDamaged:

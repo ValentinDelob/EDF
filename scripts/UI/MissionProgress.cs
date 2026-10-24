@@ -26,7 +26,7 @@ public static class MissionProgress
 
     public static string Label(MissionDef m) => $"{m.Index + 1:00}. {m.Name}";
 
-    public static string Zone(MissionDef m) => m.Map switch { MapId.Port => "port", MapId.Suburb => "banlieue", MapId.Business => "affaires", _ => "ville" };
+    public static string Zone(MissionDef m) => m.Map switch { MapId.Port => "port", MapId.Suburb => "banlieue", MapId.Business => "affaires", MapId.Industrial => "industrielle", _ => "ville" };
 
     public static string Goal(MissionDef m) => m.Goal switch
     {
