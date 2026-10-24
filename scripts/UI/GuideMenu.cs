@@ -96,7 +96,7 @@ public partial class GuideMenu : MenuScreen
     {
         Clear();
         Section("Objectif");
-        Para("Repoussez les vagues d'insectes géants et de machines qui envahissent la ville. Chaque ennemi abattu peut lâcher une caisse : ramassez-les en passant dessus pour gagner armes, armure et crédits. La mission est réussie quand l'objectif est rempli.");
+        Para("Repoussez les vagues d'insectes géants et de machines qui envahissent la ville. Chaque ennemi abattu peut lâcher une caisse : ramassez-les en passant dessus pour gagner armes et armure. La mission est réussie quand l'objectif est rempli.");
         Section("Commandes");
         Keys(("move_forward", "Avancer"), ("move_back", "Reculer"), ("move_left", "Gauche"), ("move_right", "Droite"),
             ("jump", "Sauter / voler"), ("sprint", "Courir / propulsion"), ("dodge", "Roulade / esquive"), ("fire", "Tirer"),
@@ -134,12 +134,12 @@ public partial class GuideMenu : MenuScreen
     {
         Clear();
         Section("Caisses");
-        Para("Rouge : arme · vert : armure (points de vie maximum permanents) · rose : soin immédiat · jaune : crédits. Les caisses proches sont attirées vers vous. Attention aux charognards : ils avalent les caisses au sol, tuez-les pour les récupérer.");
+        Para("Rouge : arme · vert : armure (points de vie maximum permanents) · rose : soin immédiat. Les caisses proches sont attirées vers vous. Attention aux charognards : ils avalent les caisses au sol, tuez-les pour les récupérer.");
         Section("Armes");
-        Para("Chaque arme a un niveau (0 à 100) et des étoiles par caractéristique. Un doublon ajoute une étoile à l'arme déjà possédée. Plus la difficulté est élevée, plus les armes trouvées sont puissantes.");
+        Para("Chaque arme a un niveau (0 à 100) et des étoiles par caractéristique. Vous ne possédez qu'un exemplaire de chaque arme : en retrouver une déjà possédée l'améliore (le niveau le plus haut est conservé, et chaque caractéristique garde le plus grand nombre d'étoiles). Plus la difficulté est élevée, plus les armes trouvées sont puissantes.");
         Section("Progression");
-        Para("L'armure ramassée s'ajoute définitivement à la classe jouée. L'expérience fait monter la classe de niveau : +1 % de dégâts et +3 PV par niveau. Les crédits s'accumulent dans le profil.");
+        Para("L'armure ramassée s'ajoute définitivement à la classe jouée. Les armes trouvées enrichissent ou améliorent l'arsenal.");
         Section("Échec");
-        Para("En cas d'échec, les armes ramassées sont conservées et l'armure est réduite de moitié ; les crédits sont perdus.");
+        Para("En cas d'échec, les armes ramassées sont conservées et l'armure est réduite de moitié.");
     }
 }

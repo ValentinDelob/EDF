@@ -232,7 +232,7 @@ public partial class LobbyMenu : Control
         _soldier.SetClass(cls);
         var rows = new List<ECard.Row>
         {
-            new(new[] { new ECard.Cell("Classe", 84), new ECard.Cell(Classes.Get(cls).Name, 0, 19), new ECard.Cell($"»Niv.{p.Level(cls)}", 70) }, 30, true),
+            new(new[] { new ECard.Cell("Classe", 84), new ECard.Cell(Classes.Get(cls).Name, 0, 19) }, 30, true),
             new(new[] { new ECard.Cell("Armure:", 84), new ECard.Cell($"{p.Armor(cls):0}", 0, 19), new ECard.Cell("", 70) }, 26),
         };
         var eq = p.Equipped(cls);

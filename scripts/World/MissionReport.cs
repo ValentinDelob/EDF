@@ -1,26 +1,25 @@
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 
 namespace Rempart;
 
-/// <summary>Bilan de fin de mission : conversion du butin en progression permanente.</summary>
+/// <summary>Bilan de fin de mission : conversion du butin en progression permanente (armure, armes).</summary>
 public class MissionReport
 {
     public bool Success;
     public float Elapsed;
     public int Kills;
     public float ArmorGained;
-    public int CreditsGained;
-    public int[] Crates = new int[4];
+    public int[] Crates = new int[Rempart.Crates.Count];
     public int AutoCollected;
-    /// <summary>Armes trouvées ; duplicate = doublon strict converti en crédits.</summary>
-    public readonly List<(WeaponInstance weapon, bool duplicate)> Weapons = new();
+    /// <summary>Armes trouvées : nouvelle, possédée améliorée (avant / après) ou possédée sans amélioration.</summary>
+    public readonly List<LootResult> Weapons = new();
     public string MissionName;
-    public int XpGained;
     public List<(string name, string cls, int kills, bool downed, bool me)> Squad = new();
-    public int LevelBefore, LevelAfter;
     public Difficulty Difficulty;
+
+    /// <summary>Tests (--end-after) : armes ajoutées au butin tiré, pour montrer une arme nouvelle et une arme améliorée.</summary>
+    public static List<WeaponInstance> TestDrops;
 
     public static MissionReport Build(World w, bool success)
     {
@@ -32,7 +31,7 @@ public class MissionReport
             MissionName = w.Mission.Name,
             Difficulty = w.Difficulty,
         };
-        for (var i = 0; i < 4; i++) r.Crates[i] = w.CratesCollected[i];
+        for (var i = 0; i < r.Crates.Length; i++) r.Crates[i] = w.CratesCollected[i];
         // Collecte automatique des caisses restantes en Facile et Normal.
         if (success && w.Difficulty <= Difficulty.Normal)
             foreach (var c in w.CratesById.Values)
@@ -48,38 +47,26 @@ public class MissionReport
         r.ArmorGained = armor;
         profile.AddArmor(cls, armor);
 
-        if (success)
-        {
-            var rng = new RandomNumberGenerator();
-            rng.Randomize();
-            var credits = r.Crates[(int)CrateType.Credits] * rng.RandiRange(80, 250) + 300 * ((int)w.Difficulty + 1);
-            r.CreditsGained = credits;
-            profile.Data.Credits += credits;
-        }
-
         // Armes : tirées pour la classe jouée, conservées même en cas d'échec.
         var progress = w.Mission.Index / (float)Mathf.Max(1, Missions.All.Length - 1);
         var pity = profile.Data.PityCounter;
-        var rng2 = new RandomNumberGenerator();
-        rng2.Randomize();
+        var rng = new RandomNumberGenerator();
+        rng.Randomize();
+        var drops = new List<WeaponInstance>();
         for (var i = 0; i < r.Crates[(int)CrateType.Weapon]; i++)
-        {
-            var wpn = Loot.RollWeapon(cls, w.Difficulty, progress, rng2, ref pity);
-            r.Weapons.Add(profile.Grant(wpn));
-        }
+            drops.Add(Loot.RollWeapon(cls, w.Difficulty, progress, rng, ref pity));
+        if (TestDrops != null) drops.AddRange(TestDrops);
+        TestDrops = null;
+        // Les plus étoilées en dernier pour la révélation.
+        drops.Sort((a, b) => (a.TotalStars * 1000 + a.Level).CompareTo(b.TotalStars * 1000 + b.Level));
+        foreach (var d in drops) r.Weapons.Add(profile.Grant(d));
         profile.Data.PityCounter = pity;
-        // Expérience de classe : éliminations de l'équipe + bonus de victoire, selon la difficulté.
+
         r.Squad = w.ScoreRows();
-        r.LevelBefore = profile.Level(cls);
-        r.XpGained = (int)((r.Kills * 8 + (success ? 600 + 250 * w.Mission.Index : 150)) * Difficulties.XpMul[(int)w.Difficulty]);
-        profile.AddXp(cls, r.XpGained);
-        r.LevelAfter = profile.Level(cls);
         profile.Data.TotalKills += r.Kills;
         profile.Data.MissionsPlayed++;
         if (success) profile.MarkCleared(w.Mission.Index, w.Difficulty);
         profile.Save();
-        // Les plus étoilées en dernier pour la révélation.
-        r.Weapons.Sort((a, b) => (a.weapon.TotalStars * 1000 + a.weapon.Level).CompareTo(b.weapon.TotalStars * 1000 + b.weapon.Level));
         return r;
     }
 }

@@ -1,5 +1,14 @@
 # Journal des versions
 
+## Non publié
+
+- **Plus de crédits** : caisses jaunes supprimées (remplacées dans le tirage par des caisses d'arme et d'armure), compteur retiré du profil, du menu principal, du bilan, du tableau des scores et du guide.
+- **Plus d'expérience ni de niveau de classe** : ni bonus de dégâts ni PV par niveau, plus de « Niv. » dans les menus ; l'armure grandit uniquement avec les caisses d'armure.
+- **Un exemplaire par arme** : retrouver une arme déjà possédée l'améliore (niveau le plus haut, meilleur nombre d'étoiles par caractéristique). Au bilan, une arme nouvelle porte l'étiquette « NEW » ; une arme améliorée liste ses améliorations en dessous (« Niveau 12 → 18 », « Dégâts ☆2 → ☆3 (+10) ») ; une arme possédée sans amélioration est assombrie.
+- **Bilan** : plus de jauge d'armure, de crédits ni d'XP ; une simple ligne « Armure 250 → 264 (+14) ».
+- **Sauvegardes** : les doublons d'armes existants sont fusionnés automatiquement (armes équipées conservées).
+- Petits bonus d'étoile affichés avec une décimale (« +9,6 » au lieu de « +10 », plus de « +0 »).
+
 ## v0.6.0 — Nouvelles interfaces
 
 - **Interfaces entièrement refaites** (maquettes validées, ADN Earth Defense Force) : palette verte, fond animé (grille, radar, circuits, balayage), boutons communs en plaques, polices Share Tech Mono et Saira Condensed.

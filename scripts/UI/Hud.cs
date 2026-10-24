@@ -193,7 +193,7 @@ void fragment() {
             _boardRows.AddChild(h);
         }
         _boardRows.AddChild(UiKit.Rule());
-        _boardRows.AddChild(UiKit.Label($"Butin : {World.CratesCollected[0]} armes · {World.CratesCollected[1]} armures · {World.CratesCollected[3]} crédits   ·   {UiKit.Time(World.Elapsed)}", 14, UiKit.Muted));
+        _boardRows.AddChild(UiKit.Label($"Butin : {World.CratesCollected[0]} armes · {World.CratesCollected[1]} armures   ·   {UiKit.Time(World.Elapsed)}", 14, UiKit.Muted));
     }
 }
 

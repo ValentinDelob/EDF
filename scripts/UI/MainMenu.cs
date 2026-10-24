@@ -45,7 +45,7 @@ public partial class MainMenu : Control
         Add(col, "Arsenal", () => App.I.ShowArsenal(() => App.I.ShowMain()), () => new[]
         {
             "Arsenal.", "Choisir les armes de chaque classe.", "",
-            $"Armes possédées : {p.Data.Arsenal.Count}", $"Crédits : {p.Data.Credits}",
+            $"Armes possédées : {p.Data.Arsenal.Count}",
         });
         Add(col, "Options", () => App.I.ShowOptions(), () => new[] { "Options.", "Contrôles, vidéo, audio et jeu." });
         Add(col, "Guide", () => App.I.ShowGuide(), () => new[] { "Guide.", "Commandes, classes, butin et progression." });
@@ -72,9 +72,8 @@ public partial class MainMenu : Control
         card.SetRows(new[]
         {
             new ECard.Row(new[] { new ECard.Cell("Profil", 96), new ECard.Cell(Settings.I.PlayerName, 0, 20) }, 32, true),
-            new ECard.Row(new[] { new ECard.Cell("Classe", 96), new ECard.Cell(Classes.Get(cls).Name), new ECard.Cell($"Niv.{p.Level(cls)}", 76) }, 25),
+            new ECard.Row(new[] { new ECard.Cell("Classe", 96), new ECard.Cell(Classes.Get(cls).Name) }, 25),
             new ECard.Row(new[] { new ECard.Cell("Armure:", 96), new ECard.Cell($"{p.Armor(cls):0}") }, 25),
-            new ECard.Row(new[] { new ECard.Cell("Crédits", 96), new ECard.Cell($"{p.Data.Credits}") }, 25),
             new ECard.Row(new[] { new ECard.Cell("Missions", 96), new ECard.Cell($"{MissionProgress.ClearedCount}/{Missions.All.Length}") }, 29),
         });
         stage.AddChild(card);

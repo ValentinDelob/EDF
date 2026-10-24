@@ -389,7 +389,7 @@ public partial class Player : CharacterBody3D
 
     private bool _beamActive;
 
-    public float DamageMul => (RallyTime > 0 ? 1.3f : 1f) * Profile.I.DamageBonus(Def.Id);
+    public float DamageMul => (RallyTime > 0 ? 1.3f : 1f);
 
     private void HandleFire(float dt)
     {
