@@ -383,20 +383,23 @@ public static partial class Mats
                 var col = (xo / 51) % 10;
                 var rx = xo % 51;
                 var edge = Mathf.Min(Mathf.Min(ry, 30 - ry), Mathf.Min(rx, 50 - rx));
-                var joint = edge < 3;
-                var tone = 0.75f + Hash(col, row % 16, 1572) * 0.35f;
-                var grain = Hash(x, y, 1573) * 0.15f;
-                var c = new Color(0.42f, 0.41f, 0.4f) * (tone + grain);
-                var missing = Hash(col, row % 16, 1574) < 0.025f;
-                var hh = joint ? 0.25f : Mathf.Clamp(0.55f + edge * 0.05f, 0, 0.9f) + grain * 0.3f;
-                if (joint) c = new Color(0.22f, 0.21f, 0.19f);
-                if (missing) { c = new Color(0.17f, 0.15f, 0.13f); hh = 0.1f; }
+                var joint = edge < 2;
+                // Contraste retenu : vus de loin, des pavés trop francs font un damier de briques.
+                var tone = 0.86f + Hash(col, row % 16, 1572) * 0.16f;
+                var grain = Hash(x, y, 1573) * 0.08f + ValueNoise(x, y, 6, s / 6, 1575) * 0.08f;
+                var wear = ValueNoise(x, y, 128, s / 128, 1576) * 0.12f;
+                var c = new Color(0.4f, 0.39f, 0.38f) * (tone + grain - wear);
+                var missing = Hash(col, row % 16, 1574) < 0.012f;
+                var hh = joint ? 0.35f : Mathf.Clamp(0.55f + edge * 0.04f, 0, 0.85f) + grain * 0.3f;
+                if (!joint && edge < 5) c *= 0.9f + edge * 0.02f;
+                if (joint) c *= 0.7f;
+                if (missing) { c = new Color(0.2f, 0.18f, 0.16f); hh = 0.15f; }
                 alb.Set(x, y, c);
                 bump.Set(x, y, new Color(hh, hh, hh));
             }
         });
-        var mat = Weathered(ImageTexture.CreateFromImage(alb.ToImage()), BumpToNormal(bump, 5f), null, 2, Vector3.One / 2f)
-            .With("roughness", 0.9f).With("normal_depth", 0.9f).With("vertex_color", true).With("puddles", 0.55f).With("desat", 0.3f);
+        var mat = Weathered(ImageTexture.CreateFromImage(alb.ToImage()), BumpToNormal(bump, 4f), null, 2, Vector3.One / 2f)
+            .With("roughness", 0.9f).With("normal_depth", 0.65f).With("vertex_color", true).With("puddles", 0.55f).With("desat", 0.3f).With("macro_var", 1.4f);
         Cache["cobbles"] = mat;
         return mat;
     }

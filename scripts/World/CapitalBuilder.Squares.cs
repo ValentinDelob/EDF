@@ -116,6 +116,7 @@ public static partial class CapitalBuilder
         foreach (var (x0, x1) in new[] { (-74f, -24f), (24f, 74f) })
             Balustrade(k, Mats.Ashlar(), new Vector3(x0, Walk, 60.6f), new Vector3(x1, Walk, 60.6f), 1.05f, StoneCol * 0.85f);
         c.KeepOut.Add(new Rect2(-75f, 60f, 150f, 1.2f));
+        Bastion(c);
         // Kiosques et colonnes d'affichage aux angles.
         foreach (var (x, z, yaw, kiosk) in new[] { (-66f, -50f, 0.4f, true), (66f, -50f, -0.4f, false), (-66f, 50f, 2.7f, false), (66f, 50f, -2.7f, true) })
         {
@@ -123,6 +124,127 @@ public static partial class CapitalBuilder
             c.Props.Add(kiosk ? Props.Kiosk() : Props.MorrisColumn(), p, yaw, range: 240, shadows: true);
             c.Ruins.Take(p, 2f);
         }
+    }
+
+    /// <summary>
+    /// « Dernier rempart » : la place transformée en camp retranché. Lignes de gabions percées de chicanes au nord et
+    /// côté fleuve, nids de mitrailleuse en sacs de sable, deux batteries antiaériennes pointées vers le ciel, poste de
+    /// secours sous filet, caisses de munitions, véhicules abandonnés. L'aire de départ reste dégagée.
+    /// </summary>
+    private static void Bastion(Ctx c)
+    {
+        var r = c.Ruins;
+        // Lignes de gabions (modules de 3,3 m), interrompues par des chicanes et par l'axe de l'avenue.
+        void Line(Vector3 a, Vector3 b, int salt)
+        {
+            var len = a.DistanceTo(b);
+            var dir = (b - a) / len;
+            var yaw = Mathf.Atan2(dir.X, dir.Z) + Mathf.Pi / 2;
+            var n = Mathf.FloorToInt(len / Props.HescoLen);
+            for (var i = 0; i < n; i++)
+            {
+                if (i % 6 == 4) continue; // chicane
+                var p = a + dir * ((i + 0.5f) * Props.HescoLen);
+                if (!r.Free(p, 1.4f) || !Clear(c, p, 0.4f)) continue;
+                var torn = RuinKit.Hash(p.X, p.Z, salt) < 0.15f;
+                c.Props.Add(Props.HescoWall(torn ? 1 : 0), p, yaw, range: 360f, shadows: true);
+                r.Take(p, 1.6f);
+            }
+        }
+        Line(new Vector3(-72f, Walk, -32f), new Vector3(-16f, Walk, -32f), 611);
+        Line(new Vector3(16f, Walk, -32f), new Vector3(72f, Walk, -32f), 612);
+        Line(new Vector3(-72f, Walk, 50f), new Vector3(-24f, Walk, 50f), 613);
+        Line(new Vector3(24f, Walk, 50f), new Vector3(72f, Walk, 50f), 614);
+        // Nids de mitrailleuse en sacs de sable (fer à cheval) aux angles et devant les lignes.
+        foreach (var (x, z, yaw) in new[] { (-62f, -40f, 0f), (62f, -40f, 0f), (-40f, -40f, 0.3f), (40f, -40f, -0.3f), (-66f, 56f, Mathf.Pi), (66f, 56f, Mathf.Pi), (-38f, 56f, Mathf.Pi), (38f, 56f, Mathf.Pi) })
+            SandbagNest(c, new Vector3(x, Walk, z), yaw);
+        // Batteries antiaériennes pointées vers le vaisseau.
+        AaGun(c, new Vector3(-58f, Walk, 30f), 0.6f);
+        AaGun(c, new Vector3(60f, Walk, 28f), -0.5f);
+        // Poste de secours sous filet de camouflage, brancards et caisses.
+        var pc = new Vector3(-60f, Walk, -20f);
+        if (r.TryTake(pc, 6f))
+        {
+            var k = r.Kit(RuinKit.Layer.Solid, pc);
+            Props.CamoCanopy(k, pc, 0.2f, 5f, 4f, 3.2f, 71);
+            for (var i = 0; i < 4; i++)
+            {
+                var p = pc + new Vector3(-3f + i * 2f, 0, 1.5f);
+                r.Inst(Props.Mattress(), RuinKit.At(p, 0.2f + i * 0.05f), false, 140f);
+            }
+            for (var i = 0; i < 3; i++)
+            {
+                var p = pc + new Vector3(2.5f, 0, -2f + i * 0.9f);
+                r.Inst(Props.AmmoCrates(i % 2), RuinKit.At(p, i * 0.3f), true, 200f);
+            }
+            c.KeepOut.Add(new Rect2(pc.X - 5.5f, pc.Z - 4.5f, 11f, 9f));
+        }
+        // Véhicules militaires abandonnés à l'intérieur du périmètre.
+        foreach (var (x, z, yaw, kind) in new[] { (-48f, -22f, 0.4f, 0), (52f, -20f, -0.6f, 1), (46f, 40f, 2.6f, 0) })
+        {
+            var p = new Vector3(x, Walk, z);
+            if (!r.Free(p, 3.5f)) continue;
+            var mesh = kind == 0 ? Props.ArmyTruck() : Props.MilJeepWreck(0);
+            var size = kind == 0 ? Props.ArmyTruckSize : Props.MilJeepSize;
+            r.Inst(mesh, RuinKit.At(p, yaw), true, 360f);
+            r.BoxOnGround(p, yaw, size);
+            r.Take(p, size.Z * 0.55f);
+        }
+        c.HotSpots.Add((new Vector3(0, 0, -36f), 40f, 0.18f));
+        c.HotSpots.Add((new Vector3(0, 0, 52f), 40f, 0.18f));
+    }
+
+    /// <summary>Nid de mitrailleuse en sacs de sable (fer à cheval ouvert vers l'arrière), mitrailleuse sur trépied.</summary>
+    private static void SandbagNest(Ctx c, Vector3 p, float yaw)
+    {
+        var r = c.Ruins;
+        if (!r.Free(p, 2.4f) || !Clear(c, p, 1f)) return;
+        var k = r.Kit(RuinKit.Layer.Solid, p);
+        var b = new Basis(Vector3.Up, yaw);
+        var pts = new[] { b * new Vector3(-1.9f, 0, 0.6f), b * new Vector3(-1.4f, 0, -1.5f), b * new Vector3(1.4f, 0, -1.5f), b * new Vector3(1.9f, 0, 0.6f) };
+        for (var i = 0; i < 3; i++)
+        {
+            var (bc, bs, byaw) = Props.SandbagWall(k, p + pts[i], p + pts[i + 1], 5, (int)(p.X * 5 + p.Z + i));
+            r.Box(new Transform3D(new Basis(Vector3.Up, byaw), bc), bs);
+        }
+        k.Col = new Color(0.12f, 0.12f, 0.11f);
+        var gun = p + b * new Vector3(0, 1.15f, -0.9f);
+        k.Box(Mats.DetailMetal(), gun, new Vector3(0.18f, 0.18f, 1.3f), b);
+        foreach (var (lx, lz) in new[] { (-0.4f, 0.3f), (0.4f, 0.3f), (0f, -0.4f) })
+            k.Tube(Mats.DetailMetal(), gun + Vector3.Down * 0.1f, p + b * new Vector3(lx, 0.75f, lz - 0.9f), 0.03f, 4);
+        r.Take(p, 2.4f);
+        c.KeepOut.Add(new Rect2(p.X - 2f, p.Z - 2f, 4f, 4f));
+    }
+
+    /// <summary>Canon antiaérien bitube sur affût, pointé haut vers le ciel, cercle de sacs de sable (décor solide).</summary>
+    private static void AaGun(Ctx c, Vector3 p, float yaw)
+    {
+        var r = c.Ruins;
+        if (!r.TryTake(p, 5.5f)) return;
+        var k = r.Kit(RuinKit.Layer.Solid, p);
+        for (var i = 0; i < 7; i++)
+        {
+            var a0 = i * Mathf.Tau / 8f + yaw;
+            var a1 = (i + 1) * Mathf.Tau / 8f + yaw;
+            var (bc, bs, byaw) = Props.SandbagWall(k, p + new Vector3(Mathf.Cos(a0), 0, Mathf.Sin(a0)) * 4.6f, p + new Vector3(Mathf.Cos(a1), 0, Mathf.Sin(a1)) * 4.6f, 4, i * 13 + 5);
+            r.Box(new Transform3D(new Basis(Vector3.Up, byaw), bc), bs);
+        }
+        var metal = Mats.Worn(new Color(0.25f, 0.27f, 0.21f), 0.7f, 0.35f);
+        var b = new Basis(Vector3.Up, yaw);
+        k.Col = Colors.White;
+        k.Cylinder(metal, p, 1.6f, 1.4f, 0.6f, 12);
+        k.Box(metal, p + Vector3.Up * 1.3f, new Vector3(2.2f, 1.2f, 1.8f), b);
+        var elev = new Basis(Vector3.Up, yaw) * new Basis(Vector3.Right, -1.05f);
+        foreach (var sx in new[] { -0.45f, 0.45f })
+        {
+            var root = p + b * new Vector3(sx, 1.9f, 0.2f);
+            k.Tube(metal, root, root + elev * new Vector3(0, 0, 4.2f), 0.12f, 6, true);
+            k.Cylinder(metal, root + elev * new Vector3(0, 0, 4.2f), 0.16f, 0.16f, 0.35f, 6, true, elev * new Basis(Vector3.Right, Mathf.Pi / 2));
+        }
+        k.Box(metal, p + b * new Vector3(0, 2.1f, -0.6f), new Vector3(1.8f, 0.9f, 0.1f), b);
+        r.BoxOnGround(p, yaw, new Vector3(2.4f, 2.4f, 2.4f));
+        c.KeepOut.Add(new Rect2(p.X - 5f, p.Z - 5f, 10f, 10f));
+        r.Decal(Mats.Decal.Scorch, p, 7f, yaw, Walk + 0.03f);
     }
 
     /// <summary>Candélabre de la place (trois lanternes), éclairé la nuit une fois sur trois.</summary>

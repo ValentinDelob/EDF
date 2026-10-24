@@ -97,8 +97,15 @@ public static partial class CapitalBuilder
         {
             var y = (i + 1) * 0.4f;
             k.Col = col * 0.9f;
+            // Marches visuelles ; la collision est le plan incliné qui suit leurs angles rentrants (pente 27°).
+            k.Solid = false;
             k.BoxMinMax(stone, L(-26f, 0, pz0 - (8 - i) * 0.8f), L(26f, y, pz0));
+            k.Solid = true;
         }
+        // Le plan descend sous le parvis (le parvis est à Walk sous le pied des marches) : pas de lèvre au départ.
+        k.OrientedQuad(stone, L(-26f, -Walk, pz0 - 6.4f - 2f * Walk), L(26f, -Walk, pz0 - 6.4f - 2f * Walk), L(26f, sty, pz0), L(-26f, sty, pz0), new Vector3(0, 2f, -1f));
+        foreach (var sx in new[] { -25.95f, 25.95f })
+            k.Tri(stone, L(sx, -Walk, pz0 - 6.4f - 2f * Walk), L(sx, sty, pz0), L(sx, -Walk, pz0), L(0, sty * 0.3f, pz0 - 2f));
         k.Col = col * 0.92f;
         k.BoxMinMax(stone, L(-24.5f, 0, pz0), L(24.5f, sty, pz1));
         for (var i = 0; i < 12; i++)

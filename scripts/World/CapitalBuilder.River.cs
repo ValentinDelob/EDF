@@ -344,6 +344,8 @@ public static partial class CapitalBuilder
     // ───────────────────────── Viaduc du métro ─────────────────────────
 
     private const float PierPitch = 24f, StationX0 = 24f, StationX1 = 66f, CollapseX0 = 118f, CollapseX1 = 142f;
+    /// <summary>Travée écroulée : haut au ras du tablier resté debout, pied sur la chaussée nord (hors de l'emprise des piles).</summary>
+    private static readonly Vector3 CollapseTop = new(CollapseX0 + 2f, ViaductTop, ViaductZ), CollapseLow = new(CollapseX1 - 2f, 0.02f, ViaductZ + 8.5f);
 
     private static void BuildViaduct(Ctx c)
     {
@@ -390,8 +392,9 @@ public static partial class CapitalBuilder
         // Travée écroulée : tablier couché en rampe jusqu'à la chaussée, rame déraillée qui pend.
         {
             var k = c.Solid.At(new Vector3((CollapseX0 + CollapseX1) / 2, 0, ViaductZ));
-            var top = new Vector3(CollapseX0 + 1.2f, ViaductTop - 0.6f, ViaductZ);
-            var low = new Vector3(CollapseX1 + 3f, Walk + 0.6f, ViaductZ + 1.2f);
+            // Le tablier pivote en tombant : son pied repose sur la chaussée à côté de la pile suivante (rampe praticable).
+            var top = CollapseTop;
+            var low = CollapseLow;
             var dir = (low - top).Normalized();
             var side = Vector3.Up.Cross(dir).Normalized();
             var nrm = dir.Cross(side).Normalized();
@@ -488,14 +491,18 @@ public static partial class CapitalBuilder
         const float sx0 = StationX1 + 32f, sx1 = StationX1 + 4f;
         var zs0 = BlvdZ0 + 2f;
         var zs1 = zs0 + 3f;
-        var steps = Mathf.CeilToInt(ViaductTop / 0.3f);
+        const float stairTop = ViaductTop + 0.25f; // au ras des quais
+        var steps = Mathf.CeilToInt(stairTop / 0.3f);
         var run = (sx0 - sx1) / steps;
         for (var i = 0; i < steps; i++)
         {
-            var y = (i + 1) * ViaductTop / steps;
+            var y = (i + 1) * stairTop / steps;
             var x = sx0 - i * run;
             k.Col = StoneCol * 0.82f;
+            // Marches visuelles seulement : la collision est la paillasse en pente ci-dessous (une capsule ne gravit pas 0,3 m).
+            k.Solid = false;
             k.BoxMinMax(stone, new Vector3(x - run, y - 0.3f, zs0), new Vector3(x, y, zs1));
+            k.Solid = true;
             if (i % 4 == 0)
             {
                 k.Col = new Color(0.1f, 0.1f, 0.1f);
@@ -503,12 +510,22 @@ public static partial class CapitalBuilder
                 k.Box(metal, new Vector3(x - run / 2, y / 2, zs1 - 0.2f), new Vector3(0.2f, y, 0.2f));
             }
         }
+        // Paillasse : plan qui passe par l'angle rentrant de chaque marche (dessus caché dans les marches, dessous visible).
+        k.Col = StoneCol * 0.74f;
+        var ra = new Vector3(sx0, 0, zs0);
+        var rb = new Vector3(sx0, 0, zs1);
+        var rc = new Vector3(sx1, stairTop, zs1);
+        var rd = new Vector3(sx1, stairTop, zs0);
+        var rn = (rc - rb).Cross(rb - ra).Normalized();
+        if (rn.Y < 0) rn = -rn;
+        k.OrientedQuad(stone, ra, rb, rc, rd, rn);
+        k.OrientedQuad(stone, ra, rb, rc, rd, -rn);
         k.Col = StoneCol * 0.82f;
-        k.BoxMinMax(stone, new Vector3(StationX1 - 2f, ViaductTop - 0.3f, zs0), new Vector3(sx1 + 0.01f, ViaductTop, zq0 + 0.1f));
+        k.BoxMinMax(stone, new Vector3(StationX1 - 2f, stairTop - 0.55f, zs0), new Vector3(sx1 + 0.01f, stairTop, zq0 + 0.1f));
         foreach (var z in new[] { zs0, zs1 })
         {
             k.Solid = false;
-            k.Quad(Mats.IronRail(), new Vector3(sx0, 1.1f, z), new Vector3(sx1, ViaductTop + 1.1f, z), new Vector3(sx1, ViaductTop, z), new Vector3(sx0, 0, z),
+            k.Quad(Mats.IronRail(), new Vector3(sx0, 1.1f, z), new Vector3(sx1, stairTop + 1.1f, z), new Vector3(sx1, stairTop, z), new Vector3(sx0, 0, z),
                 new Vector2(0, 0), new Vector2(sx0 - sx1, 0), new Vector2(sx0 - sx1, 1), new Vector2(0, 1));
             k.Solid = true;
         }

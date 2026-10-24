@@ -257,14 +257,17 @@ public static partial class CapitalBuilder
         if (Screenshot.CmdArg("capprobe") == null) return;
         var sx0 = StationX1 + 32f;
         var zs = BlvdZ0 + 3.5f;
-        var top = new Vector3(CollapseX0 + 1.2f, ViaductTop, ViaductZ);
+        var dh = (CollapseLow - CollapseTop) with { Y = 0 };
+        dh = dh.Normalized();
+        var foot = CollapseLow + dh * 3f;
+        var head = CollapseTop + dh * 2f;
         var walkers = new List<BizWalker>
         {
             new() { Label = "escalier de la station (quai)", GoalY = ViaductTop + 0.25f, Path = new List<Vector3> { new(sx0 + 3f, 0, zs), new(sx0 + 1f, 0, zs), new(StationX1 - 0.5f, 0, zs), new(StationX1 - 1f, 0, MedianZ0 - 2f) } },
             new() { Label = "rampe de la berge nord", GoalY = BergeY, Path = new List<Vector3> { new(Ramps[0].x - 3f, 0, QuayN - 2f), new(Ramps[0].x - 0.5f, 0, QuayN - 1f), new(Ramps[0].x + 1f, 0, QuayN + 1.8f), new(Ramps[0].x + RampLen + 2f, 0, QuayN + 1.8f), new(Ramps[0].x + RampLen + 4f, 0, QuayN + 5f) } },
-            new() { Label = "travée écroulée du viaduc", GoalY = ViaductTop - 0.4f, Path = new List<Vector3> { new(CollapseX1 + 12f, 0, ViaductZ + 1.2f), new(CollapseX1 + 5f, 0, ViaductZ + 1.2f), new(top.X + 1.5f, 0, ViaductZ + 0.6f), new(top.X - 3f, 0, ViaductZ - 1.8f) } },
-            new() { Label = "emmarchement du parlement", GoalY = 3.2f + Walk, Path = new List<Vector3> { new(8f, 0, 130f), new(8f, 0, 134f), new(8f, 0, 146f) } },
-            new() { Label = "grand pont (rive sud)", GoalY = Walk, Path = new List<Vector3> { new(-6f, 0, 64f), new(-6f, 0, 90f), new(-6f, 0, 128f), new(-6f, 0, 133f) } },
+            new() { Label = "travée écroulée du viaduc", GoalY = ViaductTop - 0.4f, Path = new List<Vector3> { new(CollapseX1 + 12f, 0, foot.Z), new(foot.X, 0, foot.Z), new(head.X, 0, head.Z), new(CollapseX0 - 3f, 0, ViaductZ - 1.8f) } },
+            new() { Label = "emmarchement du parlement", GoalY = 3.2f + Walk, Path = new List<Vector3> { new(0f, 0, 128f), new(0f, 0, 134f), new(0f, 0, 146f) } },
+            new() { Label = "grand pont (rive sud)", GoalY = Walk, Path = new List<Vector3> { new(0f, 0, 60f), new(0f, 0, 90f), new(0f, 0, 128f), new(0f, 0, 133f) } },
         };
         foreach (var w in walkers)
         {

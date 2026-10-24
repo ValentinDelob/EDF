@@ -260,14 +260,46 @@ public static partial class CapitalBuilder
             // Murs (non solides : le volume plein les porte).
             k.Solid = false;
             var off = nrm * 0.005f;
+            // Brèche d'obus sur une façade sur rue : une à deux travées sur un à trois étages, planchers à nu.
+            var breach = street && bays >= 3 && s.Floors >= 4 && Hh(i + 200) < 0.32f;
+            int hb0 = 0, hb1 = 0, hf0 = 0, hf1 = 0;
+            if (breach)
+            {
+                hb0 = 1 + (int)(Hh(i + 201) * (bays - 2));
+                hb1 = Mathf.Min(bays - 1, hb0 + 1 + (int)(Hh(i + 202) * 2f));
+                hf0 = 1 + (int)(Hh(i + 203) * (s.Floors - 2));
+                hf1 = Mathf.Min(s.Floors, hf0 + 1 + (int)(Hh(i + 204) * 2.5f));
+            }
             if (street)
             {
                 var gy = Mats.ShopStoryH;
                 k.QuadC(shops, A + off, B + off, B + Vector3.Up * gy + off, A + Vector3.Up * gy + off,
                     new Vector2(u0, 1), new Vector2(u0 + bays, 1), new Vector2(u0 + bays, 0), new Vector2(u0, 0), dark, dark, tint, tint, nrm);
-                var v1 = (H - gy) / Mats.StoryH;
-                k.QuadC(facade, A + Vector3.Up * gy + off, B + Vector3.Up * gy + off, B + Vector3.Up * H + off, A + Vector3.Up * H + off,
-                    new Vector2(u0, v1), new Vector2(u0 + bays, v1), new Vector2(u0 + bays, 0), new Vector2(u0, 0), tint, tint, dark, dark, nrm);
+                // Étages : un seul quad, ou quatre morceaux autour de la brèche.
+                void Piece(float t0, float t1, float y0, float y1)
+                {
+                    if (t1 - t0 < 0.01f || y1 - y0 < 0.01f) return;
+                    var p0 = A + along * (t0 * len) + off;
+                    var p1 = A + along * (t1 * len) + off;
+                    var c0 = tint.Lerp(dark, (y0 - gy) / (H - gy));
+                    var c1 = tint.Lerp(dark, (y1 - gy) / (H - gy));
+                    k.QuadC(facade, p0 + Vector3.Up * y0, p1 + Vector3.Up * y0, p1 + Vector3.Up * y1, p0 + Vector3.Up * y1,
+                        new Vector2(u0 + t0 * bays, (H - y0) / Mats.StoryH), new Vector2(u0 + t1 * bays, (H - y0) / Mats.StoryH),
+                        new Vector2(u0 + t1 * bays, (H - y1) / Mats.StoryH), new Vector2(u0 + t0 * bays, (H - y1) / Mats.StoryH), c0, c0, c1, c1, nrm);
+                }
+                if (!breach) Piece(0f, 1f, gy, H);
+                else
+                {
+                    var tb0 = hb0 / (float)bays;
+                    var tb1 = hb1 / (float)bays;
+                    var yb0 = gy + (hf0 - 1) * Mats.StoryH + 0.4f;
+                    var yb1 = Mathf.Min(H - 0.6f, gy + hf1 * Mats.StoryH - 0.3f);
+                    Piece(0f, tb0, gy, H);
+                    Piece(tb1, 1f, gy, H);
+                    Piece(tb0, tb1, gy, yb0);
+                    Piece(tb0, tb1, yb1, H);
+                    Breach(k, A + along * (tb0 * len), A + along * (tb1 * len), nrm, along, yb0, yb1, stone, charred, tint, s.Seed * 31 + i);
+                }
             }
             else
             {
@@ -289,28 +321,49 @@ public static partial class CapitalBuilder
             foreach (var fl in new[] { 1, s.Floors - 1 })
             {
                 var y = Mats.ShopStoryH + Mats.StoryH * fl + 0.1f;
-                var la = len - 0.6f;
-                k.Col = tint;
-                k.Box(stone, mid + Vector3.Up * (y - 0.11f) + nrm * 0.45f, new Vector3(0.9f, 0.22f, la), rot);
-                // Consoles sous la dalle, une par travée.
-                for (var j = 0; j < bays; j++)
+                // Balcon coupé par la brèche : deux tronçons, et un morceau arraché qui pend.
+                var cut = breach && fl >= hf0 - 1 && fl < hf1;
+                var spans = cut ? new[] { (0.3f, hb0 * len / bays - 0.4f), (hb1 * len / bays + 0.4f, len - 0.3f) } : new[] { (0.3f, len - 0.3f) };
+                foreach (var (sa, sb) in spans)
                 {
-                    var t = (j + 0.5f) / bays;
-                    var cp = A + along * (len * t) + nrm * 0.38f + Vector3.Up * (y - 0.45f);
-                    k.Box(stone, cp, new Vector3(0.76f, 0.46f, 0.26f), rot, false);
+                    var la = sb - sa;
+                    if (la < 0.8f) continue;
+                    var sm = A + along * ((sa + sb) / 2f);
+                    k.Col = tint;
+                    k.Box(stone, sm + Vector3.Up * (y - 0.11f) + nrm * 0.45f, new Vector3(0.9f, 0.22f, la), rot);
+                    // Consoles sous la dalle, une par travée.
+                    for (var j = 0; j < bays; j++)
+                    {
+                        var t = (j + 0.5f) / bays * len;
+                        if (t < sa || t > sb) continue;
+                        var cp = A + along * t + nrm * 0.38f + Vector3.Up * (y - 0.45f);
+                        k.Box(stone, cp, new Vector3(0.76f, 0.46f, 0.26f), rot, false);
+                    }
+                    // Garde-corps de fonte (ajouré, non solide) avec retours.
+                    k.Solid = false;
+                    var e0 = A + along * sa + nrm * 0.88f + Vector3.Up * y;
+                    var e1 = A + along * sb + nrm * 0.88f + Vector3.Up * y;
+                    k.Quad(iron, e0 + Vector3.Up * 1.05f, e1 + Vector3.Up * 1.05f, e1, e0,
+                        new Vector2(0, 0), new Vector2(la, 0), new Vector2(la, 1), new Vector2(0, 1));
+                    foreach (var e in new[] { e0, e1 })
+                    {
+                        var w0 = e - nrm * 0.85f;
+                        k.Quad(iron, e + Vector3.Up * 1.05f, w0 + Vector3.Up * 1.05f, w0, e, new Vector2(0, 0), new Vector2(0.85f, 0), new Vector2(0.85f, 1), new Vector2(0, 1));
+                    }
+                    k.Solid = true;
                 }
-                // Garde-corps de fonte (ajouré, non solide) avec retours.
-                k.Solid = false;
-                var e0 = A + along * 0.3f + nrm * 0.88f + Vector3.Up * y;
-                var e1 = B - along * 0.3f + nrm * 0.88f + Vector3.Up * y;
-                k.Quad(iron, e0 + Vector3.Up * 1.05f, e1 + Vector3.Up * 1.05f, e1, e0,
-                    new Vector2(0, 0), new Vector2(la, 0), new Vector2(la, 1), new Vector2(0, 1));
-                foreach (var (e, sgn) in new[] { (e0, 1f), (e1, -1f) })
+                if (cut)
                 {
-                    var w0 = e - nrm * 0.85f;
-                    k.Quad(iron, e + Vector3.Up * 1.05f, w0 + Vector3.Up * 1.05f, w0, e, new Vector2(0, 0), new Vector2(0.85f, 0), new Vector2(0.85f, 1), new Vector2(0, 1));
+                    // Dalle de balcon arrachée qui pend le long de la façade, garde-corps tordu.
+                    var hp = A + along * ((hb0 + 0.15f) * len / bays) + nrm * 0.5f + Vector3.Up * (y - 1.2f);
+                    var hang = rot * new Basis(Vector3.Right, 1.1f) * new Basis(Vector3.Back, 0.25f);
+                    k.Col = tint * 0.85f;
+                    k.Box(stone, hp, new Vector3(0.9f, 0.22f, 2.4f), hang);
+                    k.Solid = false;
+                    k.Col = new Color(0.08f, 0.08f, 0.08f);
+                    k.Tube(Mats.DetailMetal(), hp + Vector3.Up * 1.1f, hp + Vector3.Down * 1.4f + along * 0.6f + nrm * 0.4f, 0.035f, 4);
+                    k.Solid = true;
                 }
-                k.Solid = true;
             }
         }
 
@@ -455,5 +508,78 @@ public static partial class CapitalBuilder
         var ridgeB = P(0, y1 + 0.62f, depth);
         foreach (var sx in new[] { -hw - 0.12f, hw + 0.12f })
             k.OrientedQuad(roof, P(sx, y1 + 0.08f, 0.02f), P(sx, y1 + 0.08f, depth), ridgeB, ridgeF, Vector3.Up + along * Mathf.Sign(sx));
+    }
+
+    /// <summary>
+    /// Brèche d'obus dans une façade (entre <paramref name="a"/> et <paramref name="b"/>, de <paramref name="y0"/> à
+    /// <paramref name="y1"/>) : cavité calcinée (fond, tableaux, plafond, sol), planchers intermédiaires brisés qui pendent,
+    /// bords déchiquetés de pierre, gravats sur l'appui, panache de suie au-dessus. Visuel seul (le volume plein reste).
+    /// </summary>
+    private static void Breach(MeshKit k, Vector3 a, Vector3 b, Vector3 nrm, Vector3 along, float y0, float y1, Material stone, Material charred, Color tint, int seed)
+    {
+        var solid = k.Solid;
+        k.Solid = false;
+        const float depth = 3.4f;
+        var back = -nrm * depth;
+        var up = Vector3.Up;
+        var len = a.DistanceTo(b);
+        var rot = new Basis(Vector3.Up, Mathf.Atan2(along.X, along.Z));
+        float Hx(int salt) => RuinKit.Hash(seed * 0.73f, salt, 457);
+        k.Col = new Color(0.22f, 0.21f, 0.2f);
+        k.OrientedQuad(charred, a + back + up * y0, b + back + up * y0, b + back + up * y1, a + back + up * y1, nrm);
+        k.Col = tint * 0.45f;
+        k.OrientedQuad(stone, a + up * y0, a + back + up * y0, a + back + up * y1, a + up * y1, along);
+        k.OrientedQuad(stone, b + up * y0, b + back + up * y0, b + back + up * y1, b + up * y1, -along);
+        k.OrientedQuad(stone, a + up * y0, b + up * y0, b + back + up * y0, a + back + up * y0, Vector3.Up);
+        k.Col = new Color(0.25f, 0.24f, 0.22f);
+        k.OrientedQuad(charred, a + up * y1, b + up * y1, b + back + up * y1, a + back + up * y1, Vector3.Down);
+        // Planchers intermédiaires : dalles à nu, bord cassé plié vers la rue.
+        for (var yf = Mats.ShopStoryH + Mats.StoryH; yf < y1 - 0.4f; yf += Mats.StoryH)
+        {
+            if (yf < y0 + 0.4f) continue;
+            var c = (a + b) / 2 + back * 0.55f + up * yf;
+            k.Col = new Color(0.4f, 0.39f, 0.37f) * (0.8f + 0.2f * Hx((int)yf));
+            k.Box(stone, c, new Vector3(depth * 0.55f, 0.3f, len), rot);
+            var tilt = 0.4f + Hx((int)yf + 3) * 0.6f;
+            var hinge = c - back * 0.275f;
+            var flap = new Basis(along, -tilt);
+            k.Box(stone, hinge + flap * (nrm * 0.7f) + Vector3.Down * 0.15f, new Vector3(1.4f, 0.26f, len * 0.8f), flap * rot);
+            k.Col = new Color(0.3f, 0.17f, 0.1f);
+            for (var q = 0; q < 4; q++)
+            {
+                var p0 = hinge + along * ((q - 1.5f) * len * 0.22f);
+                k.Tube(Mats.DetailMetal(), p0, p0 + nrm * (0.8f + Hx(q + (int)yf) * 0.8f) + Vector3.Down * 0.6f, 0.025f, 3);
+            }
+        }
+        // Bords déchiquetés : blocs de pierre épaufrés qui mordent sur l'ouverture.
+        k.Col = tint * 0.9f;
+        for (var t = 0.3f; t < len; t += 0.7f)
+        {
+            var h0 = Hx((int)(t * 10f) + 11);
+            var h1 = Hx((int)(t * 10f) + 13);
+            k.Box(stone, a + along * t + up * (y1 - 0.2f - h0 * 0.5f) - nrm * 0.1f, new Vector3(0.5f, 0.4f + h0 * 0.9f, 0.6f), rot * new Basis(Vector3.Back, (h1 - 0.5f) * 0.5f));
+            k.Box(stone, a + along * t + up * (y0 + 0.15f + h1 * 0.35f) - nrm * 0.1f, new Vector3(0.5f, 0.3f + h1 * 0.6f, 0.6f), rot);
+        }
+        for (var y = y0 + 0.5f; y < y1 - 0.3f; y += 0.8f)
+        {
+            var h0 = Hx((int)(y * 10f) + 17);
+            k.Box(stone, a + along * (0.15f + h0 * 0.3f) + up * y - nrm * 0.1f, new Vector3(0.5f, 0.6f, 0.4f + h0 * 0.6f), rot);
+            k.Box(stone, b - along * (0.15f + h0 * 0.3f) + up * y - nrm * 0.1f, new Vector3(0.5f, 0.6f, 0.4f + Hx((int)(y * 10f) + 19) * 0.6f), rot);
+        }
+        // Gravats sur l'appui de la brèche.
+        k.Col = new Color(0.45f, 0.43f, 0.4f);
+        for (var q = 0; q < 6; q++)
+        {
+            var p = a + along * (len * (0.15f + 0.7f * Hx(q + 23))) + back * (0.2f + 0.6f * Hx(q + 29)) + up * (y0 + 0.2f);
+            var sz = 0.4f + Hx(q + 31) * 0.7f;
+            k.Box(stone, p, new Vector3(sz, sz * 0.6f, sz * 1.2f), new Basis(Vector3.Up, Hx(q + 37) * 3f) * new Basis(Vector3.Right, Hx(q + 41) * 0.6f));
+        }
+        // Suie au-dessus de la brèche.
+        const float top = 3.6f;
+        var u0 = Hx(43) * 4f;
+        k.Col = Colors.White;
+        k.Quad(Mats.Soot(), a + up * y1 + nrm * 0.03f, b + up * y1 + nrm * 0.03f, b + up * (y1 + top) + nrm * 0.03f, a + up * (y1 + top) + nrm * 0.03f,
+            new Vector2(u0, 1), new Vector2(u0 + len / 8f, 1), new Vector2(u0 + len / 8f, 1 - top / 8f), new Vector2(u0, 1 - top / 8f));
+        k.Solid = solid;
     }
 }

@@ -205,7 +205,7 @@ public static partial class CapitalBuilder
         foreach (var n in NestSpots) r.Block(n, 9f, 9f);
 
         Barricade(c, new Vector3(0, 0, 70f), false);
-        Barricade(c, new Vector3(0, 0, 138f), true);
+        Barricade(c, new Vector3(0, 0, 131f), true); // devant l'emmarchement du parlement, pas dessus
         Convoy(c);
         QuayConvoy(c);
         FloodLights(c);
