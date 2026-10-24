@@ -101,7 +101,7 @@ public partial class Enemy
         // Ciel dégagé au-dessus (hors du corps lui-même) : vrai creux, rien à corriger.
         if (!Ray(p + Vector3.Up * 0.05f, p + Vector3.Up * Mathf.Max(3f, g - p.Y + 1.5f), out _, out _)
             && !Ray(new Vector3(p.X, g + 0.05f, p.Z), new Vector3(p.X, g - 0.05f, p.Z), out _, out _)) return false;
-        var top = new Vector3(p.X, Mathf.Max(p.Y, g) + 60f, p.Z);
+        var top = new Vector3(p.X, _world.ProbeTop(new Vector3(p.X, g, p.Z), Mathf.Max(p.Y, g) + 60f), p.Z);
         var land = Ray(top, new Vector3(p.X, g - 40f, p.Z), out var lp, out var ln) && ln.Y > 0.5f ? lp : new Vector3(p.X, g, p.Z);
         GlobalPosition = land;
         _surfN = Vector3.Up;

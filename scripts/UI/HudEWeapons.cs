@@ -251,7 +251,9 @@ public partial class HudWeapons : HudBlock
         }
         if (!small) return;
         // Petite plaque : « Prête », « Recharge » ou munitions restantes.
-        var key = e.Reloading ? -1 : beam ? 100000 + e.CurKey : mag <= 1 ? (ws.Ammo > 0 ? -2 : -3) : ws.Ammo * 1000 + mag;
+        // Balise sans appui aérien (réseau souterrain) : « Hors liaison ».
+        var noLink = w.T.Kind == WeaponKind.Airstrike && World.Current is { AirSupport: false };
+        var key = noLink ? -4 : e.Reloading ? -1 : beam ? 100000 + e.CurKey : mag <= 1 ? (ws.Ammo > 0 ? -2 : -3) : ws.Ammo * 1000 + mag;
         if (key == e.Key) return;
         e.Key = key;
         e.Status = key switch
@@ -259,6 +261,7 @@ public partial class HudWeapons : HudBlock
             -1 => "Recharge",
             -2 => "Prête",
             -3 => "Vide",
+            -4 => "Hors liaison",
             _ => beam ? $"{e.CurKey} %" : $"{ws.Ammo} / {mag}",
         };
     }

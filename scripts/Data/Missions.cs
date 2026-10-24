@@ -28,7 +28,7 @@ public record MissionDef(
     ObjectiveDef Objective = null,
     EnemyType NestType = EnemyType.Nest);
 
-public enum MapId { City, Port, Suburb, Business, Industrial, Desert, Forest }
+public enum MapId { City, Port, Suburb, Business, Industrial, Desert, Forest, Underground }
 
 public enum Weather { Clear, Rain, Storm, Sandstorm }
 
@@ -421,5 +421,37 @@ public static class Missions
                     new WaveDef("north", 0, "Dernière vague : tout ce qui rampe dans la vallée converge vers vous !", (EnemyType.Spider, 14), (EnemyType.Centipede, 3)),
                     new WaveDef("west", 5, null, (EnemyType.RedAnt, 8))),
             }, Weather.Rain, MapId.Forest),
+        // Réseau souterrain (spécification §9.1 : tunnels étroits, nids d'insectes, pas de frappes aériennes).
+        new(24, "Les entrailles",
+            "La colonie a gagné le réseau souterrain sous la ville : tunnels du métro, galeries techniques, collecteur d'égout. Elle y a creusé ses nids, au fond de l'atelier de maintenance, dans la salle des pompes, au-delà du tronçon effondré et au bord d'une caverne qu'elle a évidée. Descendez les détruire. Sous terre, ni frappe aérienne, ni artillerie, ni véhicule : vous ne pourrez compter que sur vos armes. Les insectes courent sur les parois et les voûtes : surveillez le plafond.",
+            MissionGoal.DestroyNests, TimeOfDay.Night, 0.012f, 4,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("north", 3, "Nids repérés dans le réseau. Pas d'appui aérien sous terre : détruisez-les aux explosifs !", (EnemyType.BlackAnt, 14), (EnemyType.RedAnt, 5))),
+                new PhaseDef(0, 60,
+                    new WaveDef("west", 0, "Araignées dans l'atelier de maintenance, à l'ouest !", (EnemyType.Spider, 10))),
+                new PhaseDef(0, 120,
+                    new WaveDef("east", 0, "Mille-pattes dans les galeries techniques, à l'est ! Gare aux voûtes.", (EnemyType.Centipede, 2), (EnemyType.AcidAnt, 8))),
+                new PhaseDef(0, 180,
+                    new WaveDef("center", 0, "Charognards et fourmis rouges dans le collecteur, au sud !", (EnemyType.Scavenger, 6), (EnemyType.RedAnt, 8)),
+                    new WaveDef("beach", 8, "Ça grouille du côté de la grande caverne !", (EnemyType.BlackAnt, 12))),
+            }, Weather.Clear, MapId.Underground),
+        new(25, "La mère",
+            "Le cœur de la colonie bat sous la ville : une caverne de cent mètres, évidée par les insectes sous le réseau, tapissée de résine et d'œufs. La reine y pond sans relâche. Descendez par le tunnel sud-est, abattez-la et tout ce qui la défend. Aucun appui aérien ni véhicule ne vous suivra sous terre ; elle ne quittera pas sa caverne, mais son acide porte loin.",
+            MissionGoal.Boss, TimeOfDay.Night, 0.012f, 0,
+            new[]
+            {
+                new PhaseDef(0, 0,
+                    new WaveDef("beach", 2, "Contact dans la grande caverne : la reine ! Abattez-la à tout prix.", (EnemyType.Queen, 1), (EnemyType.RedAnt, 8)),
+                    new WaveDef("north", 10, "Elles arrivent par la galerie technique, dans votre dos !", (EnemyType.BlackAnt, 14))),
+                new PhaseDef(0, 50,
+                    new WaveDef("east", 0, "Araignées et fourmis acides dans les galeries, à l'est !", (EnemyType.Spider, 10), (EnemyType.AcidAnt, 6))),
+                new PhaseDef(0, 110,
+                    new WaveDef("center", 0, "La colonie remonte du collecteur !", (EnemyType.BlackAnt, 16), (EnemyType.Scavenger, 6))),
+                new PhaseDef(0, 180,
+                    new WaveDef("beach", 0, "Des mille-pattes sortent des parois de la caverne !", (EnemyType.RedAnt, 10), (EnemyType.Centipede, 2)),
+                    new WaveDef("south", 8, null, (EnemyType.BlackAnt, 12))),
+            }, Weather.Clear, MapId.Underground),
     };
 }

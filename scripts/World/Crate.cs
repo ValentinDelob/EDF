@@ -12,6 +12,8 @@ public partial class Crate : Node3D
     private Node3D _body;
     private Vector3 _vel;
     private bool _landed;
+    /// <summary>Hauteur de pose (0,45 m au-dessus du sol ; sous terre, au-dessus du quai ou de l'éboulis où elle tombe).</summary>
+    public float Floor = 0.45f;
 
     public static Crate Create(int id, CrateType type, Vector3 pos)
     {
@@ -77,7 +79,7 @@ public partial class Crate : Node3D
             _vel += Vector3.Down * 20f * dt;
             var p = Position + _vel * dt;
             // Sol de la carte (relief de la vallée) ; 0 sur les cartes plates.
-            var floor = World.GroundAt(p.X, p.Z) + 0.45f;
+            var floor = Mathf.Max(World.GroundAt(p.X, p.Z) + 0.45f, Floor);
             if (p.Y <= floor) { p.Y = floor; _landed = true; }
             Position = p;
         }

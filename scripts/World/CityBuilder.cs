@@ -32,6 +32,8 @@ public static partial class CityBuilder
         public readonly List<Vector3> PlayerSpawns = new();
         /// <summary>Véhicules pilotables en plus du char et de l'hélicoptère de départ (identifiants 3, 4… dans cet ordre).</summary>
         public readonly List<(bool Heli, Vector3 Pos, float Yaw)> Vehicles = new();
+        /// <summary>Emprise que les boss ne quittent pas (réseau souterrain : la reine reste dans sa caverne), ou null.</summary>
+        public Rect2? BossArea;
     }
 
     /// <summary>Axes des rues nord-sud (x) et est-ouest (z) entre les pâtés.</summary>

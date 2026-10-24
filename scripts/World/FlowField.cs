@@ -75,6 +75,29 @@ public class FlowField
 
     public bool IsBlocked(Vector3 p) => _blocked[Index(p)];
 
+    /// <summary>Centre de la cellule libre la plus proche de <paramref name="p"/> (couronnes jusqu'à <paramref name="maxRing"/>), ou null.</summary>
+    public Vector3? NearestFree(Vector3 p, int maxRing)
+    {
+        var i = Index(p);
+        int x0 = i % N, z0 = i / N;
+        for (var r = 0; r <= maxRing; r++)
+        {
+            var best = -1;
+            var bd = float.MaxValue;
+            for (var dz = -r; dz <= r; dz++)
+            for (var dx = -r; dx <= r; dx++)
+            {
+                if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)) != r) continue;
+                int x = x0 + dx, z = z0 + dz;
+                if (x < 0 || z < 0 || x >= N || z >= N || _blocked[z * N + x]) continue;
+                var d = CellCenter(z * N + x).DistanceSquaredTo(new Vector3(p.X, 0, p.Z));
+                if (d < bd) { bd = d; best = z * N + x; }
+            }
+            if (best >= 0) return CellCenter(best);
+        }
+        return null;
+    }
+
     public void Compute(IEnumerable<Vector3> targets)
     {
         for (var i = 0; i < _dist.Length; i++) _dist[i] = int.MaxValue;

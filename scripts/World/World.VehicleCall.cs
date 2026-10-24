@@ -16,7 +16,7 @@ public partial class World
     /// <summary>Hôte : traite une demande d'appel. Faux si elle est refusée (véhicule précédent occupé, aucun point dégagé).</summary>
     public bool HostVehicleCall(long owner, int type, Vector3 at)
     {
-        if (Ended || type < 0 || type >= CallIns.Count) return false;
+        if (Ended || type < 0 || type >= CallIns.Count || !AirSupport) return false;
         Vector3 ownerPos;
         if (owner == Net.I.MyId && LocalPlayer != null) ownerPos = LocalPlayer.GlobalPosition;
         else if (Remotes.TryGetValue(owner, out var r)) ownerPos = r.GlobalPosition;

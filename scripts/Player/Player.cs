@@ -480,6 +480,7 @@ public partial class Player : CharacterBody3D
         _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, camDist, Mathf.Clamp(dt * (grabbed ? 4f : 10f), 0, 1));
         // Épaule décalée de côté : la tête de la fourmi et la victime se lisent de trois quarts, pas l'une derrière l'autre.
         _arm.Position = _arm.Position.Lerp(new Vector3(grabbed ? 1.7f : 0.85f, 0.15f + (Vehicle?.CameraLift ?? 0f) + (grabbed ? 0.3f : 0f), 0), Mathf.Clamp(dt * 4f, 0, 1));
+        if (World.Underground) ClampShoulder();
         _shake = Mathf.MoveToward(_shake, 0, dt * 2.5f);
         Camera.HOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f;
         Camera.VOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f + _recoil * 0.02f;
@@ -592,6 +593,13 @@ public partial class Player : CharacterBody3D
 
         if (ws.Cooldown > 0) return;
         if (!(t.Automatic ? held : pressed)) return;
+        // Balise sans appui aérien (réseau souterrain) : pas de liaison, rien n'est consommé.
+        if (t.Kind == WeaponKind.Airstrike && !World.AirSupport)
+        {
+            ws.Cooldown = 0.6f;
+            Sfx.Ui("empty");
+            return;
+        }
         if (ws.Ammo <= 0)
         {
             if (pressed) Sfx.Ui("empty");
@@ -871,7 +879,7 @@ public partial class Player : CharacterBody3D
                 Jet.Boost(-5f, 0.85f);
                 break;
             case SoldierClass.Support:
-                if (CallCredits < CallCost) { Sfx.Ui("empty"); return; }
+                if (CallCredits < CallCost || !World.AirSupport) { Sfx.Ui("empty"); return; }
                 CallCredits -= CallCost;
                 var aim = AimPoint(400, out _);
                 var dir = aim - GlobalPosition;
@@ -891,8 +899,27 @@ public partial class Player : CharacterBody3D
         }
     }
 
+    /// <summary>
+    /// Galeries étroites (réseau souterrain) : la caméra balaie une petite sphère (pas seulement un rayon) et l'épaule
+    /// décalée est ramenée vers le soldat quand elle entrerait dans une paroi ou une voûte.
+    /// </summary>
+    private void ClampShoulder()
+    {
+        _arm.Shape ??= new SphereShape3D { Radius = 0.22f };
+        var from = _camPitch.GlobalPosition;
+        var to = _arm.GlobalPosition;
+        var d = to - from;
+        var len = d.Length();
+        if (len < 0.05f) return;
+        var q = PhysicsRayQueryParameters3D.Create(from, to + d / len * 0.35f, 1);
+        q.Exclude = new Godot.Collections.Array<Rid> { GetRid() };
+        var hit = GetWorld3D().DirectSpaceState.IntersectRay(q);
+        if (hit.Count == 0) return;
+        _arm.Position *= Mathf.Clamp((from.DistanceTo((Vector3)hit["position"]) - 0.35f) / len, 0f, 1f);
+    }
+
     public float AbilityReady => Def.Id == SoldierClass.Support
-        ? Mathf.Clamp(CallCredits / CallCost, 0, 1)
+        ? (World.AirSupport ? Mathf.Clamp(CallCredits / CallCost, 0, 1) : 0f)
         : 1f - AbilityCooldown / Mathf.Max(AbilityMaxCooldown, 0.01f);
 
     // ------------------------------------------------------------------ Appel de véhicule (Opérateur d'appui)
@@ -928,7 +955,7 @@ public partial class Player : CharacterBody3D
     public bool TryCallVehicle()
     {
         if (Def.Id != SoldierClass.Support || Downed) return false;
-        if (CallCredits < CallIns.Costs[CallChoice] || CalledVehicleBusy)
+        if (CallCredits < CallIns.Costs[CallChoice] || CalledVehicleBusy || !World.AirSupport)
         {
             Sfx.Ui("empty");
             return false;
