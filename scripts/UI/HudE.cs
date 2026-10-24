@@ -281,6 +281,44 @@ public partial class HudArmor : HudBlock
             DrawRect(new Rect2(172, 94, 218 * vf, 6), vlow ? HudE.Warn : HudE.Gauge);
             DrawRect(new Rect2(172, 94, 218, 6), HudE.Line, false, 1f);
         }
+        else if (p.Def.Id == SoldierClass.Support) DrawCallCredits(p);
+    }
+
+    private int _credInt = -1, _credChoice = -1, _credState = -1;
+    private string _cred = "", _credLabel = "";
+
+    /// <summary>
+    /// Opérateur d'appui à pied : crédits d'appel dans la petite plaque sous la jauge (même emplacement que le blindage d'un véhicule).
+    /// Jauge jusqu'au plafond, repères du barrage (capacité) et du véhicule choisi, appui long sur la touche d'appel en surimpression.
+    /// </summary>
+    private void DrawCallCredits(Player p)
+    {
+        var cost = CallIns.Costs[p.CallChoice];
+        var busy = p.CalledVehicleBusy;
+        var state = busy ? 2 : p.CallCredits >= cost ? 1 : 0;
+        var credits = Mathf.FloorToInt(p.CallCredits);
+        if (credits != _credInt) { _credInt = credits; _cred = credits.ToString(); }
+        if (p.CallChoice != _credChoice || state != _credState)
+        {
+            _credChoice = p.CallChoice;
+            _credState = state;
+            var name = CallIns.Names[p.CallChoice];
+            _credLabel = busy ? $"{name} engagé" : $"{name} {cost:0}";
+        }
+        var ready = state == 1;
+        Plate(VehShape, HudE.Plate, ready ? HudE.Frame : HudE.Line, 1.4f);
+        Text(HudE.Cond, 13, "Appui", 172, 75, 0, HorizontalAlignment.Left, HudE.Label);
+        Text(HudE.Cond, 13, _credLabel, 214, 75, 0, HorizontalAlignment.Left, ready ? Colors.White : HudE.Pale);
+        Text(HudE.Mono, 16, _cred, 290, 75, 100, HorizontalAlignment.Right, ready ? HudE.Tick : Colors.White);
+        var frac = Mathf.Clamp(p.CallCredits / CallIns.Cap, 0, 1);
+        DrawRect(new Rect2(172, 94, 218, 6), new Color(0, 0, 0, 0.6f));
+        DrawRect(new Rect2(172, 94, 218 * frac, 6), ready ? HudE.Gauge : HudE.Line);
+        var hold = p.CallHold;
+        if (hold > 0) DrawRect(new Rect2(172, 94, 218 * hold, 6), HudE.Reload);
+        DrawRect(new Rect2(172, 94, 218, 6), HudE.Line, false, 1f);
+        // Repères : barrage d'artillerie (petit) et véhicule choisi (grand).
+        DrawRect(new Rect2(172 + 218 * CallIns.BarrageCost / CallIns.Cap - 0.5f, 92, 1.2f, 10), new Color(HudE.Label, 0.7f));
+        DrawRect(new Rect2(172 + 218 * cost / CallIns.Cap - 0.75f, 90, 1.6f, 14), ready ? HudE.Tick : HudE.Pale);
     }
 }
 

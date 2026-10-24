@@ -19,6 +19,16 @@ public partial class Player : CharacterBody3D
     public float Heat;               // Grenadier blindé
     public bool Overheated;
     public float CallCredits;        // Opérateur d'appui
+    /// <summary>Opérateur d'appui : véhicule choisi pour l'appel (<see cref="CallIns"/>), changé par un appui bref sur la touche d'appel.</summary>
+    public int CallChoice;
+    /// <summary>Identifiant du dernier véhicule appelé par ce soldat (0 = aucun).</summary>
+    public int CalledVehicleId;
+    private float _callHeld = -1f;
+    /// <summary>Grenadier blindé : blocage restant du changement de jeu d'armes (0,5 s), arme abaissée, aucun tir.</summary>
+    public float SetSwapLeft;
+    public const float SetSwapTime = 0.5f;
+    /// <summary>Arme tenue dans chaque jeu (0 ou 1), retrouvée au retour sur ce jeu.</summary>
+    private readonly int[] _setPick = new int[2];
     public float AbilityCooldown;
     public float AbilityMaxCooldown = 1f;
     public float GrenadeCooldown;
@@ -44,6 +54,8 @@ public partial class Player : CharacterBody3D
     public static bool God;
     /// <summary>Test : le bot vise sans tirer (--holdfire) et reste sur place (--roof).</summary>
     public static bool BotHoldFire, BotStill;
+    /// <summary>Test : point que le bot regarde (captures d'une livraison), null = comportement normal.</summary>
+    public static Vector3? BotLookAt;
     private bool _botFire;
 
     private Node3D _camYaw, _camPitch;
@@ -66,7 +78,22 @@ public partial class Player : CharacterBody3D
 
     private const float Gravity = 24f;
 
-    public float CallCost => 300f;
+    public float CallCost => CallIns.BarrageCost;
+
+    /// <summary>Deux jeux d'armes (Grenadier blindé avec plus de deux armes) : emplacements 1-2 = jeu 1, 3-4 = jeu 2.</summary>
+    public bool HasSets => Classes.HasWeaponSets(Def.Id) && Weapons.Count > Classes.SetSize;
+    public int SetCount => HasSets ? (Weapons.Count + Classes.SetSize - 1) / Classes.SetSize : 1;
+    public int ActiveSet => HasSets ? Mathf.Clamp(Current, 0, Weapons.Count - 1) / Classes.SetSize : 0;
+    /// <summary>Avancée du changement de jeu (0 = commencé, 1 = prêt).</summary>
+    public float SetSwapProgress => 1f - SetSwapLeft / SetSwapTime;
+    /// <summary>Avancée de l'appui long sur la touche d'appel (0..1), pour le HUD.</summary>
+    public float CallHold => _callHeld >= 0 ? Mathf.Clamp(_callHeld / CallIns.HoldTime, 0, 1) : 0f;
+
+    /// <summary>Crédits d'appel gagnés par les dégâts infligés (Opérateur d'appui seulement).</summary>
+    public void EarnCredits(float damage)
+    {
+        if (Def.Id == SoldierClass.Support) CallCredits = Mathf.Min(CallIns.Cap, CallCredits + damage * 0.08f);
+    }
 
     /// <summary>Distance de la caméra à l'épaule : vue rapprochée (le Grenadier, plus massif, un peu plus loin).</summary>
     private static float CamDistance(SoldierClass cls, bool aiming) => aiming ? 1.7f : cls == SoldierClass.Heavy ? 3.5f : 2.9f;
@@ -158,23 +185,60 @@ public partial class Player : CharacterBody3D
             return;
         }
         if (Vehicle != null) return;
-        if (e.IsActionPressed("weapon_1")) Switch(0);
-        else if (e.IsActionPressed("weapon_2")) Switch(1);
-        else if (e.IsActionPressed("weapon_3")) Switch(2);
-        else if (e.IsActionPressed("weapon_swap")) Switch((Current + 1) % Weapons.Count);
+        if (e.IsActionPressed("weapon_1")) SelectSlot(0);
+        else if (e.IsActionPressed("weapon_2")) SelectSlot(1);
+        else if (e.IsActionPressed("weapon_3")) SelectSlot(2);
+        else if (e.IsActionPressed("weapon_swap")) NextWeapon(1);
+        else if (e.IsActionPressed("weapon_set")) SwapSet();
         else if (e.IsActionPressed("reload")) Reload();
         else if (e.IsActionPressed("ability")) UseAbility();
         else if (e.IsActionPressed("grenade")) ThrowGrenade();
         else if (e is InputEventMouseButton mb && mb.Pressed && (mb.ButtonIndex == MouseButton.WheelUp || mb.ButtonIndex == MouseButton.WheelDown))
-            Switch((Current + (mb.ButtonIndex == MouseButton.WheelUp ? Weapons.Count - 1 : 1)) % Weapons.Count);
+            NextWeapon(mb.ButtonIndex == MouseButton.WheelUp ? -1 : 1);
+    }
+
+    /// <summary>Touches 1/2/3 : emplacement du jeu actif pour le Grenadier (1 et 2 seulement), emplacement direct sinon.</summary>
+    private void SelectSlot(int k)
+    {
+        if (!HasSets) { Switch(k); return; }
+        if (k < Classes.SetSize) Switch(ActiveSet * Classes.SetSize + k);
+    }
+
+    /// <summary>Arme suivante / précédente : toutes les armes, ou les deux armes du jeu actif pour le Grenadier.</summary>
+    private void NextWeapon(int dir)
+    {
+        if (Weapons.Count == 0) return;
+        if (!HasSets) { Switch((Current + dir + Weapons.Count) % Weapons.Count); return; }
+        var start = ActiveSet * Classes.SetSize;
+        var n = Mathf.Min(Classes.SetSize, Weapons.Count - start);
+        Switch(start + (Current - start + dir + n) % n);
     }
 
     private void Switch(int i)
     {
-        if (i < 0 || i >= Weapons.Count || i == Current) return;
+        if (i < 0 || i >= Weapons.Count || i == Current || SetSwapLeft > 0) return;
         Current = i;
         Weapon.Cooldown = Mathf.Max(Weapon.Cooldown, 0.25f);
         Sfx.Ui("reload", -8f, 1.3f);
+    }
+
+    /// <summary>
+    /// Grenadier blindé : bascule sur l'autre jeu d'armes. L'arme est abaissée et le tir bloqué pendant 0,5 s
+    /// (les autres pairs voient l'arme abaissée par l'indicateur de rechargement de l'état réseau).
+    /// Les rechargements des deux jeux continuent en arrière-plan.
+    /// </summary>
+    public void SwapSet()
+    {
+        if (!HasSets || SetSwapLeft > 0 || Downed) return;
+        var set = ActiveSet;
+        _setPick[set % 2] = Current % Classes.SetSize;
+        var next = (set + 1) % SetCount;
+        Current = Mathf.Min(next * Classes.SetSize + _setPick[next % 2], Weapons.Count - 1);
+        SetSwapLeft = SetSwapTime;
+        _beamActive = false;
+        Sfx.Ui("reload", -4f, 0.7f);
+        Sfx.Ui("dash", -16f, 0.6f);
+        if (Bot) GD.Print($"[jeux] jeu {next + 1} : {Weapon.W.T.Name} (emplacement {Current + 1})");
     }
 
     private void Reload()
@@ -239,7 +303,7 @@ public partial class Player : CharacterBody3D
                 {
                     _netTimer = 0.05f;
                     var gflags = 4 | (Aiming ? 8 : 0) | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0)
-                                 | ((int)Model.Style & 7) << 8 | (Weapon != null && Weapon.Reloading ? 1 << 11 : 0);
+                                 | ((int)Model.Style & 7) << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
                     Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, gflags, Health, Current, Vector3.Zero);
                 }
                 return;
@@ -363,7 +427,7 @@ public partial class Player : CharacterBody3D
             _netTimer = 0.05f;
             var flags = (horiz.Length() > 0.5f ? 1 : 0) | (speed > Def.WalkSpeed + 0.1f ? 2 : 0) | (!IsOnFloor() ? 4 : 0) | (Aiming ? 8 : 0)
                         | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0) | (Downed ? 32 : 0) | (Flying ? 64 : 0)
-                        | ((int)Model.Style & 7) << 8 | (Weapon != null && Weapon.Reloading ? 1 << 11 : 0);
+                        | ((int)Model.Style & 7) << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
             Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, flags, Health, Current, Velocity);
         }
     }
@@ -439,11 +503,17 @@ public partial class Player : CharacterBody3D
         Model.Animate(dt, grabbed ? 0f : horiz.Length(), _pitch, !grabbed && !IsOnFloor(), Flying, Downed, Aiming, _recoil);
 
         Model.Visible = Vehicle == null;
+        if (SetSwapLeft > 0)
+        {
+            SetSwapLeft = Mathf.Max(0, SetSwapLeft - dt);
+            if (SetSwapLeft <= 0) Sfx.Ui("reload", -6f, 1.45f); // verrouillage de l'exosquelette : jeu prêt
+        }
         if (Weapon != null)
         {
             Model.SetWeaponStyle(SoldierModel.StyleFor(Weapon.W.T));
-            Model.Reloading = Weapon.Reloading;
+            Model.Reloading = Weapon.Reloading || SetSwapLeft > 0;
         }
+        if (Def.Id == SoldierClass.Support) HandleCallKey(dt, canAct && Vehicle == null && GrabbedBy == null);
         if (Vehicle != null)
         {
             _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Vehicle.CameraDistance(Aiming), Mathf.Clamp(dt * 6f, 0, 1));
@@ -457,7 +527,7 @@ public partial class Player : CharacterBody3D
             return;
         }
         if (Bot && canAct) BotAim(dt);
-        if (canAct && Weapon != null) HandleFire(dt);
+        if (canAct && Weapon != null && SetSwapLeft <= 0) HandleFire(dt);
         else _beamActive = false;
         if (Downed) HandleDowned(dt);
         else if (!grabbed) HandleRevive(dt);
@@ -614,7 +684,7 @@ public partial class Player : CharacterBody3D
             Net.I.SendDamageEnemy(e.Id, v.dmg, v.at, v.weak);
             World.LocalHitFx(e, v.at, true, v.dmg, v.weak);
             HitMarker = 1f;
-            if (Def.Id == SoldierClass.Support) CallCredits = Mathf.Min(CallCost * 2, CallCredits + v.dmg * 0.08f);
+            EarnCredits(v.dmg);
         }
         var sound = t.Category switch
         {
@@ -823,6 +893,57 @@ public partial class Player : CharacterBody3D
         ? Mathf.Clamp(CallCredits / CallCost, 0, 1)
         : 1f - AbilityCooldown / Mathf.Max(AbilityMaxCooldown, 0.01f);
 
+    // ------------------------------------------------------------------ Appel de véhicule (Opérateur d'appui)
+
+    /// <summary>
+    /// Touche d'appel : un appui bref change de véhicule (char ↔ hélicoptère), un appui maintenu
+    /// <see cref="CallIns.HoldTime"/> s commande le véhicule choisi au point visé.
+    /// </summary>
+    private void HandleCallKey(float dt, bool canCall)
+    {
+        if (!canCall) { _callHeld = -1f; return; }
+        if (Input.IsActionJustPressed("call_vehicle")) _callHeld = 0f;
+        if (_callHeld < 0) return;
+        if (Input.IsActionPressed("call_vehicle"))
+        {
+            _callHeld += dt;
+            if (_callHeld < CallIns.HoldTime) return;
+            _callHeld = -1f;
+            TryCallVehicle();
+            return;
+        }
+        // Relâchée avant la fin de l'appui long : véhicule suivant.
+        _callHeld = -1f;
+        CallChoice = (CallChoice + 1) % CallIns.Count;
+        Sfx.Ui("ui_click", -6f, CallChoice == CallIns.Tank ? 0.9f : 1.2f);
+    }
+
+    /// <summary>Le véhicule déjà appelé empêche-t-il un nouvel appel ? (occupé ou encore en livraison ; une épave ne compte plus)</summary>
+    public bool CalledVehicleBusy =>
+        CalledVehicleId != 0 && World.Vehicles.TryGetValue(CalledVehicleId, out var v) && !v.Wrecked && (v.Driver != 0 || v.Delivering);
+
+    /// <summary>Demande à l'hôte la livraison du véhicule choisi au point visé (les crédits sont débités à la confirmation).</summary>
+    public bool TryCallVehicle()
+    {
+        if (Def.Id != SoldierClass.Support || Downed) return false;
+        if (CallCredits < CallIns.Costs[CallChoice] || CalledVehicleBusy)
+        {
+            Sfx.Ui("empty");
+            return false;
+        }
+        var at = AimPoint(CallIns.Range * 1.5f, out _);
+        Net.I.RequestVehicleCall(CallChoice, at);
+        Sfx.Ui("radio");
+        return true;
+    }
+
+    /// <summary>L'hôte a confirmé l'appel de ce soldat : crédits débités.</summary>
+    public void OnVehicleCallConfirmed(int id, int type)
+    {
+        CalledVehicleId = id;
+        CallCredits = Mathf.Max(0, CallCredits - CallIns.Costs[Mathf.Clamp(type, 0, CallIns.Count - 1)]);
+    }
+
     // ------------------------------------------------------------------ Santé
 
     public void EnterVehicle(Vehicle v)
@@ -979,6 +1100,15 @@ public partial class Player : CharacterBody3D
             if (sq >= 0) Net.I.RequestRally(sq);
         }
         BotDodge(dt);
+        // Test (captures) : regard imposé sur un point, sans tirer.
+        if (BotLookAt is { } look)
+        {
+            var tl = look - _camYaw.GlobalPosition;
+            _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(-tl.X, -tl.Z), Mathf.Clamp(dt * 4f, 0, 1));
+            _pitch = Mathf.Lerp(_pitch, Mathf.Clamp(Mathf.Atan2(tl.Y, new Vector2(tl.X, tl.Z).Length()), -1.2f, 1.1f), Mathf.Clamp(dt * 4f, 0, 1));
+            _botFire = false;
+            return;
+        }
         // Saisi : le bot tire sur la tête de la fourmi qui le tient (le seul moyen de se libérer).
         var held = GrabbedBy != null && IsInstanceValid(GrabbedBy) ? GrabbedBy : null;
         var e = held ?? World.NearestEnemy(GlobalPosition, 140f);

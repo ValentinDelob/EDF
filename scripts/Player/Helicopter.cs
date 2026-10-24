@@ -633,10 +633,18 @@ public partial class Helicopter : Vehicle
         else _warnT = 0;
     }
 
+    /// <summary>Hélicoptère livré par un Opérateur d'appui : il se repose sur ses patins à l'image suivante (comme au départ).</summary>
+    public override void OnDelivered(Vector3 pos)
+    {
+        base.OnDelivered(pos);
+        _settled = false;
+    }
+
     // ------------------------------------------------------------------ Épave
 
     public override void _PhysicsProcess(double delta)
     {
+        if (Delivering) return;
         if (!_settled)
         {
             // Posé sur ses patins dès la première image (même résultat chez tous les pairs).

@@ -97,6 +97,10 @@ public abstract partial class Vehicle : CharacterBody3D
     public float Health;
     public float MaxHealth;
     public bool Wrecked;
+    /// <summary>Véhicule appelé par un Opérateur d'appui (pair qui l'a commandé ; 0 = véhicule garé de la carte).</summary>
+    public long CalledBy;
+    /// <summary>Livraison en cours (largage, voir <see cref="VehicleDrop"/>) : ni place, ni simulation, position imposée.</summary>
+    public bool Delivering;
     protected World _world;
     protected Label3D _prompt;
 
@@ -238,6 +242,12 @@ public abstract partial class Vehicle : CharacterBody3D
     public override void _Process(double delta)
     {
         var dt = (float)delta;
+        if (Delivering)
+        {
+            VisualTick(dt);
+            _prompt.Visible = false;
+            return;
+        }
         if (!IsLocalDriver && !Wrecked) RemoteTick(dt);
         VisualTick(dt);
         // Invite « monter à bord » pour le joueur local à proximité.
@@ -245,6 +255,19 @@ public abstract partial class Vehicle : CharacterBody3D
         var near = !Wrecked && Driver == 0 && lp != null && !lp.Downed && lp.Vehicle == null && lp.GlobalPosition.DistanceTo(GlobalPosition) < InteractRadius;
         _prompt.Visible = near;
         if (near) _prompt.Text = $"[{UiKit.KeyName("interact")}] {PromptText}";
+    }
+
+    /// <summary>
+    /// Fin de la livraison (tous les pairs) : le véhicule est posé à <paramref name="pos"/>, qui devient son point
+    /// de réarmement ; il se comporte ensuite exactement comme un véhicule garé.
+    /// </summary>
+    public virtual void OnDelivered(Vector3 pos)
+    {
+        Delivering = false;
+        GlobalPosition = pos;
+        Velocity = Vector3.Zero;
+        _netPos = pos;
+        _home = pos;
     }
 
     // ---------- Munitions, réarmement ----------

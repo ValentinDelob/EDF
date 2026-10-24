@@ -104,7 +104,8 @@ public partial class GuideMenu : MenuScreen
         Keys(("move_forward", "Avancer"), ("move_back", "Reculer"), ("move_left", "Gauche"), ("move_right", "Droite"),
             ("jump", "Sauter / voler"), ("sprint", "Courir / propulsion"), ("dodge", "Roulade / esquive"), ("fire", "Tirer"),
             ("aim", "Viser"), ("reload", "Recharger"), ("weapon_swap", "Arme suivante"), ("ability", "Capacité de classe"),
-            ("grenade", "Grenade"), ("interact", "Relever, monter dans un véhicule"), ("scoreboard", "Tableau des scores"), ("=Échap", "Pause"));
+            ("grenade", "Grenade"), ("interact", "Relever, monter dans un véhicule"), ("weapon_set", "Jeu d'armes (Grenadier)"),
+            ("call_vehicle", "Appel de véhicule (Opérateur)"), ("scoreboard", "Tableau des scores"), ("=Échap", "Pause"));
         Para("Toutes les touches et la sensibilité de la souris se règlent dans Options › Contrôles. Une manette est aussi reconnue.");
         Section("Radar");
         Para("Le radar (en haut à droite) tourne avec la caméra : le haut est toujours devant vous et le repère « N » indique le nord. Points rouges : insectes ; orange : ennemis volants ; grands points : boss et nids ; bleus : alliés et équipiers ; petits carrés : caisses, de la couleur de leur contenu ; losanges : marqueurs de l'escouade.");
@@ -126,10 +127,19 @@ public partial class GuideMenu : MenuScreen
             {
                 SoldierClass.Rifleman => "Polyvalent, idéal pour débuter. Relève ses équipiers deux fois plus vite.",
                 SoldierClass.Airborne => "Maintenez la touche de saut pour voler : le vol et les rechargements consomment la même énergie. À zéro, tout est bloqué jusqu'à la recharge complète.",
-                SoldierClass.Support => "Infliger des dégâts remplit la jauge d'appui ; pleine, la capacité déclenche un barrage d'artillerie. Balises de frappe, tourelles et champs de soin se déploient avec le tir.",
+                SoldierClass.Support => $"Infliger des dégâts (arme ou tourelle) rapporte des crédits d'appel, affichés sous l'armure (« Appui ») et remis à zéro à chaque mission. "
+                    + $"La capacité dépense {CallIns.BarrageCost:0} crédits pour un barrage d'artillerie. Balises de frappe, tourelles et champs de soin se déploient avec le tir.",
                 _ => "Lent, mais ses poussées (course ou esquive) et son saut assisté le déplacent vite. Chaque poussée chauffe l'exosquelette : attention à la surchauffe.",
             };
             Para(extra);
+            if (c.Id == SoldierClass.Support)
+                Para($"Appel de véhicule : un appui bref sur [{UiKit.KeyName("call_vehicle")}] choisit le char ({CallIns.Costs[CallIns.Tank]:0} crédits) ou l'hélicoptère ({CallIns.Costs[CallIns.Heli]:0}) ; "
+                    + $"maintenez [{UiKit.KeyName("call_vehicle")}] pour le faire larguer au point visé (jusqu'à {CallIns.Range:0} m). Un seul véhicule appelé à la fois : "
+                    + "un nouvel appel rapatrie l'ancien s'il est libre. Tout le monde peut monter à bord ; il se réarme à son point de pose.");
+            if (c.Id == SoldierClass.Heavy)
+                Para($"Deux jeux de deux armes (emplacements 1-2 et 3-4, choisis dans l'arsenal). [{UiKit.KeyName("weapon_set")}] bascule sur l'autre jeu en 0,5 s (arme abaissée, pas de tir) ; "
+                    + $"[{UiKit.KeyName("weapon_swap")}], la molette ou [{UiKit.KeyName("weapon_1")}] / [{UiKit.KeyName("weapon_2")}] changent d'arme dans le jeu actif. "
+                    + "Les armes de l'autre jeu continuent de recharger : le HUD les montre en petit au-dessus de la pile d'armes.");
         }
     }
 

@@ -486,6 +486,7 @@ public partial class ArsenalMenu : Control
 
         // Emplacements : celui visé par « Équiper » (Q / E) est mis en évidence.
         var slots = def.WeaponSlots;
+        var sets = Classes.HasWeaponSets(_cls) && slots > Classes.SetSize;
         var blockH = 12 + 24 * slots;
         p.Rect(x, y, w, blockH, panel);
         for (var i = 0; i < slots; i++)
@@ -498,6 +499,10 @@ public partial class ArsenalMenu : Control
                 p.Rect(x + 4, ry, 3, 24, EStyle.Bright);
             }
             var occupant = i < eq.Count ? eq[i] : null;
+            // Grenadier : deux jeux de deux armes, séparés par un filet (« J1 » / « J2 » à droite du numéro).
+            if (sets && i > 0 && i % Classes.SetSize == 0) p.Rect(x + 10, ry - 0.5f, w - 20, 1, EStyle.FrameInner);
+            if (sets && i % Classes.SetSize == 0)
+                p.Text(EStyle.Mono, x + w - 12 - 96, ry, 24, $"J{i / Classes.SetSize + 1}", 12, target ? EStyle.Bright : EStyle.DimText, HorizontalAlignment.Right, 30);
             p.Text(EStyle.Mono, x + 12, ry, 24, $"{i + 1}", 13, target ? EStyle.Bright : EStyle.DimText);
             var name = occupant?.T.Name ?? "Vide";
             p.Text(EStyle.Cond, x + 28, ry, 24, name, 16, occupant != null ? EStyle.White : EStyle.DimText);
@@ -520,7 +525,11 @@ public partial class ArsenalMenu : Control
             ("Entrée", "Équiper", Equip, canEquip),
             ("Échap", "Retour", Back, true),
         };
-        if (Classes.Get(_cls).WeaponSlots > 1) items.Add(("Q / E", $"Emplacement {_slot + 1}", () => ChangeSlot(1), true));
+        if (Classes.Get(_cls).WeaponSlots > 1)
+        {
+            var label = Classes.HasWeaponSets(_cls) ? $"Emplacement {_slot + 1} (jeu {_slot / Classes.SetSize + 1})" : $"Emplacement {_slot + 1}";
+            items.Add(("Q / E", label, () => ChangeSlot(1), true));
+        }
         items.Add(("Tab", "Classe", () => ChangeClass(1), true));
 
         const float gap = 22, keyPad = 5, keyGap = 7;

@@ -90,6 +90,10 @@ if ($missionIndex.ContainsKey("Escort")) {
     if (-not (Run-Expect "escorte : convoi arrivé" @("--autostart=$($missionIndex.Escort)", "--bot", "--god", "--convoy-speed=6", "--obj-hp=50", "--quit-after=110") '\[mission\] victoire' 140)) { $failures += "escorte" }
 }
 
+# Classes : bascule des deux jeux d'armes du Grenadier, appel de véhicule de l'Opérateur (largage, remplacement, montée à bord).
+if (-not (Run-Expect "grenadier : deux jeux d'armes" @("--autostart=0", "--class=3", "--bot", "--god", "--heavy-sets", "--quit-after=35") '\[jeux\] ok' 90)) { $failures += "jeux d'armes" }
+if (-not (Run-Expect "opérateur : appel de véhicule" @("--autostart=0", "--class=2", "--bot", "--god", "--call-vehicle=tank", "--quit-after=45") '\[appel\] ok' 100)) { $failures += "appel de véhicule" }
+
 if (-not $SkipLan) {
     # Partie LAN locale : hôte en arrière-plan, client au premier plan.
     $hostLog = Join-Path $env:TEMP "rempart_smoke_host.log"

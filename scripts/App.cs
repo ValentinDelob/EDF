@@ -257,6 +257,14 @@ public static partial class AutoTest
         Profile.I.MergeDuplicates();
         var dupLeft = Profile.I.Data.Arsenal.GroupBy(x => x.TemplateId).Count(g => g.Count() > 1);
         GD.Print($"Fusion des doublons : {before} → {Profile.I.Data.Arsenal.Count} armes, doublons restants : {dupLeft}");
+        // Migration version 4 : un Grenadier d'ancien profil (2 emplacements) est complété à 4 sans toucher aux deux premiers.
+        var heavyKey = SoldierClass.Heavy.ToString();
+        var oldHeavy = Profile.I.Data.Equipped[heavyKey].Take(2).ToList();
+        Profile.I.Data.Equipped[heavyKey] = oldHeavy.ToList();
+        Profile.I.FillEquipped();
+        var newHeavy = Profile.I.Data.Equipped[heavyKey];
+        GD.Print($"Migration Grenadier : {oldHeavy.Count} → {newHeavy.Count} emplacements ({string.Join(", ", Profile.I.Equipped(SoldierClass.Heavy).Select(x => x.T.Name))})"
+                 + (newHeavy.Count == 4 && newHeavy.Take(2).SequenceEqual(oldHeavy) && newHeavy.Distinct().Count() == 4 ? "" : " ERROR"));
         var tree = app.GetTree();
         void Key(Key k)
         {
@@ -277,6 +285,10 @@ public static partial class AutoTest
         At(12.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_class3"));
         At(13f, () => Key(Godot.Key.Tab));
         At(14.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_class4"));
+        // Grenadier : emplacement 4 (jeu 2) visé, équipement d'une arme non équipée.
+        At(15f, () => { Key(Godot.Key.E); Key(Godot.Key.E); Key(Godot.Key.E); Key(Godot.Key.Left); Key(Godot.Key.Down); Key(Godot.Key.Down); });
+        At(16f, () => Key(Godot.Key.Enter));
+        At(17f, () => Screenshot.Take(app.GetViewport(), "arsenal_heavy_sets"));
     }
 
     public static void Run(App app)
@@ -368,6 +380,7 @@ public static partial class AutoTest
         Player.BotHoldFire = Screenshot.CmdArg("holdfire") != null;
         RoofTest(app);
         GrabTest(app);
+        ClassTests(app); // --heavy-sets, --call-vehicle (AutoTest.Classes.cs)
         ObjectiveArgs(app); // --survive-time, --obj-hp, --convoy-speed, --objlog, --timescale (AutoTest.Objectives.cs)
         if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
         if (Screenshot.CmdArg("class") is { } cc && int.TryParse(cc, out var ccls)) Profile.I.Data.SelectedClass = (SoldierClass)ccls;
