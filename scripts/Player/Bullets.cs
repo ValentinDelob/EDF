@@ -15,6 +15,9 @@ public partial class Bullets : Node3D
     {
         public Vector3 Pos, Vel;
         public float Life, MaxLife, Damage, Far, FalloffExp, Blast, Gravity, Length, Width;
+        /// <summary>Point de départ : la traînée ne dépasse jamais en arrière de la bouche du canon.</summary>
+        public Vector3 Origin;
+        public bool HasOrigin;
         public bool Local, Pierce;
         public int Bounces;
         public Color Color;
@@ -63,6 +66,7 @@ public partial class Bullets : Node3D
     {
         if (_shots.Count >= Capacity) return;
         if (s.Pierce) s.Hit = new List<int>();
+        if (!s.HasOrigin) { s.Origin = s.Pos; s.HasOrigin = true; }
         _shots.Add(s);
     }
 
@@ -186,9 +190,10 @@ public partial class Bullets : Node3D
             var s = _shots[i];
             var dir = s.Vel.LengthSquared() > 0.01f ? s.Vel.Normalized() : Vector3.Forward;
             var up = Mathf.Abs(dir.Y) > 0.98f ? Vector3.Right : Vector3.Up;
-            var basis = Basis.LookingAt(dir, up) * Basis.FromScale(new Vector3(s.Width, s.Width, s.Length));
-            // Le trait part de la tête de la balle vers l'arrière.
-            _mm.SetInstanceTransform(i, new Transform3D(basis, s.Pos - dir * s.Length * 0.5f));
+            // Le trait part de la tête de la balle vers l'arrière, sans dépasser le point de départ.
+            var len = Mathf.Min(s.Length, Mathf.Max(0.05f, s.Pos.DistanceTo(s.Origin)));
+            var basis = Basis.LookingAt(dir, up) * Basis.FromScale(new Vector3(s.Width, s.Width, len));
+            _mm.SetInstanceTransform(i, new Transform3D(basis, s.Pos - dir * len * 0.5f));
             _mm.SetInstanceColor(i, s.Color);
         }
     }

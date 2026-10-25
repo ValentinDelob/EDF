@@ -492,6 +492,8 @@ public partial class Net : Node
 
     public void DamagePlayer(long peer, float dmg, Vector3 from)
     {
+        // Leurre de l'Air Raider (identifiant négatif) : il encaisse chez l'hôte.
+        if (peer < 0) { W?.DamageDecoy(peer, dmg); return; }
         if (peer == MyId) W?.OnLocalPlayerDamaged(dmg, from);
         else if (!IsSolo) RpcId(peer, MethodName.PlayerDamaged, dmg, from);
     }

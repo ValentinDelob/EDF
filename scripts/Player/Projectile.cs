@@ -35,6 +35,15 @@ public partial class Projectile : Node3D
     /// <summary>Roquette guidée : vise à chaque instant le point renvoyé (réticule du tireur), virage limité (rad/s).</summary>
     public System.Func<Vector3> Guide;
     public float TurnRate = 3f;
+    /// <summary>
+    /// Vol des missiles d'EDF 5 : poussée de départ sans guidage pendant <see cref="HomingDelay"/> s, montée jusqu'à l'altitude
+    /// <see cref="ClimbTo"/> (tirs en piqué : Air Tortoise, Prominence, MLRA, FG High Altitude Impact), puis le moteur accélère
+    /// (<see cref="Accel"/>) jusqu'à <see cref="MaxSpeed"/> et le guidage prend la cible.
+    /// </summary>
+    public float HomingDelay, ClimbTo, MaxSpeed, Accel;
+    /// <summary>Bombe à détecteur : explose d'elle-même quand un ennemi entre dans ce rayon (0 : jamais).</summary>
+    public float ProximityRadius;
+    private float _proxT;
     /// <summary>Impact remplaçant l'explosion standard (napalm, sous-munitions, soin…) : position, normale.</summary>
     public System.Action<Vector3, Vector3> CustomImpact;
     /// <summary>Tir ennemi renvoyé par la garde d'un bouclier du Fencer : il frappe désormais les ennemis.</summary>
@@ -187,14 +196,41 @@ public partial class Projectile : Node3D
         var dt = (float)delta;
         Life -= dt;
         if (Life <= 0) { Impact(GlobalPosition, Vector3.Up, null); return; }
+        if (ProximityRadius > 0 && (_proxT -= dt) <= 0)
+        {
+            _proxT = 0.2f;
+            foreach (var e in _world.EnemiesById.Values)
+                if (e.State != EnemyState.Dead && e.BodyDistance(GlobalPosition) < ProximityRadius + e.Def.Size)
+                {
+                    Life = 0.05f;
+                    ProximityRadius = 0;
+                    break;
+                }
+        }
         if (_stuckTo != null)
         {
             // Grenade collante : suit ce qu'elle a touché jusqu'à l'explosion.
             if (IsInstanceValid(_stuckTo)) GlobalPosition = _stuckTo.GlobalTransform * _stuckOffset;
             return;
         }
-        var steer = _homingTarget != null && IsInstanceValid(_homingTarget) ? _homingTarget.GlobalPosition + Vector3.Up
-            : Guide?.Invoke();
+        if (MaxSpeed > 0)
+        {
+            var s0 = Velocity.Length();
+            Velocity = Velocity / Mathf.Max(s0, 0.001f) * Mathf.MoveToward(s0, MaxSpeed, Accel * dt);
+        }
+        Vector3? steer = _homingTarget != null && IsInstanceValid(_homingTarget)
+            ? (_homingTarget is Enemy he ? he.Center : _homingTarget.GlobalPosition + Vector3.Up) : Guide?.Invoke();
+        if (HomingDelay > 0) { HomingDelay -= dt; steer = null; }
+        else if (ClimbTo > 0)
+        {
+            // Montée : le missile se redresse vers le ciel jusqu'à l'altitude de bascule, puis pique sur la cible.
+            if (GlobalPosition.Y < ClimbTo)
+            {
+                var flat = new Vector3(Velocity.X, 0, Velocity.Z);
+                steer = GlobalPosition + Vector3.Up * 60f + (flat.LengthSquared() > 0.01f ? flat.Normalized() * 12f : Vector3.Zero);
+            }
+            else ClimbTo = 0;
+        }
         if (steer is { } goal)
         {
             var sp = Velocity.Length();
@@ -262,6 +298,8 @@ public partial class Projectile : Node3D
         _done = true;
         Impacted?.Invoke(pos, collider);
         var enemyShot = (int)Kind >= 10;
+        // Abri de l'Air Raider : le tir ennemi use ses murs (hôte).
+        if (enemyShot && !Reflected && Authoritative && collider is BunkerWall bw) bw.Hit(Damage);
         // Tir renvoyé : dégâts à l'ennemi touché (calculés par l'hôte), éclaboussure seule.
         if (enemyShot && Reflected && Authoritative && collider is Enemy re && re.State != EnemyState.Dead)
         {
@@ -281,7 +319,8 @@ public partial class Projectile : Node3D
         else if (CustomImpact != null) CustomImpact(pos, normal);
         else if (Authoritative)
         {
-            Net.I.SendExplosion(pos + normal * 0.3f, Radius, Damage, Kind == ProjectileKind.Plasma ? 2 : 0);
+            // Points de l'Air Raider : dégâts estimés de l'explosion.
+            AirRaid.Explode(_world, pos + normal * 0.3f, Radius, Damage, Kind == ProjectileKind.Plasma ? 2 : 0);
         }
         if (_trail != null)
         {

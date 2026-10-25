@@ -148,6 +148,78 @@ FENCER = {
 F_KIND = {'flamerevolver': 'Flame', 'lightmortar': 'Mortar', 'heavymortar': 'Mortar', 'dispersal': 'Mortar', 'crusher': 'Mortar'}
 
 
+# Air Raider (Opérateur d'appui) : frappes aériennes (artillerie, canonnières, bombardiers, missiles, satellites), bombes
+# collantes, armes posées (robots, tourelles), équipements de soutien (guidage, soins, renforts), abris et leurres.
+# Les véhicules (chars, blindés, hélicoptères, exosquelettes, armes spéciales) viendront à part.
+AIRRAIDER = {
+    'Arillery Units': ("Tirs d'artillerie", [
+        (r'Howitzer', 'howitzer'), (r'^Cannon Gun', 'cannongun'), (r'^Gigantic', 'gigantic'), (r'Mortar', 'mortarstrike'),
+    ], 'Artillery'),
+    'Gunships': ('Canonnière', [
+        (r'Neutralize', 'gsneutral'), (r'Rocket Cannon', 'gsrocket'), (r'Autocannon|[Mm]inigun|Vulcan', 'gsauto'),
+        (r'^105mm', 'gs105'), (r'Triple|Quadruple', 'gsmulti'), (r'150mm|180mm|190mm', 'gs150'),
+    ], 'Gunship'),
+    'Bombers': ('Bombardiers', [
+        (r'KM6', 'km6'), (r'Kamuy', 'kamuy'), (r'Vesta', 'vesta'), (r'Phobos', 'phobos'), (r'^Scout', 'scoutbomber'),
+    ], 'Bomber'),
+    'Missiles': ('Missiles guidés', [(r'Lionic', 'lionic'), (r'Tempest', 'tempest'), (r'Cruise|Missile Group', 'cruise')], 'AirMissile'),
+    'Satellites': ('Satellites', [(r'^Bulge', 'bulge'), (r'^Spritefall', 'spritefall')], 'Satellite'),
+    'Limpet Guns': ('Bombes collantes', [
+        (r'Sniper', 'limpetsniper'), (r'Splendor', 'splendor'), (r'Chain', 'limpetchain'), (r'Detector', 'detector'),
+        (r'^Limpet Shot', 'limpetshot'), (r'^Buster', 'busterbomb'), (r'^Limpet Gun', 'limpetgun'),
+    ], 'Limpet'),
+    'Stationary Weapons': ('Armes posées', [
+        (r'Robot Bomb', 'robotbomb'), (r'Beetle', 'beetle'), (r'^Patroller', 'patroller'), (r'^Speed Star', 'speedstar'),
+        (r'Sniper', 'zesniper'), (r'Launcher', 'zelauncher'), (r'Blaster', 'zeblaster'), (r'GUN', 'zegun'),
+    ], 'Sentry'),
+    'Support Equipment': ('Soutien', [
+        (r'Guide Kit|Guided Device', 'guidekit'), (r'Beacon', 'beacongun'), (r'Life Vendor', 'lifevendor'),
+        (r'Life Spout', 'lifespout'), (r'Power Assist', 'powerassist'), (r'Power Post|Offensive', 'powerpost'),
+        (r'Guard Assist', 'guardassist'), (r'Guard Post|Zone Protector', 'guardpost'),
+    ], 'Post'),
+    'Special': ('Abris et leurres', [
+        (r'^Decoy', 'decoy'), (r'^Suppress', 'suppress'), (r'Anti-Aircraft', 'aabunker'), (r'Prison', 'prison'),
+        (r'Borderline|Electromagnetic Wall', 'emwall'), (r'Shelter', 'shelter'), (r'Heavy Bunker|Absolute', 'heavybunker'),
+        (r'Bunker', 'embunker'),
+    ], 'Bunker'),
+}
+AR_KIND = {'robotbomb': 'Robot', 'beetle': 'Robot', 'patroller': 'Robot', 'speedstar': 'Robot',
+           'guidekit': 'Guide', 'beacongun': 'Guide', 'decoy': 'Decoy', 'suppress': 'Bullet'}
+
+
+def ar_extra(r, fam, kind, p):
+    """Champs propres à l'Air Raider (avant les champs communs)."""
+    shots = get(r, 'Shots')
+    if shots:
+        m = re.match(r'\s*(\d+)(?:×(\d+))?', shots)
+        p.append(f'Shots = {m.group(1)}')
+        if m.group(2) and int(m.group(2)) > 1: p.append(f'Rows = {m.group(2)}')
+    ar = num(get(r, 'Attack Range (Radius m)'))
+    if ar: p.append(f'AttackRadius = {f(ar)}')
+    rl = get(r, 'Reload (pt)', 'Reload')
+    if rl:
+        st_ = stat(rl)
+        p.append(f'Reload = {st(st_)}')
+        if 'pt' in rl or get(r, 'Reload (pt)'): p.append('PointReload = true')
+    lr = stat(get(r, 'Laser Range (m)'))
+    if lr: p.append(f'Range = {st(lr)}')
+    heal = stat(get(r, 'Amount Healed (HP/Frame)', 'Increase/Reduction Rate (%)'))
+    if heal: p.append(f'Damage = {st(heal)}')
+    er = stat(get(r, 'Effective Range (Radius m)'))
+    if er: p.append(f'Blast = {st(er)}')
+    et = num(get(r, 'Effective Time (sec)'))
+    if et: p.append(f'Duration = {f(et)}')
+    bt = num(get(r, 'Burn Time (sec)'))
+    if bt: p.append(f'Duration = {f(bt)}')
+    du = stat(get(r, 'Durability'))
+    if du: p.append(f'Durability = {st(du)}')
+    la = num(get(r, 'Loaded Ammo'))
+    if la: p.append(f'Loaded = {int(la)}')
+    gs, gr = num(get(r, 'Lock-on Speed')), num(get(r, 'Lock-on Range'))
+    if gs: p.append(f'GuideSpeed = {f(gs)}')
+    if gr: p.append(f'GuideRange = {f(gr)}')
+
+
 def strike(s):
     """« Clash Close Range(★9) 0.0 / 56.6×2 / 48.3m » → (attaque, charge, dégâts, étoiles, nombre, portée)."""
     if s is None or s.strip() in ('', '-'):
@@ -322,6 +394,8 @@ def gen_class(rows, table, kinds, supply=None):
         a = [f'"{wid}"', json.dumps(name, ensure_ascii=False), f'"{fr}"', f'Edf5Kind.{kind}', f'"{fam}"', r['LV']]
         p = []
         if dlc: p.append(f'Dlc = {dlc}')
+        if table is AIRRAIDER:
+            ar_extra(r, fam, kind, p)
         if table is FENCER and fencer_extra(r, fam, kind, p):
             ammo = stat(get(r, 'Ammo'))
             if ammo and kind == 'Strike': p.append(f'Ammo = {st(ammo)}')
@@ -346,10 +420,10 @@ def gen_class(rows, table, kinds, supply=None):
             elif fs and num(fs): p.append(f'FlightSpeed = {f(num(fs) / 100)}')
             lines.append(f'        new({", ".join(a)}) {{ {", ".join(p)} }},')
             continue
-        d = None if any(x.startswith('Strikes') for x in p) else damage(get(r, 'Damage', 'Damage/Amount Healed'))
-        ammo = stat(get(r, 'Ammo', 'Ammo/Number'))
+        d = None if any(x.startswith(('Strikes', 'Damage')) for x in p) else damage((get(r, 'Damage', 'Damage/Amount Healed') or '').replace('x', '×') or None)
+        ammo = stat(get(r, 'Ammo', 'Ammo/Number', 'Number'))
         if ammo: p.append(f'Ammo = {st(ammo)}')
-        rof = stat(get(r, 'Rate of Fire (Fire/sec)'))
+        rof = stat(get(r, 'Rate of Fire (Fire/sec)', 'Rate of Fire (Shot/sec)'))
         if rof: p.append(f'Rof = {st(rof)}')
         if d:
             p.append(f'Damage = new({f(d[0])}, {d[1]})')
@@ -357,18 +431,20 @@ def gen_class(rows, table, kinds, supply=None):
             if d[3] > 1: p.append(f'Pellets = {d[3]}')
             if d[4] > 1: p.append(f'Burst = {d[4]}')
             if d[5]: p.append('Pierce = true')
-        rl = stat(get(r, 'Reload (sec)', 'Charge Time(sec)'))
-        if rl: p.append(f'Reload = {st(rl)}')
+        rl = stat(get(r, 'Reload (sec)', 'Charge Time(sec)', 'Reload(sec)'))
+        if rl and not any(x.startswith('Reload') for x in p): p.append(f'Reload = {st(rl)}')
         en = stat(get(r, 'Energy Cost'))
         if en: p.append(f'Energy = {st(en)}')
         rg = stat(get(r, 'Range (m)', 'Range (sec)'))
+        if table is AIRRAIDER and not any(x.startswith('Blast') for x in p) and stat(get(r, 'Blast Area (Radius m)')):
+            p.append(f'Blast = {st(stat(get(r, "Blast Area (Radius m)")))}')
         if rg and not any(x.startswith('Range') for x in p): p.append(f'Range = {st(rg)}')
         sp = stat(get(r, 'Shot Speed (m/sec)'))
         if sp: p.append(f'Speed = {st(sp)}')
         acc = grade(get(r, 'Accuracy'))
         if acc: p.append(f'Accuracy = new({acc[0]}, {acc[1]})')
         bl = stat(get(r, 'Blast Area (m)', 'Effective Area (Radius m)', 'Blast Area (Radius m)'))
-        if bl: p.append(f'Blast = {st(bl)}')
+        if bl and not any(x.startswith('Blast') for x in p): p.append(f'Blast = {st(bl)}')
         z = get(r, 'Zoom')
         if z and num(z): p.append(f'Zoom = {f(num(z))}')
         if get(r, 'Laser Sight') == 'Equipped': p.append('LaserSight = true')
@@ -388,7 +464,7 @@ def gen_class(rows, table, kinds, supply=None):
             p.append(f'Fuse = {f(num(get(r, "Detonation Time (sec)") or "3"))}')
         dl = stat(get(r, 'Delay (sec)'))
         if dl: p.append(f'SpinUp = {st(dl)}')
-        sd = stat(get(r, 'Search Distance'))
+        sd = stat(get(r, 'Search Distance', 'Search Distance (m)'))
         if sd: p.append(f'Search = {st(sd)}')
         lines.append(f'        new({", ".join(a)}) {{ {", ".join(p)} }},')
     return lines
@@ -410,6 +486,8 @@ def main():
     write('Ranger', "Armes du Ranger d'EDF 5 (Fusilier)", gen_class([r for r in rows if r['class'] == 'Ranger'], RANGER, KIND))
     write('WingDiver', "Armes et cœurs plasma de la Wing Diver d'EDF 5 (Commando aéroporté)",
           gen_class([r for r in rows if r['class'] == 'Wing Diver'], WINGDIVER, WD_KIND, SUPPLY))
+    write('AirRaider', "Armes et équipements de l'Air Raider d'EDF 5 (Opérateur d'appui), hors véhicules",
+          gen_class([r for r in rows if r['class'] == 'Air Raider'], AIRRAIDER, AR_KIND))
     write('Fencer', "Armes et équipements de soutien du Fencer d'EDF 5 (Grenadier blindé)",
           gen_class([r for r in rows if r['class'] == 'Fencer'], FENCER, F_KIND))
 

@@ -71,9 +71,13 @@ public partial class Sfx
     private void LoadEdf5()
     {
         // Familles qui tirent, plus les sons de parade et de renvoi des boucliers du Fencer.
-        var families = Edf5Weapons.Ranger.Concat(Edf5Weapons.WingDiver).Concat(Edf5Weapons.Fencer)
+        var families = Edf5Weapons.Ranger.Concat(Edf5Weapons.WingDiver).Concat(Edf5Weapons.Fencer).Concat(Edf5Weapons.AirRaider)
             .Where(x => x.Kind is not (Edf5Kind.Core or Edf5Kind.Gear or Edf5Kind.Shield))
-            .Select(x => (x.Family, Edf5Sounds.GainDb(x))).Concat(new[] { ("shieldblock", 3f), ("reflect", 0f) });
+            .Select(x => (x.Family, Edf5Sounds.GainDb(x))).Concat(new[]
+            {
+                ("shieldblock", 3f), ("reflect", 0f), ("gunshipfire", 6f), ("flyover", 4.5f), ("satellite", 0f), ("zegunfire", 4f),
+                ("zesniperfire", 6f), ("zeblasterfire", 0f), ("zelauncherfire", 4.5f), ("bunker", 0f),
+            });
         foreach (var (family, gain) in families)
         {
             var name = "e5_" + family;

@@ -15,6 +15,10 @@ public enum Edf5Kind
     // Fencer : frappe chargée (marteaux, lames, rouleaux, haken), perforation (lances, marteaux-piqueurs), boucliers,
     // mortiers (obus en cloche), équipement de soutien (propulseurs, renforts de bouclier, stabilisateurs, exosquelettes).
     Strike, Pierce, Shield, Mortar, Gear,
+    // Air Raider : frappes appelées (artillerie et bombardiers sur fumigène ; canonnière, missiles et satellites au laser),
+    // bombes collantes, robots (bombes roulantes, coléoptères, patrouilleurs, leurre rapide), tourelles posées, guidage
+    // (kit laser, balises), postes et pistolets de soutien (soin, puissance, protection), abris, leurres.
+    Artillery, Gunship, Bomber, AirMissile, Satellite, Limpet, Robot, Sentry, Guide, Post, Bunker, Decoy,
 }
 
 /// <summary>
@@ -102,6 +106,12 @@ public sealed class Edf5Spec(string id, string name, string category, Edf5Kind k
     // poussées, vitesse horizontale des sauts ; consommation, durabilité, angle et réduction des dégâts des boucliers, réduction
     // du recul ; impact du poids sur la vitesse et la rotation, vitesse de marche.
     public int Dashes, Boosts;
+    // Air Raider : nombre de coups d'une frappe (Shots) et de rangées de bombes, rayon de la zone frappée, rechargement en
+    // points (dégâts infligés) plutôt qu'en secondes, durée d'effet (postes, leurres, flammes des bombardiers), munitions d'une
+    // tourelle, multiplicateurs de verrouillage accordés par le guidage (vitesse, portée).
+    public int Shots = 1, Rows = 1, Loaded;
+    public float AttackRadius, Duration, GuideSpeed, GuideRange;
+    public bool PointReload;
     public float DashInterval = 1f, BoostGain = 1f, ShieldUse = 1f, ShieldDurability = 1f, ShieldAngle, ShieldCut, KnockbackCut,
         RecoilCut, WeightSpeed = 1f, WeightTurn = 1f, WalkSpeed = 1f;
 
@@ -138,7 +148,7 @@ public static partial class Edf5Weapons
             s.Speed.Present ? s.Speed.At(5, RaRange, false) : 0f, 0f, s.Zoom,
             // Armes automatiques : cadence d'au moins 4 coups/s (fusils d'assaut, lance-flammes, rapières, blasters…) ;
             // Wing Diver à alimentation directe : le tir continue tant que le bouton est tenu.
-            s.Supply == Edf5Supply.Direct || s.SpinUp.Present || s.Kind == Edf5Kind.Pierce && rof >= 2f || rof >= 4f && s.Burst == 1
+            s.Supply == Edf5Supply.Direct || s.SpinUp.Present || s.Kind == Edf5Kind.Limpet && rof >= 4f || s.Kind == Edf5Kind.Pierce && rof >= 2f || rof >= 4f && s.Burst == 1
                 && (s.Kind is Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Acid or Edf5Kind.BoundGun or Edf5Kind.Reverser || s.Supply == Edf5Supply.Reload),
             s.Level, s);
     }
@@ -152,6 +162,6 @@ public static partial class Edf5Weapons
 
     /// <summary>Toutes les armes d'EDF 5 reprises dans le jeu, par identifiant.</summary>
     /// <remarks>Construit à la première demande : l'ordre d'initialisation des champs statiques entre les fichiers partiels n'est pas garanti.</remarks>
-    public static Dictionary<string, Edf5Spec> ById => _byId ??= Ranger.Concat(WingDiver).Concat(Fencer).ToDictionary(s => s.Id);
+    public static Dictionary<string, Edf5Spec> ById => _byId ??= Ranger.Concat(WingDiver).Concat(Fencer).Concat(AirRaider).ToDictionary(s => s.Id);
     private static Dictionary<string, Edf5Spec> _byId;
 }

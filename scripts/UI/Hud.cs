@@ -26,6 +26,7 @@ public partial class Hud : CanvasLayer
     private HudWorldMarkers _markers;
     private HudObjectiveMarkers _objective;
     private HudReticle _reticle;
+    private HudLockOn _lockOn;
     private Vector2 _layoutSize;
     private float _layoutScale;
     private const int M = 40;
@@ -45,6 +46,8 @@ public partial class Hud : CanvasLayer
         _root.AddChild(_markers);
         _objective = new HudObjectiveMarkers { World = World };
         _root.AddChild(_objective);
+        _lockOn = new HudLockOn { World = World };
+        _root.AddChild(_lockOn);
         _reticle = new HudReticle { World = World };
         _reticle.SetAnchorsPreset(Control.LayoutPreset.Center);
         _root.AddChild(_reticle);
@@ -130,7 +133,7 @@ void fragment() {
             _armor.Layout(s, screen);
             _radar.Layout(s, screen);
             _weapons.Layout(s, screen);
-            _markers.S = _reticle.S = _objective.S = s;
+            _markers.S = _reticle.S = _objective.S = _lockOn.S = s;
             _damageArc.Scale = new Vector2(s, s);
         }
         if (p == null) return;

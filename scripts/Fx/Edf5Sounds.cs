@@ -52,6 +52,17 @@ public static class Edf5Sounds
         "flamerevolver" => ("jet_loop", -10f, 0.6f),
         "lightmortar" or "heavymortar" or "dispersal" or "crusher" => ("launcher", 0f, 0.7f),
         "armhound" or "bloodstorm" or "haytal" or "leviathan" or "arcane" or "fgimpact" or "phoenix" => ("rocket", -2f, 1f),
+        // Air Raider : fumigène, désignateur, bombes collantes, matériel posé, pistolets de soutien.
+        "mortarstrike" or "howitzer" or "cannongun" or "gigantic" or "km6" or "kamuy" or "vesta" or "phobos" or "scoutbomber"
+            or "limpetgun" or "splendor" or "detector" or "busterbomb" => ("launcher", -4f, 1f),
+        "gs150" or "gsauto" or "gs105" or "gsrocket" or "gsneutral" or "gsmulti" or "cruise" or "lionic" or "tempest" or "bulge"
+            or "spritefall" or "guidekit" or "lifespout" or "powerassist" or "guardassist" or "beacongun" => ("laser", -10f, 1.4f),
+        "limpetsniper" => ("sniper", -2f, 1.1f),
+        "limpetchain" => ("smg", -4f, 0.8f),
+        "limpetshot" or "suppress" => ("shotgun", 0f, 0.85f),
+        "zegun" or "zelauncher" or "zesniper" or "zeblaster" or "robotbomb" or "beetle" or "patroller" or "speedstar" or "lifevendor"
+            or "powerpost" or "guardpost" or "embunker" or "aabunker" or "heavybunker" or "shelter" or "prison" or "emwall" or "decoy"
+            => ("hammer", -8f, 1.3f),
         _ => ("rifle", -3f, 1f),
     };
 

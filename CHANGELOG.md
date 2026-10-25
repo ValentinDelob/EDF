@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.15.0 — Armes de l'Air Raider d'EDF 5 et verrouillage des missiles
+
+- **Les 233 armes et équipements de l'Air Raider d'EDF 5** remplacent ceux de l'Opérateur d'appui (les véhicules viendront ensuite) : tirs d'artillerie (mortiers, obusiers, Cannon Gun, Gigantic Grenade), canonnière (canons de 105 à 190 mm, roquettes, Autocannon, Minigun, Vulcan), bombardiers (KM6, Kamuy, Vesta, Phobos), missiles de croisière (AH, N5/N6, Lionic, Tempest), satellites (Bulge Laser, Spritefall), bombes collantes (Limpet Gun, Sniper, Splendor, Chain Gun, Detector, Buster Bomb), armes posées (robots bombes, Assault / Stag Beetle, Patroller, Speed Star, tourelles ZE / FZ), soutien (kits de guidage laser, balises, Life Vendor, Life Spout, Power / Guard Post, Zone Protector), abris et leurres (bunkers électromagnétiques, abri antiaérien, cage, murs, ballons leurres, Suppress Gun).
+- **Frappes comme dans EDF 5** : fumigène pour l'artillerie et les bombardiers (le bombardier passe dans l'axe soldat → fumigène), désignation au laser pour la canonnière, les missiles (ils suivent le laser) et les satellites ; rechargement en points gagnés en infligeant des dégâts. Aucune frappe sous terre.
+- **Verrouillage des lance-missiles** : rectangle de verrouillage au HUD, bouton de visée tenu, bip régulier puis bip de confirmation, cible gardée tant qu'elle reste dans le rectangle, marquée pendant le verrouillage puis confirmée ; trajectoires d'EDF 5 (poussée de départ, montée et piqué de la Prominence, de l'Air Tortoise, des MLRA et du FG High Altitude Impact, accélération, guidage selon le rang).
+- **Les balles partent du bout du canon** : le soldat épaule instantanément au tir et la traînée ne dépasse plus en arrière de l'arme.
+- **Leurres** : les ennemis proches attaquent les ballons leurres et le Speed Star. **Abris** : leurs murs arrêtent les tirs ennemis.
+- Les lance-missiles à kit de guidage du Fencer visent les balises et le laser de guidage de l'Air Raider.
+- 30 modèles 3D (objets tenus, tourelles, robots, postes, ballon, canonnière et bombardiers) et les sons de l'Air Raider.
+
 ## v0.14.0 — Armes du Fencer d'EDF 5 et équipements de soutien
 
 - **Les 175 armes du Fencer d'EDF 5** remplacent celles du Grenadier blindé, avec leurs noms et valeurs officielles : frappe (Vibro Hammer, Vulcan Hammer, Force Blade, Dynamo Blade, Force Ax, Vibro Roller, Vibro / Quake Haken), perforation (Blasthole Spear, Blast Twin Spears, Flashing Spear, Jackhammer, Spine Driver), boucliers (Deflection, Ion Mirror, Tower, Reflector, Master, Great Shield), canons automatiques (Hand Gatling, FGS, Galleon, Dexter, Flame Revolver, Disruptor), artillerie (canons à main NC, Gallic, Powerdyne, Cannon Shot, mortiers FH / FHD / YH, Super-Heavy Crusher) et lance-missiles (Arm Hound, Blood Storm, Leviathan, Haytal, Arcane, FG High Altitude Impact, Phoenix).

@@ -105,6 +105,8 @@ public partial class Player
         UpdateLocks(ws, dt);
         // Fencer : frappes, lances, boucliers, mise en rotation des canons automatiques.
         if (Def.Id == SoldierClass.Heavy && HandleFencer(ws, s, dt, held, pressed)) return;
+        // Air Raider : laser de désignation, kit de guidage, frappes refusées sous terre.
+        if (Def.Id == SoldierClass.Support && HandleAirRaider(ws, s, dt, held, pressed)) return;
         // Bot : relâche la détente d'une arme à charge quand la charge est pleine.
         if (Bot && held && (s.Supply == Edf5Supply.Charge && ws.Charge >= 1f || s.Supply == Edf5Supply.ChargeBurst && ws.Ammo >= ws.W.Magazine)) held = false;
         if (s.Supply == Edf5Supply.Charge && _burstLeft <= 0) { HandleCharge(ws, dt, held); return; }
@@ -149,7 +151,9 @@ public partial class Player
                 else if (ws.Ammo <= 0 && held) Reload();
                 return;
             case Edf5Kind.Bomb:
-                if (!pressed || ws.Cooldown > 0) return;
+            case Edf5Kind.Limpet when s.Family != "detector":
+                if (!(ws.W.T.Automatic ? held : pressed) || ws.Cooldown > 0) return;
+                if (ws.Ammo <= 0 && !pressed) return;
                 if (ws.Ammo <= 0) { DetonateBombs(); Reload(); return; }
                 break;
         }
@@ -180,11 +184,11 @@ public partial class Player
         }
 
         ShootOnce(ws);
-        if (ws.Ammo <= 0 && s.Kind != Edf5Kind.Bomb) Reload();
+        if (ws.Ammo <= 0 && s.Kind is not (Edf5Kind.Bomb or Edf5Kind.Limpet)) Reload();
     }
 
     /// <summary>Un coup : munition, départ local, réplique réseau, son, flamme de bouche, recul.</summary>
-    private void ShootOnce(WeaponState ws, Enemy target = null)
+    private void ShootOnce(WeaponState ws, Node3D target = null)
     {
         var s = ws.W.T.Spec;
         ws.Ammo--;
@@ -196,6 +200,10 @@ public partial class Player
         // Mortiers : vitesse de départ complète vers le point visé (cloche), transmise telle quelle.
         if (s.Kind == Edf5Kind.Mortar) dir = FencerFire.MortarLaunch(s, muzzle, AimPoint(Mathf.Min(range, 1500f), out _), range);
         var seed = (int)World.Rng.Randi();
+        // Missile verrouillé : l'identifiant de la cible voyage dans la graine (les autres pairs le suivent aussi).
+        if (s.Kind == Edf5Kind.Missile && target is Enemy te) seed = Edf5Fire.MissileSeed(te.Id);
+        // Lance-missiles à kit de guidage (Fencer) : balise ou laser de guidage d'un allié dans la zone de verrouillage.
+        if (s.Kind == Edf5Kind.Missile && s.GuideOnly && target == null) target = World.GuideTargetFor(Camera, ws.W.LockRange, LockBox);
         // Blasters : la puissance baisse quand le chargeur se vide (Mag Blaster, Reflectron : min + (max − min) × (reste)²).
         var power = _shotPower;
         if (s.Family is "magblaster" or "reflectron")
@@ -207,7 +215,8 @@ public partial class Player
         if (s.Kind == Edf5Kind.Homing) Edf5Fire.HomingTargets = Locks.Where(e => IsInstanceValid(e)).Cast<Node3D>().ToList();
         Edf5Fire.Shoot(World, s, ws.W, muzzle, dir, seed, true, this, () => AimPoint(800f, out _), target, power);
         Edf5Fire.HomingTargets = null;
-        Net.I.SendEdf5Shot(s.Id, muzzle, dir, seed);
+        // Frappes de l'Air Raider : le tireur annonce lui-même la frappe, au point visé.
+        if (!AirRaid.SendsItself(s)) Net.I.SendEdf5Shot(s.Id, muzzle, dir, seed);
         Edf5Sounds.Fire(s, muzzle, true);
         if (s.Kind is Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.GrenadeLauncher)
             Effects.MuzzleFlash(World.FxRoot, muzzle, new Color(1f, 0.7f, 0.3f), s.Pellets > 1 || s.Kind != Edf5Kind.Bullet ? 0.75f : 0.45f);
@@ -267,7 +276,41 @@ public partial class Player
         if (best is RemotePlayer rp) Net.I.SendHealPlayer(rp.PeerId, ws.W.Damage * 60f * dt);
     }
 
-    /// <summary>Lance-missiles tenu : verrouille une cible toutes les « Lock-On Time » secondes dans un cône de 20° autour du réticule.</summary>
+    /// <summary>Zone de verrouillage à l'écran (fractions de la largeur et de la hauteur, centrée sur le réticule).</summary>
+    public static readonly Vector2 LockBoxSize = new(0.4f, 0.34f);
+
+    /// <summary>L'arme tenue verrouille-t-elle des cibles (lance-missiles, armes guidées de la Wing Diver) ?</summary>
+    public bool LockWeapon => Weapon?.W.T.Spec is { Kind: Edf5Kind.Missile or Edf5Kind.Homing, GuideOnly: false } && Vehicle == null;
+
+    /// <summary>Rectangle de verrouillage en pixels de l'écran.</summary>
+    public Rect2 LockBox
+    {
+        get
+        {
+            var vp = GetViewport().GetVisibleRect().Size;
+            var size = vp * LockBoxSize;
+            return new Rect2(vp / 2f - size / 2f, size);
+        }
+    }
+
+    private float _lockBeep, _lockForget;
+
+    /// <summary>Une cible est-elle dans la zone de verrouillage (devant la caméra, à portée, projetée dans le rectangle) ?</summary>
+    private bool InLockBox(Enemy e, float range, Rect2 box)
+    {
+        if (!IsInstanceValid(e) || e.State == EnemyState.Dead) return false;
+        var c = e.Center;
+        if (Camera.IsPositionBehind(c) || Camera.GlobalPosition.DistanceTo(c) > range) return false;
+        return box.HasPoint(Camera.UnprojectPosition(c));
+    }
+
+    /// <summary>
+    /// Verrouillage façon EDF 5 : bouton de visée tenu, la cible la plus proche du réticule dans le rectangle de verrouillage se
+    /// verrouille en « Lock-On Time » (bip régulier, puis bip de confirmation) ; tant qu'elle reste dans le rectangle, le
+    /// verrouillage en cours ne change pas de cible. Les cibles confirmées s'accumulent jusqu'au nombre de l'arme (une même cible
+    /// peut être verrouillée plusieurs fois s'il n'y en a pas d'autre). Elles restent verrouillées tant qu'elles sont à portée et
+    /// à l'écran ; trois secondes sans viser les libèrent.
+    /// </summary>
     private void UpdateLocks(WeaponState ws, float dt)
     {
         var s = ws.W.T.Spec;
@@ -275,26 +318,52 @@ public partial class Player
         {
             if (Locks.Count > 0) Locks.Clear();
             LockPending = null;
+            LockProgress = 0;
             return;
         }
         var range = ws.W.LockRange;
-        var fwd = -Camera.GlobalBasis.Z;
-        var eye = Camera.GlobalPosition;
-        Locks.RemoveAll(e => !IsInstanceValid(e) || e.State == EnemyState.Dead || e.Center.DistanceTo(eye) > range * 1.1f
-                             || fwd.AngleTo(e.Center - eye) > Mathf.DegToRad(40f));
-        if (ws.Reloading || _salvoLeft > 0 || Locks.Count >= ws.W.LockTargets) { LockPending = null; LockProgress = 0; return; }
-        var cand = World.EnemiesById.Values
-            .Where(e => e.State != EnemyState.Dead && !Locks.Contains(e) && e.Center.DistanceTo(eye) < range && fwd.AngleTo(e.Center - eye) < Mathf.DegToRad(20f))
-            .OrderBy(e => fwd.AngleTo(e.Center - eye)).FirstOrDefault();
-        if (cand != LockPending) { LockPending = cand; _lockT = 0; }
-        if (cand == null) { LockProgress = 0; return; }
+        var box = LockBox;
+        var screen = new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size);
+        Locks.RemoveAll(e => !IsInstanceValid(e) || e.State == EnemyState.Dead || Camera.IsPositionBehind(e.Center)
+                             || Camera.GlobalPosition.DistanceTo(e.Center) > range * 1.1f || !screen.HasPoint(Camera.UnprojectPosition(e.Center)));
+        var locking = (Aiming || Bot) && !ws.Reloading && _salvoLeft == 0 && Locks.Count < ws.W.LockTargets;
+        if (!locking)
+        {
+            LockPending = null;
+            LockProgress = 0;
+            _lockT = 0;
+            if (!Aiming && !Bot && Locks.Count > 0 && (_lockForget += dt) > 3f) Locks.Clear();
+            return;
+        }
+        _lockForget = 0;
+        // La cible en cours reste la même tant qu'elle est dans le rectangle.
+        if (LockPending != null && !InLockBox(LockPending, range, box)) { LockPending = null; _lockT = 0; }
+        if (LockPending == null)
+        {
+            var center = box.GetCenter();
+            LockPending = World.EnemiesById.Values.Where(e => InLockBox(e, range, box))
+                .OrderBy(e => Locks.Count(l => l == e)).ThenBy(e => Camera.UnprojectPosition(e.Center).DistanceSquaredTo(center))
+                .FirstOrDefault();
+            _lockT = 0;
+            _lockBeep = 0;
+        }
+        if (LockPending == null) { LockProgress = 0; return; }
+        var time = Mathf.Max(ws.W.LockTime, 0.06f);
         _lockT += dt;
-        LockProgress = Mathf.Clamp(_lockT / Mathf.Max(ws.W.LockTime, 0.02f), 0, 1);
-        if (_lockT < ws.W.LockTime) return;
-        Locks.Add(cand);
-        _lockT = 0;
+        LockProgress = Mathf.Clamp(_lockT / time, 0, 1);
+        // Bip régulier pendant le verrouillage.
+        _lockBeep -= dt;
+        if (_lockBeep <= 0 && _lockT < time)
+        {
+            _lockBeep = Mathf.Clamp(time / 5f, 0.07f, 0.16f);
+            Sfx.Ui("lock_beep", -9f, 1f, 0);
+        }
+        if (_lockT < time) return;
+        Locks.Add(LockPending);
+        Sfx.Ui("lock_ok", -6f, 1f, 0);
         LockPending = null;
-        Sfx.Ui("hitmarker", -10f, 1.6f, 30);
+        LockProgress = 0;
+        _lockT = 0;
     }
 
     /// <summary>État d'une arme tenue : énergie (recharge payée par le cœur plasma) et vitesse de charge du cœur.</summary>

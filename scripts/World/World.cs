@@ -416,7 +416,22 @@ public partial class World : Node3D
         foreach (var (id, r) in Remotes) _soldiers.Add((id, r, r.GlobalPosition));
     }
 
+    /// <summary>
+    /// Hôte : cible d'un ennemi — le soldat le plus proche, ou un leurre de l'Air Raider qui l'attire (identifiant négatif).
+    /// </summary>
     public bool NearestPlayer(Vector3 pos, out long peer, out Vector3 at)
+    {
+        var found = NearestSoldier(pos, out peer, out at);
+        if (Decoy.All.Count > 0 && NearestDecoy(pos, found ? pos.DistanceTo(at) : 1e6f, out var id, out var dp))
+        {
+            peer = id;
+            at = dp;
+            return true;
+        }
+        return found;
+    }
+
+    private bool NearestSoldier(Vector3 pos, out long peer, out Vector3 at)
     {
         peer = 0;
         at = Vector3.Zero;
@@ -625,6 +640,8 @@ public partial class World : Node3D
     public void OnEdf5Shot(long from, string weaponId, Vector3 a, Vector3 dir, int seed)
     {
         if (!Edf5Weapons.ById.TryGetValue(weaponId, out var s)) return;
+        // Kit de guidage d'un allié : point laser partagé (pas de tir).
+        if (s.Family == "guidekit") { UpdateGuideLaser(from, a); return; }
         if (s.Kind == Edf5Kind.Flame) FlameJet.For(this).Emit(s, 0, a, dir, 0.1f, false);
         else if (s.Kind == Edf5Kind.Reverser && !s.Blast.Present) Effects.Beam(this, a, a + dir * 12f, new Color(0.35f, 1f, 0.55f), 0.05f);
         else
@@ -1094,6 +1111,9 @@ public partial class World : Node3D
 
     private IEnumerable<(long, Vector3)> PlayerTargets()
     {
+        // Leurres : les tirs ennemis les touchent aussi (identifiant négatif).
+        foreach (var d in Decoy.All.Values)
+            if (IsInstanceValid(d) && d.Health > 0) yield return (d.Id, d.Point - Vector3.Up);
         if (LocalPlayer != null && !LocalPlayer.Downed) yield return (Net.I.MyId, LocalPlayer.GlobalPosition);
         foreach (var (id, r) in Remotes)
             if (!r.Downed) yield return (id, r.GlobalPosition);

@@ -37,7 +37,7 @@ public partial class SoldierModel
     private bool LoadGun(WeaponTemplate t, Edf5Spec s)
     {
         if (GunId == s.Id) return true;
-        var scene = GunScene(s.Family);
+        var scene = GunScene(ModelName(s));
         if (scene == null || _gun == null) return false;
         foreach (var c in _gun.GetChildren()) c.QueueFree();
         var model = scene.Instantiate<Node3D>();
@@ -68,6 +68,12 @@ public partial class SoldierModel
     private static int ApplyGunMats(Node3D model, Edf5Spec s)
     {
         var (paint, accent) = GunColors(s);
+        return ApplyMats(model, paint, accent, s);
+    }
+
+    /// <summary>Matières du jeu d'un modèle Blender (armes, objets de l'Air Raider) ; options de variante si <paramref name="s"/>.</summary>
+    public static int ApplyMats(Node3D model, Color paint, Color accent, Edf5Spec s = null)
+    {
         var mats = new Dictionary<string, Material>
         {
             ["Metal"] = Mats.GunSteel(),
@@ -92,7 +98,7 @@ public partial class SoldierModel
                 if (mi.Mesh is ArrayMesh am) tris += am.SurfaceGetArrayIndexLen(i) / 3;
             }
             // Pièces optionnelles de la variante : laser (« LS »), lunette (zoom), sinon masquées.
-            if (mi.Name.ToString().StartsWith("opt_"))
+            if (s != null && mi.Name.ToString().StartsWith("opt_"))
             {
                 var opt = mi.Name.ToString()[4..];
                 mi.Visible = opt switch
@@ -150,9 +156,29 @@ public partial class SoldierModel
         return true;
     }
 
+    /// <summary>
+    /// Modèle tenu : celui de la famille ; Air Raider : objets partagés (fumigène des frappes, désignateur laser, caisses de
+    /// déploiement, pistolets de soutien, lance-bombes collantes par grande famille).
+    /// </summary>
+    public static string ModelName(Edf5Spec s) => s.Class != SoldierClass.Support ? s.Family : s.Kind switch
+    {
+        Edf5Kind.Artillery or Edf5Kind.Bomber => "smokecan",
+        Edf5Kind.Gunship or Edf5Kind.AirMissile or Edf5Kind.Satellite => "designator",
+        Edf5Kind.Guide => s.Family == "guidekit" ? "designator" : "assistgun",
+        Edf5Kind.Limpet => s.Family is "limpetshot" or "busterbomb" ? "splendor" : s.Family,
+        Edf5Kind.Sentry => "sentrycase",
+        Edf5Kind.Robot => "robotcase",
+        Edf5Kind.Post => s.Family is "lifevendor" or "powerpost" or "guardpost" ? "postcase" : "assistgun",
+        Edf5Kind.Bunker or Edf5Kind.Decoy => "deployer",
+        _ => s.Family == "suppress" ? "suppressgun" : s.Family,
+    };
+
     /// <summary>Tenue selon la nature de l'arme.</summary>
     private static Hold HoldFor(Edf5Spec s) => s.Kind switch
     {
+        // Air Raider : fumigène, désignateur et caisses à une main.
+        _ when s.Class == SoldierClass.Support && ModelName(s) is "smokecan" or "designator" or "sentrycase" or "robotcase" or "postcase" or "deployer"
+            => Hold.OneHand,
         // Fencer : armes de mêlée à une main, canons à la hanche, lance-missiles à l'épaule.
         Edf5Kind.Strike or Edf5Kind.Pierce => Hold.OneHand,
         Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Mortar when s.Class == SoldierClass.Heavy => Hold.Hip,
@@ -188,6 +214,10 @@ public partial class SoldierModel
         "tower" => (new Color(0.24f, 0.26f, 0.2f), new Color(0.07f, 0.075f, 0.08f)),
         "flamerevolver" => (new Color(0.2f, 0.22f, 0.25f), new Color(0.45f, 0.12f, 0.06f)),
         "disruptor" => (new Color(0.14f, 0.15f, 0.17f), new Color(0.6f, 0.33f, 0.08f)),
+        // Air Raider : sable et pièces sombres ; fumigène et désignateur kaki ; matériel de soutien blanc.
+        _ when s.Class == SoldierClass.Support && ModelName(s) is "smokecan" or "designator" => (new Color(0.26f, 0.29f, 0.2f), new Color(0.1f, 0.1f, 0.1f)),
+        _ when s.Class == SoldierClass.Support && ModelName(s) is "assistgun" or "postcase" => (new Color(0.8f, 0.8f, 0.78f), new Color(0.1f, 0.1f, 0.1f)),
+        _ when s.Class == SoldierClass.Support => (new Color(0.55f, 0.48f, 0.34f), new Color(0.1f, 0.1f, 0.1f)),
         // Fencer : acier bleuté, gaines sombres (comme tools/blender/weapons/fencer.py).
         _ when s.Class == SoldierClass.Heavy => (new Color(0.2f, 0.22f, 0.25f), new Color(0.07f, 0.075f, 0.08f)),
         _ when s.Class == SoldierClass.Airborne => (new Color(0.78f, 0.8f, 0.83f), new Color(0.12f, 0.13f, 0.15f)),

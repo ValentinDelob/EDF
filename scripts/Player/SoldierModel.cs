@@ -701,8 +701,24 @@ public partial class SoldierModel : Node3D
     /// <summary>
     /// speed : vitesse horizontale (m/s) ; aimPitch : radians ; airborne/flying/downed : états.
     /// </summary>
+    private (float speed, float pitch, bool air, bool fly, bool down, bool aim, float recoil) _lastPose;
+
+    /// <summary>
+    /// Tir : l'arme est épaulée sur-le-champ (pose de visée complète) et la pose est recalculée aussitôt, pour que le coup parte
+    /// bien de la bouche du canon et non de l'arme encore baissée.
+    /// </summary>
+    public void SnapAim()
+    {
+        if (_aimBlend >= 0.999f) { _fireHold = Mathf.Max(_fireHold, 0.8f); return; }
+        _aimBlend = 1f;
+        _fireHold = 0.8f;
+        var l = _lastPose;
+        Animate(0f, l.speed, l.pitch, l.air, l.fly, l.down, true, l.recoil);
+    }
+
     public void Animate(float dt, float speed, float aimPitch, bool airborne, bool flying, bool downed, bool aiming, float recoil)
     {
+        _lastPose = (speed, aimPitch, airborne, flying, downed, aiming, recoil);
         _t += dt;
         float Ease(float rate) => Mathf.Min(1f, dt * rate);
 

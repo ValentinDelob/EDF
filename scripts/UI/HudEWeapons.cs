@@ -34,6 +34,13 @@ public static class HudWeaponArt
     public static HudWeaponIcon IconFor(Edf5Spec s) => s.Kind switch
     {
         Edf5Kind.Strike or Edf5Kind.Pierce or Edf5Kind.Shield => HudWeaponIcon.Hammer,
+        // Air Raider : frappes (balise), bombes collantes et robots (grenades), tourelles, soutien, abris et leurres.
+        Edf5Kind.Artillery or Edf5Kind.Gunship or Edf5Kind.Bomber or Edf5Kind.AirMissile or Edf5Kind.Satellite or Edf5Kind.Guide
+            or Edf5Kind.Bunker or Edf5Kind.Decoy => HudWeaponIcon.Beacon,
+        Edf5Kind.Limpet or Edf5Kind.Robot => HudWeaponIcon.Grenade,
+        Edf5Kind.Sentry => HudWeaponIcon.Turret,
+        Edf5Kind.Post => HudWeaponIcon.Heal,
+        Edf5Kind.Bullet when s.Family == "suppress" => HudWeaponIcon.Shotgun,
         Edf5Kind.Mortar => HudWeaponIcon.Siege,
         Edf5Kind.Bullet when s.Family is "gatling" or "fgs" or "disruptor" => HudWeaponIcon.Gatling,
         Edf5Kind.Bullet when s.Family is "dexter" or "cannonshot" => HudWeaponIcon.Shotgun,
@@ -60,6 +67,14 @@ public static class HudWeaponArt
         Edf5Kind.Firecracker => "Pétards",
         Edf5Kind.Strike or Edf5Kind.Pierce => "Frappes",
         Edf5Kind.Shield => "Durabilité",
+        Edf5Kind.Artillery or Edf5Kind.Gunship or Edf5Kind.Bomber or Edf5Kind.AirMissile or Edf5Kind.Satellite => "Frappe",
+        Edf5Kind.Limpet => "Bombes",
+        Edf5Kind.Robot => "Robots",
+        Edf5Kind.Sentry => "Tourelles",
+        Edf5Kind.Post => s.Family is "lifevendor" or "powerpost" or "guardpost" ? "Postes" : "Charges",
+        Edf5Kind.Guide => s.Family == "guidekit" ? "Laser" : "Balises",
+        Edf5Kind.Bunker => "Abris",
+        Edf5Kind.Decoy => "Leurres",
         _ => AmmoName(i),
     };
 

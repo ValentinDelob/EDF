@@ -14,6 +14,9 @@ public static class Edf5Fire
     /// <summary>Cibles verrouillées pour le prochain coup d'une arme guidée de la Wing Diver (null : tir droit devant).</summary>
     public static System.Collections.Generic.List<Node3D> HomingTargets;
 
+    /// <summary>Graine d'un missile verrouillé : bit 30 + identifiant de l'ennemi visé.</summary>
+    public static int MissileSeed(int enemyId) => (1 << 30) | (enemyId & 0x3FFFFFFF);
+
     /// <summary>Gravité des grenades, de l'acide et des pétards (m/s²).</summary>
     public const float GrenadeGravity = 18f, AcidGravity = 9f;
 
@@ -35,6 +38,8 @@ public static class Edf5Fire
         Player shooter = null, Func<Vector3> aim = null, Node3D lockTarget = null, float power = 1f)
     {
         var rng = new RandomNumberGenerator { Seed = (ulong)(uint)seed };
+        if (lockTarget == null && s.Kind == Edf5Kind.Missile && (seed & (1 << 30)) != 0
+            && world.EnemiesById.TryGetValue(seed & 0x3FFFFFFF, out var locked)) lockTarget = locked;
         var t = w?.T ?? Weapons.Get(s.Id);
         var dmg = (w?.Damage ?? t.Damage) * power;
         var spread = Mathf.DegToRad(w?.Spread ?? t.Spread) * (shooter is { Aiming: true } ? 0.6f : 1f);
@@ -44,6 +49,9 @@ public static class Edf5Fire
         var bullets = Bullets.For(world);
         if (WingDiverShot(world, s, w, t, from, dir, rng, local, shooter, dmg, spread, range, speed, blast, power)) return;
         if (FencerFire.Shot(world, s, w, t, from, dir, seed, rng, local, shooter, dmg, spread, range, speed, blast)) return;
+        if (AirRaid.Shot(world, s, w, t, from, dir, seed, local, shooter, dmg)) return;
+        if (ArDeploy.Shot(world, s, w, t, from, dir, seed, rng, local, shooter, dmg, spread, range, speed, blast)) return;
+        if (s.Kind == Edf5Kind.Limpet) { Limpet(world, s, from, dir, rng, local, shooter, dmg * (shooter?.DamageMul ?? 1f), spread, speed, blast); return; }
         switch (s.Kind)
         {
             case Edf5Kind.Bullet:
@@ -103,24 +111,26 @@ public static class Edf5Fire
             case Edf5Kind.Missile:
             {
                 // Missiles : départ vers le haut (Air Tortoise, Prominence : très haut puis piqué), guidage selon le rang.
-                var turn = s.Homing >= 0 ? Mathf.Lerp(7f, 1.2f, s.Homing / 12f) : 2.5f;
+                // Guidage : virage (rad/s) selon le rang « Homing » d'EDF 5 (S++ très vif … C+ lent).
+                var turn = s.Homing >= 0 ? Mathf.Lerp(5.5f, 1.1f, s.Homing / 12f) : 2.5f;
                 var n = s.Family is "fork" or "bloodstorm" or "haytal" ? Math.Max(1, s.Pellets) : 1;
+                var fl = Flight(s);
                 for (var i = 0; i < n; i++)
                 {
-                    // Départ vers le haut (Air Tortoise, Prominence, FG High Altitude Impact : très haut puis piqué) ; missiles à
-                    // kit de guidage du Fencer (Leviathan, Haytal, Phoenix) : tir droit sans verrouillage.
-                    var up = s.Family is "tortoise" or "prominence" or "fgimpact" ? 0.85f : s.GuideOnly ? 0.04f : 0.35f;
-                    var scatter = s.GuideOnly ? (n > 1 ? 0.22f : 0.02f) : n > 1 ? 0.6f : 0.12f;
-                    var d = (dir + Vector3.Up * up + RandomOnSphere(rng) * scatter).Normalized();
-                    var ms = s.Family switch
-                    {
-                        "tortoise" => 45f, "prominence" => 70f, "leviathan" => 55f, "phoenix" => 160f, "armhound" => 110f,
-                        "bloodstorm" => 75f, "fgimpact" => 80f, _ => 85f,
-                    };
-                    var p = Projectile.Spawn(world, ProjectileKind.Missile, from, d * ms, local, dmg * (shooter?.DamageMul ?? 1f), blast);
-                    p.Life = s.Family == "leviathan" ? 20f : 12f;
+                    // Départ : direction de la visée relevée selon le lanceur, avec la dispersion d'une salve ; missiles à kit de
+                    // guidage du Fencer (Leviathan, Haytal, Phoenix) sans cible : tir droit.
+                    var scatter = s.GuideOnly && lockTarget == null ? (n > 1 ? 0.18f : 0.02f) : fl.scatter;
+                    var d = (dir + Vector3.Up * (lockTarget != null ? fl.up : Mathf.Min(fl.up, 0.08f)) + RandomOnSphere(rng) * scatter).Normalized();
+                    var p = Projectile.Spawn(world, ProjectileKind.Missile, from, d * fl.launch, local, dmg * (shooter?.DamageMul ?? 1f), blast);
+                    p.Life = s.Family is "leviathan" or "tortoise" or "prominence" or "fgimpact" ? 20f : 12f;
+                    p.MaxSpeed = fl.top;
+                    p.Accel = fl.accel;
+                    p.HomingDelay = fl.delay + (n > 1 ? rng.Randf() * 0.12f : 0f);
+                    // Sans cible, pas de montée : le missile part droit vers la visée.
+                    if (fl.climb > 0 && lockTarget != null) p.ClimbTo = from.Y + fl.climb + rng.Randf() * fl.climb * 0.2f;
                     if (s.Family is "leviathan" or "phoenix") p.Scale = Vector3.One * (s.Family == "leviathan" ? 3.2f : 1.8f);
-                    else if (s.Family == "bloodstorm") p.Scale = Vector3.One * 0.6f;
+                    else if (s.Family is "bloodstorm" or "mlra") p.Scale = Vector3.One * 0.6f;
+                    else if (s.Family is "tortoise" or "prominence") p.Scale = Vector3.One * 1.8f;
                     if (lockTarget != null) p.SetHoming(lockTarget, turn);
                 }
                 break;
@@ -177,6 +187,8 @@ public static class Edf5Fire
                 p.Sticky = true;
                 p.Life = 600f;
                 shooter?.Edf5PlacedBomb(p);
+                // Copie d'un autre pair : la mise à feu n'est pas transmise, la bombe s'efface (l'explosion vient de l'hôte).
+                if (!local) p.Life = 8f;
                 break;
             }
             case Edf5Kind.Impulse:
@@ -204,6 +216,51 @@ public static class Edf5Fire
                 };
                 break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Bombes collantes de l'Air Raider : elles se collent à ce qu'elles touchent et explosent à la mise à feu (rechargement ou
+    /// tir chargeur vide) ; Splendor, Buster Bomb et détecteurs éclatent en gerbe d'éclats ; détecteurs : mise à feu d'eux-mêmes
+    /// à l'approche d'un ennemi (« Search Distance »).
+    /// </summary>
+    private static void Limpet(World world, Edf5Spec s, Vector3 from, Vector3 dir, RandomNumberGenerator rng, bool local, Player shooter,
+        float dmg, float spread, float speed, float blast)
+    {
+        var burst = s.Family is "splendor" or "busterbomb" or "detector";
+        var many = s.Family == "limpetshot" || s.Name == "Splendor Shot";
+        var bombs = many ? Math.Max(1, s.Pellets) : 1;
+        var frags = s.Name == "Splendor Shot" ? 8 : burst ? Math.Max(1, s.Pellets) : 0;
+        var sp = Mathf.Clamp(speed > 0 ? speed : 300f, 60f, 260f);
+        for (var i = 0; i < bombs; i++)
+        {
+            var d = many ? Spread(dir, Mathf.Max(spread, Mathf.DegToRad(6f)), rng) : Spread(dir, spread, rng);
+            var p = Projectile.Spawn(world, ProjectileKind.Grenade, from, d * sp, local, dmg, blast > 0 ? blast : 2.5f);
+            p.Gravity = 6f;
+            p.Sticky = true;
+            p.Life = local ? 600f : 8f;
+            p.Scale = Vector3.One * (s.Family is "busterbomb" or "limpetsniper" ? 1.6f : 1f);
+            p.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.05f, Height = 0.1f }, MaterialOverride = Mats.Glow(new Color(1f, 0.25f, 0.1f), 5f), Position = Vector3.Up * 0.12f });
+            if (frags > 0)
+            {
+                var n = frags;
+                p.CustomImpact = (at, nrm) =>
+                {
+                    // Gerbe d'éclats dans toutes les directions (hémisphère tourné vers l'extérieur de la surface).
+                    Effects.Explosion(world, at, 1.6f, ExplosionFx.Explosive);
+                    for (var k = 0; k < n; k++)
+                    {
+                        var fd = (RandomOnSphere(rng) + nrm * 0.6f).Normalized();
+                        Bullets.For(world).Add(new Bullets.Shot
+                        {
+                            Pos = at + nrm * 0.2f, Vel = fd * 220f, Life = 0.12f, MaxLife = 0.12f, Damage = dmg, Far = 1f, FalloffExp = 1f,
+                            Local = local, Color = new Color(1f, 0.7f, 0.3f), Length = 1.5f, Width = 0.04f,
+                        });
+                    }
+                };
+            }
+            if (s.Family == "detector" && local) p.ProximityRadius = s.Search.Present ? s.Search.Max * 0.3f : 8f;
+            if (local) shooter?.Edf5PlacedBomb(p);
         }
     }
 
@@ -307,6 +364,30 @@ public static class Edf5Fire
         }
         return false;
     }
+
+    /// <summary>
+    /// Vol des missiles par lanceur, d'après EDF 5 : relèvement au départ, dispersion de la salve, vitesse de sortie, vitesse de
+    /// croisière et accélération, durée de la poussée sans guidage, hauteur de montée des tirs en piqué.
+    /// </summary>
+    private static (float up, float scatter, float launch, float top, float accel, float delay, float climb) Flight(Edf5Spec s) => s.Family switch
+    {
+        // Ranger
+        "emerald" => (0.12f, 0.06f, 35f, 120f, 160f, 0.18f, 0f),
+        "tortoise" => (0.55f, 0.08f, 18f, 55f, 40f, 0.35f, 45f),
+        "mlra" => (0.9f, 0.35f, 30f, 105f, 140f, 0.25f, 30f),
+        "fork" => (0.25f, 0.15f, 40f, 115f, 150f, 0.2f, 0f),
+        "prominence" => (3f, 0.05f, 25f, 90f, 70f, 0.3f, 140f),
+        "falcon" => (0.08f, 0.04f, 60f, 170f, 250f, 0.12f, 0f),
+        // Fencer
+        "armhound" => (0.7f, 0.3f, 30f, 125f, 170f, 0.22f, 0f),
+        "bloodstorm" => (0.35f, 0.45f, 40f, 85f, 90f, 0.15f, 0f),
+        "arcane" => (0.15f, 0.08f, 40f, 115f, 160f, 0.15f, 0f),
+        "fgimpact" => (3f, 0.12f, 30f, 110f, 90f, 0.25f, 120f),
+        "leviathan" => (0.05f, 0.02f, 25f, 60f, 30f, 0.4f, 0f),
+        "haytal" => (0.08f, 0.2f, 40f, 95f, 90f, 0.2f, 0f),
+        "phoenix" => (0.03f, 0.02f, 60f, 170f, 220f, 0.15f, 0f),
+        _ => (0.3f, 0.12f, 35f, 100f, 120f, 0.2f, 0f),
+    };
 
     public static Vector3 Spread(Vector3 dir, float rad, RandomNumberGenerator rng)
     {

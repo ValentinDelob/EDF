@@ -18,7 +18,7 @@ public class ProfileData
     /// 5 : le Fusilier passe aux armes du Ranger d'EDF 5 : chaque ancienne arme devient l'arme d'EDF 5 du même type
     /// au niveau le plus proche (sans le dépasser), étoiles ramenées à l'échelle de chaque caractéristique.
     /// </summary>
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
     public int Version { get; set; } = CurrentVersion;
     public SoldierClass SelectedClass { get; set; } = SoldierClass.Rifleman;
     public Dictionary<string, float> ArmorBonus { get; set; } = new();
@@ -204,6 +204,7 @@ public partial class Profile : Node
         if (Data.Version < 5) MigrateRangerEdf5();
         if (Data.Version < 6) MigrateToEdf5(AirborneCategoryOf, Edf5Weapons.WingDiver, "du Commando");
         if (Data.Version < 7) MigrateToEdf5(HeavyCategoryOf, Edf5Weapons.Fencer, "du Grenadier");
+        if (Data.Version < 8) MigrateToEdf5(SupportCategoryOf, Edf5Weapons.AirRaider, "de l'Opérateur");
         // Armes disparues (modèle inconnu) : retirées, l'équipement est complété ensuite.
         Data.Arsenal.RemoveAll(w => !Weapons.Exists(w.TemplateId));
         foreach (var w in Data.Arsenal)
@@ -249,6 +250,14 @@ public partial class Profile : Node
         ["cs90"] = ("Artillerie", "handcannon"), ["cs150"] = ("Artillerie", "gallic"),
         ["mh2"] = ("Frappe", "hammer"), ["mh6"] = ("Frappe", "hammer"),
         ["ms6"] = ("Lance-missiles", "armhound"),
+    };
+
+    /// <summary>Ancienne arme de l'Opérateur d'appui → (type d'arme, famille) de l'Air Raider d'EDF 5 (version 8 du profil).</summary>
+    private static readonly Dictionary<string, (string cat, string fam)> SupportCategoryOf = new()
+    {
+        ["pdw5"] = ("Bombes collantes", "limpetgun"), ["pdw9"] = ("Bombes collantes", "limpetgun"),
+        ["art1"] = ("Tirs d'artillerie", "mortarstrike"), ["art5"] = ("Bombardiers", "km6"), ["art8"] = ("Bombardiers", "phobos"),
+        ["trt2"] = ("Armes posées", "zegun"), ["trt5"] = ("Armes posées", "zegun"), ["med3"] = ("Soutien", "lifevendor"),
     };
 
     /// <summary>

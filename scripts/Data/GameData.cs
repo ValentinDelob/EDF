@@ -32,7 +32,7 @@ public static class Classes
             "Piqué", "Vol au réacteur dorsal alimenté par le cœur plasma. Le piqué inflige des dégâts de zone à l'impact.",
             new Color(0.75f, 0.77f, 0.8f), new Color(0.2f, 0.35f, 0.6f), 3), // deux armes + cœur plasma
         new(SoldierClass.Support, "Opérateur d'appui", "Soutien et frappes", 200, 5.5f, 8f,
-            "Balise prioritaire", "Frappes d'artillerie, tourelles et champ de soin. Gagne des crédits d'appel : barrage d'artillerie ou véhicule (char, hélicoptère).",
+            "Balise prioritaire", "Frappes aériennes (artillerie, canonnière, bombardiers, missiles, satellites), bombes collantes, tourelles, robots, soutien et abris. Gagne des crédits d'appel : barrage d'artillerie ou véhicule (char, hélicoptère).",
             new Color(0.55f, 0.48f, 0.34f), new Color(0.75f, 0.55f, 0.15f), 3),
         new(SoldierClass.Heavy, "Grenadier blindé", "Ligne de front", 400, 4.2f, 18f,
             "Ancrage", "Exosquelette : -50 % de dégâts et aucun recul pendant 8 s. Poussées et sauts propulsés. Deux jeux de deux armes et deux équipements de soutien.",
@@ -129,27 +129,16 @@ public record WeaponTemplate(
 
 public static class Weapons
 {
-    private static readonly WeaponTemplate[] Legacy =
-    {
-        // Opérateur d'appui
-        new("pdw5", "PDW-5 Écho", SoldierClass.Support, WeaponKind.Hitscan, "Arme de défense", 7, 11, 45, 1.4f, 180, 2f),
-        new("art1", "Balise ARTY-1", SoldierClass.Support, WeaponKind.Airstrike, "Frappe d'artillerie", 220, 1, 1, 14f, 300, 0, BlastRadius: 10, Pellets: 6, Automatic: false),
-        new("trt2", "Tourelle TR-2", SoldierClass.Support, WeaponKind.Turret, "Tourelle automatique", 8, 9, 1, 25f, 80, 2f, Automatic: false),
-        new("med3", "Champ médical M-3", SoldierClass.Support, WeaponKind.HealField, "Champ de soin", 12, 1, 1, 30f, 10, 0, BlastRadius: 9, Automatic: false),
-        new("art5", "Balise SALVE-5", SoldierClass.Support, WeaponKind.Airstrike, "Bombardement en ligne", 160, 1, 1, 20f, 300, 0, BlastRadius: 8, Pellets: 12, Automatic: false, MinLevel: 15),
-        // Armes de haut niveau (difficultés élevées)
-        new("pdw9", "PDW-9 Rafale", SoldierClass.Support, WeaponKind.Hitscan, "Arme de défense", 13, 13, 60, 1.5f, 200, 1.6f, MinLevel: 25),
-        new("trt5", "Tourelle TR-5 Lourde", SoldierClass.Support, WeaponKind.Turret, "Tourelle automatique", 22, 9, 1, 30f, 100, 2f, Automatic: false, MinLevel: 30),
-        new("art8", "Balise SALVE-8", SoldierClass.Support, WeaponKind.Airstrike, "Bombardement en ligne", 330, 1, 1, 22f, 300, 0, BlastRadius: 10, Pellets: 16, Automatic: false, MinLevel: 40),
-    };
+
 
     /// <summary>
-    /// Toutes les armes : Fusilier = Ranger d'EDF 5, Commando aéroporté = Wing Diver, Grenadier blindé = Fencer ; Opérateur
-    /// d'appui : armes propres au jeu (en attendant l'Air Raider).
+    /// Toutes les armes : Fusilier = Ranger d'EDF 5, Commando aéroporté = Wing Diver, Grenadier blindé = Fencer, Opérateur
+    /// d'appui = Air Raider (hors véhicules, appelés à part).
     /// </summary>
     public static readonly WeaponTemplate[] All = Edf5Weapons.Ranger.Select(e => Edf5Weapons.Template(e, SoldierClass.Rifleman))
         .Concat(Edf5Weapons.WingDiver.Select(e => Edf5Weapons.Template(e, SoldierClass.Airborne)))
-        .Concat(Edf5Weapons.Fencer.Select(e => Edf5Weapons.Template(e, SoldierClass.Heavy))).Concat(Legacy).ToArray();
+        .Concat(Edf5Weapons.Fencer.Select(e => Edf5Weapons.Template(e, SoldierClass.Heavy)))
+        .Concat(Edf5Weapons.AirRaider.Select(e => Edf5Weapons.Template(e, SoldierClass.Support))).ToArray();
 
     private static readonly Dictionary<string, WeaponTemplate> ById = All.ToDictionary(w => w.Id);
 
@@ -201,6 +190,15 @@ public static class Weapons
         "Renforts de bouclier" => "Renforts de bouclier",
         "Stabilisateurs" => "Stabilisateurs",
         "Exosquelettes" => "Exosquelettes",
+        "Tirs d'artillerie" => "Artillerie",
+        "Canonnière" => "Canonnière",
+        "Bombardiers" => "Bombardiers",
+        "Missiles guidés" => "Missiles",
+        "Satellites" => "Satellites",
+        "Bombes collantes" => "Bombes collantes",
+        "Armes posées" => "Armes posées",
+        "Soutien" => "Soutien",
+        "Abris et leurres" => "Abris et leurres",
         _ => category,
     };
 
@@ -223,6 +221,12 @@ public static class Weapons
         "Stabilisateurs" => "Stabilis.",
         "Exosquelettes" => "Exos",
         "Propulseurs" => "Propuls.",
+        "Canonnière" => "Canonn.",
+        "Bombardiers" => "Bombard.",
+        "Bombes collantes" => "Collantes",
+        "Armes posées" => "Posées",
+        "Abris et leurres" => "Abris",
+        "Satellites" => "Satell.",
         _ => CategoryTitle(category),
     };
 
@@ -251,6 +255,9 @@ public static class Weapons
         return e.Kind switch
         {
             Edf5Kind.Strike or Edf5Kind.Pierce or Edf5Kind.Shield or Edf5Kind.Mortar or Edf5Kind.Gear => FencerUsage(e),
+            Edf5Kind.Artillery or Edf5Kind.Gunship or Edf5Kind.Bomber or Edf5Kind.AirMissile or Edf5Kind.Satellite or Edf5Kind.Limpet
+                or Edf5Kind.Robot or Edf5Kind.Sentry or Edf5Kind.Guide or Edf5Kind.Post or Edf5Kind.Bunker or Edf5Kind.Decoy => AirRaiderUsage(e),
+            Edf5Kind.Bullet when e.Family == "suppress" => $"Canon de répression : gerbe de {e.Pellets} éclats perforants à très courte portée.",
             Edf5Kind.Bullet when e.Family is "handcannon" or "gallic" or "powerdyne" or "galleon" =>
                 "Obus à trajectoire tendue" + (e.Pierce ? " qui traverse les ennemis alignés" : "") + (e.Burst > 1 ? $", tirés par rafales de {e.Burst}" : "")
                 + (e.FarDamage < 0.95f ? " ; il perd de sa puissance en fin de portée" : "") + "." + (e.Zoom > 1 ? $" Visée ×{e.Zoom:0.#}." : ""),
@@ -325,6 +332,65 @@ public static class Weapons
         }
     }
 
+    /// <summary>Usage des armes de l'Air Raider : frappes appelées, bombes collantes, armes posées, soutien, abris.</summary>
+    private static string AirRaiderUsage(Edf5Spec e)
+    {
+        var pts = e.PointReload ? " Se recharge avec les points gagnés en infligeant des dégâts." : "";
+        var rows = e.Rows > 1 ? $"{e.Shots} × {e.Rows}" : $"{e.Shots}";
+        return e.Kind switch
+        {
+            Edf5Kind.Artillery => $"Lance un fumigène : {e.Shots} obus tombent dans un rayon de {e.AttackRadius:0} m autour de lui.{pts}",
+            Edf5Kind.Gunship => (e.Shots > 1
+                ? $"Désigne un point au laser : la canonnière tire {e.Shots} coups dans un rayon de {e.AttackRadius:0} m."
+                : "Désigne un point au laser : la canonnière tire un obus à chaque pression.") + " Appui aérien obligatoire.",
+            Edf5Kind.Bomber => $"Lance un fumigène : le bombardier passe dans l'axe soldat → fumigène et largue {rows} "
+                               + (e.Blast.Present ? "bombes" : "rafales") + (e.Duration > 0 ? " incendiaires" : "") + $".{pts}",
+            Edf5Kind.AirMissile => $"Désigne une cible au laser (bouton tenu) : {e.Shots} missile{(e.Shots > 1 ? "s" : "")} de croisière la suivent.{pts}",
+            Edf5Kind.Satellite => e.Family == "bulge"
+                ? "Désigne une cible au laser : le satellite y tient un rayon continu qui suit le laser tant que le bouton est tenu."
+                  : e.Shots == 1 ? $"Désigne un point au laser : un trait d'énergie orbital frappe un rayon de {e.AttackRadius:0} m.{pts}"
+                  : $"Désigne un point au laser : {e.Shots} traits orbitaux tombent dans un rayon de {e.AttackRadius:0} m.{pts}",
+            Edf5Kind.Limpet => e.Family switch
+            {
+                "detector" => "Bombes collantes à détecteur : elles éclatent d'elles-mêmes quand un ennemi approche.",
+                "splendor" => "Bombes collantes qui éclatent en gerbe d'éclats. Rechargement ou tir à vide : mise à feu.",
+                _ => "Tire des bombes collantes ; rechargement ou tir chargeur vide : mise à feu de toutes les bombes posées.",
+            },
+            Edf5Kind.Robot => e.Family switch
+            {
+                "robotbomb" => "Lâche un robot explosif qui roule vers l'ennemi le plus proche devant lui.",
+                "beetle" => "Lâche un robot sauteur qui bondit sur l'ennemi le plus proche et explose.",
+                "patroller" => "Lâche un robot patrouilleur qui avance et mitraille les ennemis à sa portée.",
+                _ => "Lâche un robot très rapide qui attire les ennemis à lui.",
+            },
+            Edf5Kind.Sentry => $"Pose une tourelle automatique ({e.Loaded} coups) qui tire seule sur les ennemis"
+                               + (e.Search.Present ? $" à moins de {e.Search.Max:0} m" : "") + ".",
+            Edf5Kind.Guide => e.Family == "guidekit"
+                ? "Laser de guidage (bouton tenu) : les lance-missiles alliés à kit de guidage se verrouillent sur le point visé."
+                : "Tire des balises qui se collent aux ennemis : les lance-missiles alliés à kit de guidage les visent.",
+            Edf5Kind.Post => e.Family switch
+            {
+                "lifevendor" => $"Pose un poste de soin : soigne les soldats à moins de {e.Blast.Max:0} m pendant {e.Duration:0} s.",
+                "lifespout" => $"Tire une charge de soin : zone de {e.Blast.Max:0} m pendant {e.Duration:0} s.",
+                "powerassist" => $"Tire une charge de renfort : dégâts des soldats touchés +{e.Damage.Max:0} % pendant {e.Duration:0} s.",
+                "powerpost" => $"Pose un poste de renfort : dégâts +{e.Damage.Max:0} % à moins de {e.Blast.Max:0} m pendant {e.Duration:0} s.",
+                "guardassist" => $"Tire une charge de protection : dégâts reçus −{e.Damage.Max:0} % pendant {e.Duration:0} s.",
+                _ => $"Pose un poste de protection : dégâts reçus −{e.Damage.Max:0} % à moins de {e.Blast.Max:0} m pendant {e.Duration:0} s.",
+            },
+            Edf5Kind.Bunker => e.Family switch
+            {
+                "aabunker" => "Déploie un abri couvert (dôme) qui arrête les tirs ennemis, y compris venus du ciel.",
+                "prison" => "Enferme le point visé dans une cage de murs d'énergie.",
+                "emwall" => "Dresse un long mur d'énergie devant soi.",
+                "shelter" => "Déploie un abri individuel autour du soldat.",
+                "heavybunker" => "Déploie un grand abri fermé aux murs épais.",
+                _ => "Déploie un abri de murs d'énergie qui arrêtent les tirs ennemis.",
+            },
+            Edf5Kind.Decoy => $"Pose un ballon leurre qui attire les ennemis proches pendant {e.Duration:0} s.",
+            _ => "",
+        };
+    }
+
     /// <summary>Nom français d'une attaque de mêlée d'EDF 5.</summary>
     public static string StrikeName(string attack) => attack switch
     {
@@ -388,7 +454,7 @@ public static class Weapons
     {
         [SoldierClass.Rifleman] = new[] { "pa11", "grantm31" }, // départ du Ranger d'EDF 5
         [SoldierClass.Airborne] = new[] { "rapier", "powerlance", "plasmacore" }, // départ de la Wing Diver d'EDF 5
-        [SoldierClass.Support] = new[] { "pdw5", "art1", "med3" },
+        [SoldierClass.Support] = new[] { "limpetgun", "lightmortar", "zegun" }, // départ de l'Air Raider d'EDF 5
         // Départ du Fencer d'EDF 5 : jeu 1 lance + bouclier, jeu 2 gatling + canon à main ; exosquelette et Deflect Cell.
         [SoldierClass.Heavy] = new[] { "blastholespear", "deflectionshield", "fg7handgatling", "nc101handcannon", "v1exoskeleton", "deflectcell" },
     };
@@ -426,6 +492,11 @@ public class WeaponInstance
         WeaponStat.Speed when t.Spec?.SpinUp.Present == true => "Mise en rotation",
         WeaponStat.Speed when t.Spec?.Kind == Edf5Kind.Strike => "Vitesse de charge",
         WeaponStat.Speed => "Vitesse d'attaque",
+        WeaponStat.Damage when t.Spec?.Family is "lifevendor" or "lifespout" => "Soin",
+        WeaponStat.Damage when t.Spec?.Kind == Edf5Kind.Post => "Effet",
+        WeaponStat.Blast when t.Spec?.Kind == Edf5Kind.Post => "Zone",
+        WeaponStat.Range when t.Spec?.Kind is Edf5Kind.Gunship or Edf5Kind.AirMissile or Edf5Kind.Satellite or Edf5Kind.Guide => "Portée du laser",
+        WeaponStat.Magazine when t.Spec?.Kind is Edf5Kind.Sentry or Edf5Kind.Robot or Edf5Kind.Post or Edf5Kind.Bunker or Edf5Kind.Decoy => "Nombre",
         WeaponStat.Magazine when t.Spec?.Kind is Edf5Kind.Strike or Edf5Kind.Pierce => "Frappes",
         _ => StatNames[(int)s],
     };
@@ -630,6 +701,10 @@ public class WeaponInstance
         var n = StarsOf(s);
         switch (s)
         {
+            case WeaponStat.Damage when E5?.Kind == Edf5Kind.Post:
+                return E5.Family is "lifevendor" or "lifespout"
+                    ? ($"{Fr(Damage * 60f, "0.#")} PV/s", $"+{Fr((Damage - DamageAt(0)) * 60f, "0.#")}")
+                    : ($"{Fr(Damage, "0.#")} %", $"+{Fr(Damage - DamageAt(0), "0.#")}");
             case WeaponStat.Damage:
             {
                 var pel = T.Pellets > 1 && T.Kind is WeaponKind.Hitscan or WeaponKind.Projectile ? $" ×{T.Pellets}" : "";
@@ -639,6 +714,8 @@ public class WeaponInstance
                 return ($"{Fr(FireRate * 60f, "0")}/min", $"+{Fr((FireRate - FireRateAt(0)) * 60f, "0")}/min");
             case WeaponStat.Magazine:
                 return ($"{Magazine}", $"+{Magazine - MagazineAt(0)}");
+            case WeaponStat.Reload when E5?.PointReload == true:
+                return ($"{Fr(Reload, "0")} pt", $"−{Fr(ReloadAt(0) - Reload, "0")} pt");
             case WeaponStat.Reload:
             {
                 var fmt = Reload >= 10 ? "0" : "0.0";

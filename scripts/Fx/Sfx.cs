@@ -124,6 +124,10 @@ public partial class Sfx : Node
         snd["ui_hover"] = Make(0.04f, t => Mathf.Sin(t * Mathf.Tau * 1800f) * 0.08f * Env(t, 0.001f, 0.03f));
         snd["hit"] = Make(0.1f, t => (Noise(rng) * 0.4f + Mathf.Sin(t * Mathf.Tau * 300f) * 0.3f) * Env(t, 0.001f, 0.08f));
         snd["hitmarker"] = Make(0.05f, t => Mathf.Sin(t * Mathf.Tau * 2400f) * 0.2f * Env(t, 0.001f, 0.04f));
+        // Verrouillage des lance-missiles : bip électronique bref pendant le verrouillage, double bip aigu à la confirmation.
+        snd["lock_beep"] = Make(0.05f, t => Mathf.Clamp(Mathf.Sin(t * Mathf.Tau * 1900f) * 2.5f, -1f, 1f) * 0.18f * Env(t, 0.001f, 0.045f));
+        snd["lock_ok"] = Make(0.2f, t => Mathf.Clamp(Mathf.Sin(t * Mathf.Tau * (t < 0.07f ? 2600f : 3400f)) * 2.5f, -1f, 1f) * 0.2f
+                                         * (t < 0.06f || t > 0.08f ? 1f : 0f) * Env(t, 0.001f, 0.19f));
         vars["screech"] = Enumerable.Range(0, 5).Select(i => Make(0.5f + 0.08f * i, Screech(rng, i))).ToArray();
         snd["screech"] = vars["screech"][0];
         vars["death_bug"] = Enumerable.Range(0, 3).Select(i => Make(0.55f + 0.1f * i, DeathBug(rng, i))).ToArray();

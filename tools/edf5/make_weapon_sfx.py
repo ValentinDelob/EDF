@@ -244,3 +244,34 @@ finish("leviathan", [mix((ken(f"spaceEngineLarge_00{i}", 0.6, 2.2), 1.0), (thump
 finish("arcane", [missile(1, 1.1), missile(3, 1.1)], "rocket", -1)
 finish("fgimpact", [mix((missile(4, 1.3), 1.0), (ken("forceField_002", 1.6, 0.3), 0.3)) for _ in (0, 1)], "rocket", -2)
 finish("phoenix", [mix((ken(f"spaceEngineLarge_00{i}", 1.0, 1.4), 1.0), (thump(40, 0.8, 0.2), 0.7), (big(i, 0.7, 0.6), 0.4)) for i in (1, 3)], "rocket", 1)
+
+# ═════════════ Air Raider : radio et fumigène, désignateur, canonnière, avions, bombes collantes, tourelles, satellite ═════════════
+throw = [hp(cut(ken(f"forceField_00{i}", 1.6), 0, 0.4, 0.6, 0), 700) for i in (1, 4)]
+for fam in ("mortarstrike", "howitzer", "cannongun", "gigantic", "km6", "kamuy", "vesta", "phobos", "scoutbomber"):
+    finish(fam, throw, "launcher", -9)
+beep = [mix((cut(ken(f"computerNoise_00{i}", 1.2), 0, 0.3, 0.5, 0), 1.0), (zap(i, 2.2, 0.12), 0.3)) for i in (0, 1)]
+for fam in ("gs150", "gsauto", "gs105", "gsrocket", "gsneutral", "gsmulti", "cruise", "lionic", "tempest", "bulge", "spritefall", "guidekit"):
+    finish(fam, beep, "laser", -10)
+finish("gunshipfire", [mix((c, 1.0), (boom(0, 1.1, 0.8), 0.6)) for c in shots(SPR, 1.6, f=0.55)], "sniper", 3)
+finish("flyover", [mix((ken(f"spaceEngineLow_00{i}", 0.7, 3.0), 1.0), (ken(f"engineCircular_00{i}", 0.6, 3.0), 0.5)) for i in (0, 2)], "rocket", 4)
+finish("satellite", [mix((big(i, 0.35, 2.0), 1.0), (field(i, 0.5, 2.0), 0.6), (thump(30, 1.8, 0.6), 0.6)) for i in (1, 3)], "laser", 4)
+finish("limpetgun", [mix((lp(c, 2500), 1.0), (ken("impactMetal_003", 1.8, 0.15), 0.3)) for c in shots(MOSS, 0.4, f=0.9)], "launcher", -2)
+finish("limpetsniper", [mix((c, 1.0), (ken("impactMetal_001", 1.5, 0.2), 0.3)) for c in shots(TIKKA, 1.4, f=0.9)], "sniper", -1)
+finish("splendor", [mix((lp(c, 2200), 1.0), (pitch(c, 1.1), 0.5)) for c in shots(MOSS, 0.45, f=0.8)], "launcher", -1)
+finish("limpetchain", [lp(c, 3000) for c in shots(PPSH, 0.25, f=0.7)], "smg", -2)
+finish("detector", [mix((lp(c, 2500), 1.0), (zap(2, 1.5, 0.2), 0.4)) for c in shots(MOSS, 0.4, f=0.85)], "launcher", -2)
+finish("limpetshot", [mix((c, 1.0), (thump(70, 0.4, 0.1), 0.4)) for c in shots(CD, 1.2, f=0.85)], "shotgun")
+finish("busterbomb", [mix((lp(c, 1800), 1.0), (thump(55, 0.5, 0.12), 0.6)) for c in shots(MOSS, 0.6, f=0.6)], "launcher", 1)
+deploy = [mix((clang(i, 0.6, 0.4), 1.0), (cut(ken(f"doorClose_00{i}", 1.0), 0, 0.5, 0.5, 0), 0.6)) for i in (0, 1)]
+for fam in ("zegun", "zelauncher", "zesniper", "zeblaster", "robotbomb", "beetle", "patroller", "speedstar", "lifevendor", "powerpost",
+            "guardpost", "embunker", "aabunker", "heavybunker", "shelter", "prison", "emwall", "decoy"):
+    finish(fam, deploy, "hammer", -6)
+finish("zegunfire", [hp(c, 200) for c in shots(AR, 0.4, f=1.05)], "rifle", -3)
+finish("zesniperfire", shots(SAV, 1.6, f=0.95), "sniper", -2)
+finish("zeblasterfire", [mix((big(i, 1.4, 0.3), 1.0), (zap(i, 1.2, 0.2), 0.4)) for i in (0, 2)], "laser", -5)
+finish("zelauncherfire", [missile(1, 1.6), missile(3, 1.6)], "rocket", -4)
+spout = [mix((field(i, 1.3, 0.5), 1.0), (thump(120, 0.2, 0.05), 0.3)) for i in (2, 3)]
+for fam in ("lifespout", "powerassist", "guardassist", "beacongun"):
+    finish(fam, spout, "laser", -6)
+finish("bunker", [mix((field(i, 0.6, 1.0), 1.0), (thump(45, 0.8, 0.2), 0.6)) for i in (0, 4)], "laser", 1)
+finish("suppress", [mix((c, 1.0), (thump(55, 0.5, 0.12), 0.5)) for c in shots(NOVA, 1.4, f=0.75)], "shotgun", 1)

@@ -111,6 +111,8 @@ public partial class Player : CharacterBody3D
     public void EarnCredits(float damage)
     {
         if (Def.Id == SoldierClass.Support) CallCredits = Mathf.Min(CallIns.Cap, CallCredits + damage * 0.08f);
+        // Frappes de l'Air Raider rechargées en points : un point par point de dégâts.
+        foreach (var w in Weapons) w.EarnPoints(damage);
     }
 
     /// <summary>Distance de la caméra à l'épaule : vue rapprochée (le Grenadier, plus massif, un peu plus loin).</summary>
@@ -274,7 +276,7 @@ public partial class Player : CharacterBody3D
         var w = Weapon;
         if (w == null || w.Reloading) return;
         // Bombes C : le rechargement déclenche d'abord celles qui sont posées.
-        if (w.W.T.Spec?.Kind == Edf5Kind.Bomb) DetonateBombs();
+        if (w.W.T.Spec?.Kind is Edf5Kind.Bomb or Edf5Kind.Limpet) DetonateBombs();
         if (Def.Id == SoldierClass.Airborne && w.W.T.EnergyCost > 0)
         {
             if (Overheated || Energy < w.W.T.EnergyCost * 0.5f) return;
@@ -628,7 +630,8 @@ public partial class Player : CharacterBody3D
     /// <summary>Style d'arme procédural transmis dans l'état réseau (repli si l'arme d'EDF 5 n'est pas encore connue).</summary>
     private int StyleBits => (int)(Weapon != null ? SoldierModel.StyleFor(Weapon.W.T) : WeaponStyle.Rifle) & 7;
 
-    public float DamageMul => (RallyTime > 0 ? 1.3f : 1f);
+    /// <summary>Multiplicateur de dégâts : fusée de ralliement, zone de puissance de l'Air Raider.</summary>
+    public float DamageMul => (RallyTime > 0 ? 1.3f : 1f) * (1f + SupportZone.PowerAt(GlobalPosition));
 
     private void HandleFire(float dt)
     {
@@ -701,7 +704,27 @@ public partial class Player : CharacterBody3D
         return (Vector3)hit["position"];
     }
 
-    private Vector3 MuzzlePos => Model.Muzzle.GlobalPosition;
+    /// <summary>Bouche du canon, arme épaulée et soldat tourné vers la visée (le coup part toujours du bout du canon).</summary>
+    private Vector3 MuzzlePos
+    {
+        get
+        {
+            ReadyToFire();
+            return Model.Muzzle.GlobalPosition;
+        }
+    }
+
+    /// <summary>Avant un tir : le modèle fait face à la visée et épaule aussitôt (pas d'interpolation d'une image à l'autre).</summary>
+    private void ReadyToFire()
+    {
+        var want = _yaw + Mathf.Pi;
+        if (Mathf.Abs(Mathf.AngleDifference(_modelYaw, want)) > 0.02f)
+        {
+            _modelYaw = want;
+            Model.Rotation = new Vector3(0, _modelYaw, 0);
+        }
+        Model.SnapAim();
+    }
 
     private void FireHitscan(WeaponState ws)
     {
@@ -1073,6 +1096,8 @@ public partial class Player : CharacterBody3D
         dmg = FencerGuard(dmg, from);
         if (dmg <= 0) return;
         if (AnchorTime > 0) dmg *= 0.5f;
+        // Zone de protection de l'Air Raider.
+        dmg *= 1f - SupportZone.GuardAt(GlobalPosition);
         Health -= dmg;
         DamageFlash = Mathf.Min(1f, DamageFlash + 0.35f + dmg / MaxHealth);
         AddShake(Mathf.Clamp(dmg / MaxHealth * 4f, 0.1f, 0.6f));

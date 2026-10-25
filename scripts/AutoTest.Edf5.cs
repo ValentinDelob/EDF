@@ -83,10 +83,11 @@ public static partial class AutoTest
     {
         var source = p.Def.Id switch
         {
-            SoldierClass.Airborne => Edf5Weapons.WingDiver, SoldierClass.Heavy => Edf5Weapons.Fencer, _ => Edf5Weapons.Ranger,
+            SoldierClass.Airborne => Edf5Weapons.WingDiver, SoldierClass.Heavy => Edf5Weapons.Fencer,
+            SoldierClass.Support => Edf5Weapons.AirRaider, _ => Edf5Weapons.Ranger,
         };
         // Équipements et boucliers : pas de tir (les boucliers ont leur propre essai, --shield-test).
-        var specs = source.Where(s => s.Kind is not (Edf5Kind.Core or Edf5Kind.Gear or Edf5Kind.Shield) && (filter is "" or "all" || s.Family == filter || s.Id == filter || s.Category == filter
+        var specs = source.Where(s => s.Kind is not (Edf5Kind.Core or Edf5Kind.Gear or Edf5Kind.Shield) && (filter is "" or "all" || s.Family == filter || s.Id == filter || filter.Contains(',') && filter.Split(',').Contains(s.Id) || s.Category == filter
                                                   || s.Kind.ToString() == filter)).ToList();
         // Wing Diver : cœur le plus puissant (les armes de haut niveau coûtent plus que l'énergie d'un cœur de départ).
         if (p.Def.Id == SoldierClass.Airborne) { p.Core = Grant("vzplasmacore"); p.Energy = p.MaxEnergy; }
@@ -118,6 +119,11 @@ public static partial class AutoTest
                 Edf5Kind.Lance or Edf5Kind.Spark or Edf5Kind.Beam => 26f,
                 Edf5Kind.Orb => 22f,
                 Edf5Kind.Strike => s.Family is "blade" or "forceax" or "roller" ? 12f : 6f,
+                Edf5Kind.Gunship or Edf5Kind.Satellite => 55f,
+                Edf5Kind.AirMissile => 80f,
+                Edf5Kind.Artillery or Edf5Kind.Bomber => 22f,
+                Edf5Kind.Limpet => 20f,
+                Edf5Kind.Sentry or Edf5Kind.Robot => 18f,
                 Edf5Kind.Pierce => s.Family == "spinedriver" ? 30f : 7f,
                 Edf5Kind.Mortar => s.Family == "crusher" ? 90f : 60f,
                 _ when s.Family is "dexter" or "cannonshot" => 18f,
@@ -151,12 +157,19 @@ public static partial class AutoTest
             {
                 Player.BotForceFire = false;
                 // Bombes C : rechargement = déclenchement.
-                if (s.Kind == Edf5Kind.Bomb) p.Edf5DetonateForTest();
-                app.GetTree().CreateTimer(s.Kind is Edf5Kind.Napalm ? 3f : 1.6f).Timeout += () =>
+                if (s.Kind is Edf5Kind.Bomb or Edf5Kind.Limpet) p.Edf5DetonateForTest();
+                // Frappes aériennes : délai d'arrivée et durée de la frappe.
+                var wait = s.Kind switch
+                {
+                    Edf5Kind.Napalm => 3f, Edf5Kind.Artillery => 9f, Edf5Kind.Bomber => 8f, Edf5Kind.AirMissile => 9f, Edf5Kind.Satellite => 9f,
+                    Edf5Kind.Gunship => 5f, Edf5Kind.Sentry or Edf5Kind.Robot => 5f, _ => 1.6f,
+                };
+                app.GetTree().CreateTimer(wait).Timeout += () =>
                 {
                     watch.QueueFree();
                     var dmg = GodotObject.IsInstanceValid(target) ? before - target.Health : 0;
-                    var heals = s.Kind is Edf5Kind.Reverser or Edf5Kind.ReverseShooter;
+                    var heals = s.Kind is Edf5Kind.Reverser or Edf5Kind.ReverseShooter or Edf5Kind.Guide or Edf5Kind.Post or Edf5Kind.Bunker
+                        or Edf5Kind.Decoy || s.Family == "speedstar";
                     var err = !heals && dmg <= 0;
                     if (err) errors++;
                     GD.Print($"[edf5] {s.Id} « {s.Name} » ({s.Kind}, Lv {s.Level}) : {shots} coups / {ammo0}, dégâts {dmg:0}{(err ? " ERREUR" : "")}");

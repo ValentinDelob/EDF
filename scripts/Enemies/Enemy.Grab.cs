@@ -105,7 +105,7 @@ public partial class Enemy
             Net.I.BroadcastGrab(Id, 0, ally.Id);
             return Grabbing;
         }
-        if (peer == 0 || _world.VehicleOf(peer) != null || _world.IsGrabbed(peer, 0)) return false;
+        if (peer <= 0 || _world.VehicleOf(peer) != null || _world.IsGrabbed(peer, 0)) return false;
         Net.I.BroadcastGrab(Id, peer, 0);
         return Grabbing;
     }

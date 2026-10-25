@@ -230,3 +230,106 @@ public partial class HudReticle : Control
         }
     }
 }
+
+/// <summary>
+/// Verrouillage des lance-missiles (EDF 5) : rectangle de la zone de verrouillage, cible en cours (crochets jaunes qui se
+/// resserrent avec la progression) et cibles confirmées (crochets rouges, « ×n » si une cible est verrouillée plusieurs fois),
+/// compte des verrouillages sous le rectangle.
+/// </summary>
+public partial class HudLockOn : Control
+{
+    public World World;
+    public float S = 1f;
+    private string _countText = "";
+    private int _count = -1, _max = -1;
+
+    public override void _Ready()
+    {
+        MouseFilter = MouseFilterEnum.Ignore;
+        SetAnchorsPreset(LayoutPreset.FullRect);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (IsVisibleInTree()) QueueRedraw();
+    }
+
+    private void Brackets(Vector2 c, float h, Color col, float w, float arm)
+    {
+        foreach (var (sx, sy) in new[] { (-1, -1), (1, -1), (1, 1), (-1, 1) })
+        {
+            var corner = c + new Vector2(sx * h, sy * h);
+            DrawLine(corner, corner - new Vector2(sx * arm, 0), col, w, true);
+            DrawLine(corner, corner - new Vector2(0, sy * arm), col, w, true);
+        }
+    }
+
+    public override void _Draw()
+    {
+        var p = World?.LocalPlayer;
+        var cam = GetViewport()?.GetCamera3D();
+        if (p == null || cam == null || p.Downed || !p.LockWeapon) return;
+        var box = p.LockBox;
+        var aiming = p.Aiming;
+        // Rectangle de verrouillage : coins marqués, plus vif en visée.
+        var bc = new Color(HudE.Reticle, aiming ? 0.85f : 0.35f);
+        var arm = Mathf.Min(box.Size.X, box.Size.Y) * 0.16f;
+        var w = 1.6f * S;
+        foreach (var (corner, dx, dy) in new[]
+                 {
+                     (box.Position, 1f, 1f), (box.Position + new Vector2(box.Size.X, 0), -1f, 1f),
+                     (box.End, -1f, -1f), (box.Position + new Vector2(0, box.Size.Y), 1f, -1f),
+                 })
+        {
+            DrawLine(corner, corner + new Vector2(dx * arm, 0), bc, w, true);
+            DrawLine(corner, corner + new Vector2(0, dy * arm), bc, w, true);
+        }
+        if (aiming)
+            DrawRect(box, new Color(HudE.Reticle, 0.06f), false, 1f);
+        // Cibles verrouillées.
+        var counts = new Dictionary<Enemy, int>();
+        foreach (var e in p.Locks)
+            if (IsInstanceValid(e)) counts[e] = counts.TryGetValue(e, out var n) ? n + 1 : 1;
+        var red = new Color(1f, 0.22f, 0.15f, 0.95f);
+        foreach (var (e, n) in counts)
+        {
+            if (cam.IsPositionBehind(e.Center)) continue;
+            var sp = cam.UnprojectPosition(e.Center);
+            var h = Size(cam, e);
+            Brackets(sp, h, red, 2.2f * S, h * 0.6f);
+            DrawLine(sp + new Vector2(-4, 0) * S, sp + new Vector2(4, 0) * S, red, 1.6f * S, true);
+            DrawLine(sp + new Vector2(0, -4) * S, sp + new Vector2(0, 4) * S, red, 1.6f * S, true);
+            if (n > 1) DrawString(UiKit.HeadFont, sp + new Vector2(h + 4 * S, -h + 12 * S), $"×{n}", HorizontalAlignment.Left, -1, Mathf.RoundToInt(13 * S), red);
+        }
+        // Cible en cours : crochets jaunes qui se resserrent, arc de progression.
+        if (p.LockPending is { } pe && IsInstanceValid(pe) && !cam.IsPositionBehind(pe.Center))
+        {
+            var sp = cam.UnprojectPosition(pe.Center);
+            var h = Size(cam, pe);
+            var k = p.LockProgress;
+            var y = new Color(1f, 0.85f, 0.2f, 0.95f);
+            Brackets(sp, h * Mathf.Lerp(1.9f, 1.05f, k), y, 2f * S, h * 0.45f);
+            DrawArc(sp, h * 0.55f, -Mathf.Pi / 2f, -Mathf.Pi / 2f + Mathf.Tau * k, 32, y, 2f * S, true);
+        }
+        // Compte des verrouillages.
+        var max = p.Weapon?.W.LockTargets ?? 0;
+        if (p.Locks.Count != _count || max != _max)
+        {
+            _count = p.Locks.Count;
+            _max = max;
+            _countText = $"VERROUILLAGE {_count}/{_max}";
+        }
+        var fs = Mathf.RoundToInt(13 * S);
+        var tw = UiKit.HeadFont.GetStringSize(_countText, HorizontalAlignment.Left, -1, fs).X;
+        DrawString(UiKit.HeadFont, new Vector2(box.GetCenter().X - tw / 2f, box.End.Y + 18 * S), _countText, HorizontalAlignment.Left, -1, fs,
+            _count > 0 ? red : bc);
+    }
+
+    /// <summary>Demi-taille des crochets : taille apparente de l'ennemi, bornée.</summary>
+    private float Size(Camera3D cam, Enemy e)
+    {
+        var d = Mathf.Max(cam.GlobalPosition.DistanceTo(e.Center), 1f);
+        var px = e.Def.Size * 2.2f / d * GetViewportRect().Size.Y / (2f * Mathf.Tan(Mathf.DegToRad(cam.Fov) * 0.5f));
+        return Mathf.Clamp(px, 14f * S, 70f * S);
+    }
+}
