@@ -74,6 +74,8 @@ public partial class Player : CharacterBody3D
     public static Vector3? BotLookAt;
     /// <summary>Test (--edf5-fire) : avec <see cref="BotLookAt"/>, le bot tire aussi sur le point regardé.</summary>
     public static bool BotForceFire;
+    /// <summary>Test (--aim) : le bot tire en visée (bouton de visée tenu), comme un joueur.</summary>
+    public static bool BotAiming;
     private bool _botFire;
 
     private Node3D _camYaw, _camPitch;
@@ -504,7 +506,7 @@ public partial class Player : CharacterBody3D
         _recoil = Mathf.MoveToward(_recoil, 0, dt * 6f);
 
         var canAct = !World.Paused && !World.Ended && !Downed;
-        Aiming = canAct && Input.IsActionPressed("aim");
+        Aiming = canAct && (Input.IsActionPressed("aim") || Bot && BotAiming);
 
         // Caméra : visée, tremblement
         var zoom = Aiming ? (Vehicle != null ? Vehicle.AimZoom : Weapon != null && Weapon.W.T.Zoom > 1 ? Weapon.W.T.Zoom : 1.4f) : 1f;

@@ -321,6 +321,13 @@ public partial class Projectile : Node3D
         {
             // Points de l'Air Raider : dégâts estimés de l'explosion.
             AirRaid.Explode(_world, pos + normal * 0.3f, Radius, Damage, Kind == ProjectileKind.Plasma ? 2 : 0);
+            // Coup au but sur un grand ennemi dont le centre est hors du rayon de l'explosion : il est touché quand même.
+            if (collider is Enemy he && he.State != EnemyState.Dead && he.BodyDistance(pos) - he.Def.Size * 1.2f > Radius)
+            {
+                Net.I.SendDamageEnemy(he.Id, Damage, pos, false);
+                _world.LocalHitFx(he, pos, true, Damage, false);
+                _world.LocalPlayer?.EarnCredits(Damage);
+            }
         }
         if (_trail != null)
         {

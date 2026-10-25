@@ -35,6 +35,7 @@ public static partial class AutoTest
         if (Screenshot.CmdArg("edf5-fire") is { } filter)
         {
             if (Screenshot.CmdArg("class") == null) Profile.I.Data.SelectedClass = SoldierClass.Rifleman;
+            Player.BotAiming = Screenshot.CmdArg("aim") != null;
             Enemy.Frozen = true;
             WhenPlayerReady(app, 2f, p => FireRange(app, p, filter));
         }

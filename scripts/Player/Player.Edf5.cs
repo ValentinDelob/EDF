@@ -166,6 +166,12 @@ public partial class Player
             Reload();
             return;
         }
+        // Lance-missiles (EDF 5) : pas de tir sans cible verrouillée (sauf ceux à kit de guidage, qui tirent droit).
+        if (s.Kind == Edf5Kind.Missile && !s.GuideOnly && Locks.Count == 0)
+        {
+            if (pressed) Sfx.Ui("empty");
+            return;
+        }
         ws.Cooldown = 1f / Mathf.Max(ws.W.FireRate, 0.05f);
         _lastFireTime = Time.GetTicksMsec() / 1000f;
         if (s.Kind == Edf5Kind.Missile)

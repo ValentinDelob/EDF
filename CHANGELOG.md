@@ -1,5 +1,10 @@
 # Journal des versions
 
+## v0.15.1 — Corrections
+
+- **Balles explosives** (Minion Buster, mitrailleuses à impulsions de la Wing Diver, canons de la canonnière…) : l'insecte touché de plein fouet prend toujours les dégâts. Une grande fourmi a son centre loin du point d'impact, et l'explosion, de rayon réduit, ne l'atteignait pas. Même correction pour les roquettes et grenades qui explosent sur un grand ennemi.
+- **Lance-missiles** : pas de tir sans cible verrouillée, comme dans EDF 5. Les lance-missiles à kit de guidage du Fencer tirent toujours droit sans cible.
+
 ## v0.15.0 — Armes de l'Air Raider d'EDF 5 et verrouillage des missiles
 
 - **Les 233 armes et équipements de l'Air Raider d'EDF 5** remplacent ceux de l'Opérateur d'appui (les véhicules viendront ensuite) : tirs d'artillerie (mortiers, obusiers, Cannon Gun, Gigantic Grenade), canonnière (canons de 105 à 190 mm, roquettes, Autocannon, Minigun, Vulcan), bombardiers (KM6, Kamuy, Vesta, Phobos), missiles de croisière (AH, N5/N6, Lionic, Tempest), satellites (Bulge Laser, Spritefall), bombes collantes (Limpet Gun, Sniper, Splendor, Chain Gun, Detector, Buster Bomb), armes posées (robots bombes, Assault / Stag Beetle, Patroller, Speed Star, tourelles ZE / FZ), soutien (kits de guidage laser, balises, Life Vendor, Life Spout, Power / Guard Post, Zone Protector), abris et leurres (bunkers électromagnétiques, abri antiaérien, cage, murs, ballons leurres, Suppress Gun).

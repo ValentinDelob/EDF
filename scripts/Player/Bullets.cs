@@ -109,7 +109,7 @@ public partial class Bullets : Node3D
                 var dmg = s.Damage * (s.Far + (1f - s.Far) * Mathf.Pow(frac, s.FalloffExp));
                 if (col is Enemy e && e.State != EnemyState.Dead)
                 {
-                    if (s.Blast > 0) Blast(at, s.Blast, dmg, s.Local, ref perEnemy);
+                    if (s.Blast > 0) Blast(at, s.Blast, dmg, s.Local, ref perEnemy, e);
                     else if (s.Local)
                     {
                         var weak = e.IsWeakShape(hit["shape"].AsInt32());
@@ -164,7 +164,8 @@ public partial class Bullets : Node3D
     /// Balle explosive (impulsions de la Wing Diver, Minion Buster…) : effet sur chaque pair (tous simulent la balle) ; dégâts
     /// de zone calculés par le tireur et regroupés par ennemi pour l'image (pas un message réseau par explosion).
     /// </summary>
-    private void Blast(Vector3 at, float radius, float dmg, bool local, ref Dictionary<Enemy, (float dmg, Vector3 at, bool weak)> perEnemy)
+    /// <remarks><paramref name="direct"/> : ennemi touché de plein fouet, toujours atteint (un grand insecte a son centre loin du point d'impact).</remarks>
+    private void Blast(Vector3 at, float radius, float dmg, bool local, ref Dictionary<Enemy, (float dmg, Vector3 at, bool weak)> perEnemy, Enemy direct = null)
     {
         Effects.Explosion(_world, at, Mathf.Max(radius, 1f), radius < 3f ? ExplosionFx.Plasma : ExplosionFx.Explosive);
         if (!local) return;
@@ -172,7 +173,7 @@ public partial class Bullets : Node3D
         foreach (var e in _world.EnemiesById.Values)
         {
             if (e.State == EnemyState.Dead) continue;
-            var d = e.BodyDistance(at) - e.Def.Size * 1.2f;
+            var d = e == direct ? 0f : e.BodyDistance(at) - e.Def.Size * 1.2f;
             if (d > radius) continue;
             var f = Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
             perEnemy ??= new Dictionary<Enemy, (float, Vector3, bool)>();
