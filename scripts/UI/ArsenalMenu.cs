@@ -46,6 +46,8 @@ public partial class ArsenalMenu : Control
 
     private SoldierClass _cls;
     private int _slot;
+    /// <summary>Emplacement choisi explicitement : l'arme cliquée ensuite le remplace sans second clic.</summary>
+    private bool _armed;
     private WeaponInstance _selected;
     private ArsenalEBackground _bg;
     private Control _stage;
@@ -125,6 +127,14 @@ public partial class ArsenalMenu : Control
         if (target != null) Callable.From(() => UiKit.FocusSilently(target.Node)).CallDeferred();
         _stage.QueueRedraw();
     }
+
+    /// <summary>Test (--menu-shots=arsenal) : clic gauche sur la ligne de l'arme, comme à la souris.</summary>
+    public void TestClick(WeaponInstance w)
+    {
+        if (FindRow(w) is { } r) RowInput(r, new InputEventMouseButton { Pressed = true, ButtonIndex = MouseButton.Left });
+    }
+
+    public SoldierClass ShownClass => _cls;
 
     private Row FindRow(WeaponInstance w) => w == null ? null : _cols.SelectMany(c => c.Rows).FirstOrDefault(r => r.W == w);
 
@@ -231,16 +241,23 @@ public partial class ArsenalMenu : Control
     {
         if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb)
         {
-            // Premier clic : sélection ; clic sur la ligne déjà sélectionnée (ou double-clic) : équiper.
-            if (r.Node.HasFocus() || mb.DoubleClick) Equip();
-            else r.Node.GrabFocus();
+            // Arme équipée puis arme de la liste : la seconde remplace la première dès le clic.
+            // Sinon, premier clic : sélection ; clic sur la ligne déjà sélectionnée (ou double-clic) : équiper.
+            var free = EquippedSlot(r.W) < 0;
+            var replace = _armed && free;
+            var wasFocused = r.Node.HasFocus();
+            if (!wasFocused) r.Node.GrabFocus();
+            if (free && (replace || wasFocused || mb.DoubleClick)) Equip();
+            else if (!free) TargetSlot(EquippedSlot(r.W));
             r.Node.AcceptEvent();
         }
         else if (e is InputEventMouseButton { Pressed: true } wheel && wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
             ColumnInput(r.Col, e);
         else if (e.IsActionPressed("ui_accept"))
         {
-            Equip();
+            // Entrée sur une arme équipée : son emplacement devient la cible ; sur une autre : elle y est équipée.
+            if (EquippedSlot(r.W) is var s and >= 0 && !_armed) TargetSlot(s);
+            else Equip();
             r.Node.AcceptEvent();
         }
     }
@@ -292,8 +309,18 @@ public partial class ArsenalMenu : Control
     private void ChangeSlot(int dir)
     {
         var slots = Classes.Get(_cls).WeaponSlots;
-        _slot = (_slot + dir + slots) % slots;
-        Sfx.Ui("ui_click", -8f, 1.1f);
+        TargetSlot((_slot + dir + slots) % slots);
+    }
+
+    /// <summary>
+    /// Emplacement visé (clic sur une arme équipée ou sur sa ligne dans l'équipement, Q / E) : la prochaine arme
+    /// cliquée dans la liste le prend aussitôt.
+    /// </summary>
+    private void TargetSlot(int slot)
+    {
+        if (slot != _slot || !_armed) Sfx.Ui("ui_click", -8f, 1.1f);
+        _slot = slot;
+        _armed = true;
         _stage.QueueRedraw();
     }
 
@@ -304,6 +331,7 @@ public partial class ArsenalMenu : Control
         _portrait.SetClass(_cls);
         _selected = null;
         _slot = 0;
+        _armed = false;
         Sfx.Ui("ui_click", -8f, 1f);
         Rebuild();
     }
@@ -312,13 +340,11 @@ public partial class ArsenalMenu : Control
     {
         var w = _selected;
         if (w == null) return;
-        if (EquippedSlot(w) >= 0)
-        {
-            // Déjà équipée (dans cet emplacement ou l'autre) : non équipable une seconde fois.
-            Sfx.Ui("empty", -6f);
-            return;
-        }
+        var at = EquippedSlot(w);
+        // Déjà dans l'emplacement visé : rien à faire. Dans un autre : les deux armes échangent leur place.
+        if (at == _slot) return;
         Profile.I.Equip(_cls, _slot, w);
+        _armed = false;
         Sfx.Ui("pickup", -6f, 1.2f);
         Layout();
         foreach (var c in _cols) foreach (var x in c.Rows) { x.Node.QueueRedraw(); x.NameInk.QueueRedraw(); }
@@ -497,8 +523,16 @@ public partial class ArsenalMenu : Control
             {
                 p.HGrad(x + 4, ry, w - 8, 24, new Color("16CC62", 0.55f), new Color("09893E", 0.25f));
                 p.Rect(x + 4, ry, 3, 24, EStyle.Bright);
+                // Emplacement choisi explicitement : la prochaine arme cliquée le remplace.
+                if (_armed)
+                {
+                    p.Inset(x + 4, ry, w - 8, 24, EStyle.Gold, 1);
+                    p.Text(EStyle.CondBold, x + w - 12 - 120, ry, 24, "À REMPLACER", 10, EStyle.Gold, HorizontalAlignment.Right, 120);
+                }
             }
             var occupant = i < eq.Count ? eq[i] : null;
+            var slot = i;
+            _hints.Add((new Rect2(x, ry, w, 24), () => TargetSlot(slot)));
             // Grenadier : deux jeux de deux armes, séparés par un filet (« J1 » / « J2 » à droite du numéro).
             if (sets && i > 0 && i % Classes.SetSize == 0) p.Rect(x + 10, ry - 0.5f, w - 20, 1, EStyle.FrameInner);
             if (sets && i % Classes.SetSize == 0)
@@ -506,7 +540,7 @@ public partial class ArsenalMenu : Control
             p.Text(EStyle.Mono, x + 12, ry, 24, $"{i + 1}", 13, target ? EStyle.Bright : EStyle.DimText);
             var name = occupant?.T.Name ?? "Vide";
             p.Text(EStyle.Cond, x + 28, ry, 24, name, 16, occupant != null ? EStyle.White : EStyle.DimText);
-            if (occupant != null) p.Text(EStyle.Mono, x + w - 12 - 60, ry, 24, $"Lv{occupant.Level}", 15, EStyle.White, HorizontalAlignment.Right, 60);
+            if (occupant != null && !(target && _armed)) p.Text(EStyle.Mono, x + w - 12 - 60, ry, 24, $"Lv{occupant.Level}", 15, EStyle.White, HorizontalAlignment.Right, 60);
         }
         y += blockH + 6;
         p.Rect(x, y, w, 34, panel);
@@ -519,7 +553,7 @@ public partial class ArsenalMenu : Control
         p.HexBand(230, 652, 820, 40, 20, (0f, new Color("85D8A8")), (0.5f, new Color("479969")), (1f, new Color("34754F")));
         p.HexBand(242, 656, 796, 32, 14, (0f, new Color("1F3F2C")), (1f, new Color("102519")));
 
-        var canEquip = _selected != null && EquippedSlot(_selected) < 0;
+        var canEquip = _selected != null && EquippedSlot(_selected) != _slot;
         var items = new List<(string key, string label, Action act, bool enabled)>
         {
             ("Entrée", "Équiper", Equip, canEquip),

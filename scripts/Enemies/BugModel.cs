@@ -384,7 +384,10 @@ public partial class BugModel : Node3D
         var sc = Mathf.Max(Scale.X, 0.5f);
         var amp = Mathf.Clamp(speed / (4f * sc), 0f, 1f);
         _gait += dt * speed * 2.4f / sc;
-        if (_bodyPivot != null)
+        var biting = BiteTick(dt, attack) && GrabT < 0;
+        if (biting) amp *= 0.4f;
+        if (_bodyPivot != null && biting) BiteBody((1f - Mathf.Abs(Mathf.Sin(_gait))) * 0.06f * amp, amp);
+        else if (_bodyPivot != null)
         {
             // Léger tangage à chaque appui, roulis alterné, bond vers l'avant pendant la morsure.
             var lunge = Mathf.Sin(Mathf.Clamp(attack, 0, 1) * Mathf.Pi);
@@ -404,8 +407,9 @@ public partial class BugModel : Node3D
                 fa = -1f + 2f * w * w * (3f - 2f * w);
                 lift = Mathf.Sin(w * Mathf.Pi);
             }
-            PoseLeg(l, fa * amp, lift * amp);
+            if (!biting || !BiteLeg(l, fa * amp, lift * amp)) PoseLeg(l, fa * amp, lift * amp);
         }
+        if (biting) { BiteHead(); return; }
         if (_head != null) _head.RotationDegrees = new Vector3(-attack * 25f + Mathf.Sin(_t * 2f) * 3f, Mathf.Sin(_t * 1.3f) * 6f, 0);
         for (var i = 0; i < _antennae.Count; i++)
         {

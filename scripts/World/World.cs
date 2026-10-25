@@ -947,7 +947,7 @@ public partial class World : Node3D
         e.PlayAttack();
         switch (kind)
         {
-            case 0: Sfx.At("hit", e.GlobalPosition, 0f, 0.7f); break;
+            case 0: if (!e.Model.HasBite) Sfx.At("hit", e.GlobalPosition, 0f, 0.7f); break;
             case 1:
                 Projectile.Spawn(this, e.IsBoss ? ProjectileKind.AcidBig : e.Def.Type == EnemyType.Spider ? ProjectileKind.Web : ProjectileKind.Acid, e.Center + e.Basis.Z * 1.5f * e.Def.Size,
                     BallisticVelocity(e.Center, target + Vector3.Up, 30f, 9f), false, 0, 0);

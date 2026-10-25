@@ -289,6 +289,27 @@ public static partial class AutoTest
         At(15f, () => { Key(Godot.Key.E); Key(Godot.Key.E); Key(Godot.Key.E); Key(Godot.Key.Left); Key(Godot.Key.Down); Key(Godot.Key.Down); });
         At(16f, () => Key(Godot.Key.Enter));
         At(17f, () => Screenshot.Take(app.GetViewport(), "arsenal_heavy_sets"));
+        // Souris : clic sur l'arme équipée n° 2, puis sur une arme libre → elle remplace la n° 2, la n° 1 ne bouge pas.
+        At(18f, () => Key(Godot.Key.Tab));
+        System.Collections.Generic.List<WeaponInstance> eqBefore = null;
+        WeaponInstance pick = null;
+        At(19f, () =>
+        {
+            if (app.CurrentScreen is not ArsenalMenu am) return;
+            eqBefore = Profile.I.Equipped(am.ShownClass);
+            pick = Profile.I.Data.Arsenal.FirstOrDefault(x => x.T.Class == am.ShownClass && !eqBefore.Contains(x));
+            am.TestClick(eqBefore[1]);
+        });
+        At(19.5f, () => Screenshot.Take(app.GetViewport(), "arsenal_target2"));
+        At(20.5f, () => (app.CurrentScreen as ArsenalMenu)?.TestClick(pick));
+        At(21f, () =>
+        {
+            if (app.CurrentScreen is not ArsenalMenu am || pick == null) return;
+            var eq = Profile.I.Equipped(am.ShownClass);
+            var ok = eq[0] == eqBefore[0] && eq[1] == pick;
+            GD.Print($"[arsenal] clic arme 2 puis {pick.T.Name} : {string.Join(" / ", eq.Select(x => x.T.Name))}" + (ok ? " OK" : " ERROR"));
+            Screenshot.Take(app.GetViewport(), "arsenal_replaced2");
+        });
     }
 
     public static void Run(App app)
@@ -730,6 +751,7 @@ public static partial class AutoTest
     /// --grab[=client|ally] : une fourmi rouge sort de terre à ~9 m devant le soldat (bot immobile) et le saisit ; une nouvelle
     /// apparaît 4 s après la mort de la précédente. =client : devant le soldat du client (avec --autohost, vue de la victime
     /// côté client) ; =ally : devant un soldat allié (les insectes ignorent sinon les alliés pendant ce test).
+    /// =bite : une fourmi noire à 7 m qui mord, caméra de profil (animation de morsure).
     /// Journal « [grab] » : début et fin de chaque saisie. Avec --god --holdfire, la saisie dure indéfiniment (captures).
     /// </summary>
     private static void GrabTest(App app)
@@ -737,7 +759,12 @@ public static partial class AutoTest
         if (Screenshot.CmdArg("grab") is not { } mode) return;
         Player.BotStill = true;
         Enemy.IgnoreAllies = mode != "ally";
+        // =bite : une fourmi noire (morsures), vue de profil.
+        var bite = mode == "bite";
+        Enemy.NoCameraFade = bite;
+        var type = bite ? EnemyType.BlackAnt : EnemyType.RedAnt;
         var nextAt = 0f;
+        Enemy mine = null;
         void Tick()
         {
             app.GetTree().CreateTimer(0.5f).Timeout += () =>
@@ -745,7 +772,7 @@ public static partial class AutoTest
                 var w = app.CurrentWorld;
                 if (w == null || w.LocalPlayer == null || !GodotObject.IsInstanceValid(w.LocalPlayer)) { Tick(); return; }
                 if (!Net.I.IsHost || w.Elapsed < 3f) { Tick(); return; }
-                if (w.EnemiesById.Values.Any(e => e.Def.Type == EnemyType.RedAnt && e.State != EnemyState.Dead)) { nextAt = w.Elapsed + 4f; Tick(); return; }
+                if (mine != null && GodotObject.IsInstanceValid(mine) && mine.State != EnemyState.Dead) { nextAt = w.Elapsed + 4f; Tick(); return; }
                 if (w.Elapsed < nextAt) { Tick(); return; }
                 Node3D victim = w.LocalPlayer;
                 var face = w.LocalPlayer.AimForward;
@@ -763,14 +790,30 @@ public static partial class AutoTest
                 face.Y = 0;
                 face = face.LengthSquared() > 0.01f ? face.Normalized() : Vector3.Forward;
                 var at = victim.GlobalPosition;
-                var p = new Vector3(at.X, 0, at.Z) + face * 9f;
+                var p = new Vector3(at.X, 0, at.Z) + face * (bite ? 7f : 9f);
+                if (bite)
+                {
+                    // Caméra de profil, à mi-chemin entre la fourmi et le soldat.
+                    var cam = new Camera3D { Fov = 50, Current = true };
+                    w.AddChild(cam);
+                    var mid = (p + new Vector3(at.X, 0, at.Z)) * 0.5f + Vector3.Up * 1.8f;
+                    cam.GlobalPosition = mid + new Vector3(face.Z, 0, -face.X) * 15f + Vector3.Up * 1.2f;
+                    cam.LookAt(mid, Vector3.Up);
+                    cam.MakeCurrent();
+                    // Ralenti (1/20) une fois la fourmi au contact : les captures décomposent la morsure.
+                    app.GetTree().CreateTimer(3f).Timeout += () =>
+                    {
+                        if (mine != null && GodotObject.IsInstanceValid(mine)) GD.Print($"[grab] morsure : fourmi à {mine.GlobalPosition.DistanceTo(victim.GlobalPosition):0.0} m, état {mine.State}");
+                        if (Screenshot.CmdArg("shots") != null) Engine.TimeScale = 0.05;
+                    };
+                }
                 // =ally : le soldat (observateur) recule derrière l'allié, que la fourmi visera en premier.
                 if (victim is Ally) w.LocalPlayer.GlobalPosition = new Vector3(at.X, 0.5f, at.Z) - face * 16f + new Vector3(face.Z, 0, -face.X) * 6f;
-                var ant = w.HostSpawnEnemy(EnemyType.RedAnt, p);
+                var ant = mine = w.HostSpawnEnemy(type, p);
                 ant.Rotation = new Vector3(0, Mathf.Atan2(at.X - p.X, at.Z - p.Z), 0);
                 // --holdfire : personne ne doit l'abattre (saisie durable pour les captures).
                 if (Player.BotHoldFire) ant.MaxHealth = ant.Health = 1e6f;
-                GD.Print($"[grab] fourmi rouge {ant.Id} ({ant.Health:0} PV) apparue à 9 m de {victim.Name} (t = {Time.GetTicksMsec() / 1000f:0.0} s)");
+                GD.Print($"[grab] {ant.Def.Name.ToLowerInvariant()} {ant.Id} ({ant.Health:0} PV) apparue à 9 m de {victim.Name} (t = {Time.GetTicksMsec() / 1000f:0.0} s)");
                 nextAt = w.Elapsed + 4f;
                 Tick();
             };

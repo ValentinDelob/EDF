@@ -407,7 +407,7 @@ public static class Enemies
     // (la tête est loin du centre) ; vitesses à peine relevées (grandes foulées) ; points de vie inchangés.
     public static readonly EnemyDef[] All =
     {
-        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 6.4f, 1.25f, 1f, 0.28f, Giant: 2f),
+        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 5.4f, 1.25f, 1f, 0.28f, Giant: 2f),
         new(EnemyType.RedAnt, "Fourmi rouge", 150, 8.8f, 9, 6.6f, 1.3f, 1.15f, 0.45f, Giant: 1.95f),
         new(EnemyType.AcidAnt, "Fourmi acide", 50, 8.2f, 6, 32f, 2.4f, 1f, 0.32f, Ranged: true, Giant: 2f),
         new(EnemyType.Wasp, "Guêpe", 40, 14f, 4, 28f, 1.8f, 0.8f, 0.3f, Flying: true, Ranged: true, Giant: 1.5f),

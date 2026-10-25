@@ -595,6 +595,19 @@ public partial class Enemy : StaticBody3D
                 _world.HostEnemyProjectile(this, Def.Type == EnemyType.Spider ? 2 : 0, from, target + Vector3.Up, Def.Boss ? 3 : 1);
                 Net.I.BroadcastEnemyAttack(Id, 1, target);
             }
+            else if (Model.HasBite)
+            {
+                // Morsure : les dégâts tombent quand les mandibules se referment, si le soldat est encore à portée (il peut esquiver).
+                Net.I.BroadcastEnemyAttack(Id, 0, target);
+                var dmg = Def.Damage * _world.DamageMul * DamageScale;
+                var range = reach * 1.3f;
+                GetTree().CreateTimer(BugModel.BiteImpact).Timeout += () =>
+                {
+                    if (!IsInstanceValid(this) || State == EnemyState.Dead || !_world.PlayerPosition(peer, out var at)) return;
+                    if (at.DistanceTo(GlobalPosition) > range) return;
+                    Net.I.DamagePlayer(peer, dmg, GlobalPosition);
+                };
+            }
             else
             {
                 Net.I.DamagePlayer(peer, Def.Damage * _world.DamageMul * DamageScale, pos);
@@ -770,6 +783,9 @@ public partial class Enemy : StaticBody3D
 
     private bool _camFaded;
 
+    /// <summary>Test (--grab=bite) : caméra de profil libre, les insectes restent opaques.</summary>
+    public static bool NoCameraFade;
+
     /// <summary>
     /// Translucide quand la caméra est dans le volume du corps (pattes comprises) ou que le corps cache le soldat suivi :
     /// avec des insectes de 10 m, celui qui passe entre la caméra et le soldat masquerait tout l'écran.
@@ -780,7 +796,7 @@ public partial class Enemy : StaticBody3D
         if (IsMothership) { MothershipCameraFade(); return; }
         if (IsTitan) { TitanCameraFade(cam); return; }
         if (IsAlienKind) { AlienCameraFade(cam, focus); return; }
-        if (IsFortress || Def.Static) return;
+        if (IsFortress || Def.Static || NoCameraFade) return;
         var s = Def.Size;
         bool fade;
         if (State == EnemyState.Dead) fade = false;
