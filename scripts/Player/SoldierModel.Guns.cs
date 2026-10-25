@@ -118,6 +118,13 @@ public partial class SoldierModel
         "stork4" => (new Color(0.33f, 0.28f, 0.19f), new Color(0.12f, 0.12f, 0.11f)),
         "slade" => (new Color(0.2f, 0.21f, 0.23f), new Color(0.6f, 0.25f, 0.05f)),
         "blazer" => (new Color(0.75f, 0.76f, 0.78f), new Color(0.1f, 0.12f, 0.16f)),
+        // Wing Diver : coque claire, pièces sombres (quelques familles teintées, comme tools/blender/weapons/wingdiver.py).
+        "dragoon" or "fenrir" => (new Color(0.55f, 0.57f, 0.6f), new Color(0.12f, 0.13f, 0.15f)),
+        "monster" or "monsterlance" => (new Color(0.55f, 0.57f, 0.6f), new Color(0.5f, 0.12f, 0.08f)),
+        "raijin" => (new Color(0.12f, 0.13f, 0.15f), new Color(0.6f, 0.5f, 0.15f)),
+        "heavycannon" => (new Color(0.55f, 0.57f, 0.6f), new Color(0.5f, 0.25f, 0.05f)),
+        "finaldays" => (new Color(0.12f, 0.13f, 0.15f), new Color(0.55f, 0.1f, 0.1f)),
+        _ when s.Class == SoldierClass.Airborne => (new Color(0.78f, 0.8f, 0.83f), new Color(0.12f, 0.13f, 0.15f)),
         _ => (new Color(0.16f, 0.17f, 0.12f), new Color(0.32f, 0.27f, 0.18f)),
     };
 }

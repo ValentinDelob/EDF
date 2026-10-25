@@ -39,6 +39,8 @@ public static class HudWeaponArt
         Edf5Kind.Bomb or Edf5Kind.Impulse => HudWeaponIcon.Beacon,
         Edf5Kind.Reverser or Edf5Kind.ReverseShooter => HudWeaponIcon.Heal,
         Edf5Kind.Flame => HudWeaponIcon.Gatling,
+        Edf5Kind.Arc or Edf5Kind.Lance or Edf5Kind.Spark or Edf5Kind.Beam or Edf5Kind.Pulse or Edf5Kind.Laser or Edf5Kind.PlasmaShot
+            or Edf5Kind.Homing or Edf5Kind.Orb => HudWeaponIcon.Energy,
         _ => IconFor(s.Category),
     };
 
@@ -256,6 +258,17 @@ public partial class HudWeapons : HudBlock
             e.Key = int.MinValue;
         }
         var beam = w.T.Kind == WeaponKind.Beam && w.T.Spec == null; // EDF 5 : lance-flammes et Reverser ont des munitions
+        // Arme à charge de la Wing Diver : charge en pour cent.
+        if (w.T.Spec?.Supply == Edf5Supply.Charge)
+        {
+            var pct = Mathf.RoundToInt(ws.Charge * 100);
+            e.Reloading = false;
+            e.SetCur(pct);
+            e.SetMax(100);
+            e.Bar = ws.Charge;
+            e.Empty = pct <= 0;
+            return;
+        }
         var mag = w.Magazine;
         e.Reloading = ws.Reloading;
         if (beam)

@@ -34,6 +34,15 @@ public static class Edf5Sounds
         "firecracker" => ("launcher", -3f, 1.3f),
         "boundgun" => ("smg", -4f, 1.25f),
         "reverser" or "revshooter" => ("heal", -8f, 1.2f),
+        // Wing Diver (en attendant les sons propres) : arcs, lances, éclairs, rayons, impulsions, plasma.
+        "rapier" or "phalanx" => ("zap", -8f, 1.2f),
+        "powerlance" or "dragoon" or "monsterlance" => ("laser", -2f, 0.8f),
+        "sparkvine" or "sparkwhip" or "lightningbow" or "boltgun" or "crossbow" or "boltshooter" or "raijin" => ("zap", -4f, 0.9f),
+        "magblaster" or "destroyer" or "spine" or "reflectron" or "closedlaser" or "monster" => ("laser", -8f, 1.1f),
+        "pulsemg" or "stardust" or "pulsebuster" => ("plasma", -6f, 1.4f),
+        "plasmacannon" or "plasmafall" or "bigcannon" or "heavycannon" or "burstcannon" or "grit" or "splasher" => ("plasma", -1f, 0.85f),
+        "mirage" or "geist" or "ghostchaser" or "fenrir" or "psiblade" => ("laser", -6f, 1.3f),
+        "diffuser" or "gleipnir" or "thundercluster" or "heavensgate" or "psicluster" or "finaldays" or "blinkball" => ("dash", -8f, 1.3f),
         _ => ("rifle", -3f, 1f),
     };
 

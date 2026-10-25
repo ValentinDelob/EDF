@@ -681,6 +681,9 @@ public partial class SoldierModel : Node3D
         "Fusil de précision" or "Fusil à particules" => WeaponStyle.Sniper,
         "Lance-roquettes" or "Lance-grenades" or "Canon de siège" or "Lance-missiles" => WeaponStyle.Launcher,
         "Laser à rayon" or "Lance électrique" or "Canon à plasma" => WeaponStyle.Energy,
+        // Wing Diver d'EDF 5 (repli tant que le modèle de la famille manque).
+        "Courte portée" or "Blasters" or "Électriques" or "Pulsation" or "Artillerie plasma" or "Guidées" or "Spéciales" => WeaponStyle.Energy,
+        "Longue portée" => WeaponStyle.Sniper,
         "Mitrailleuse rotative" => WeaponStyle.Minigun,
         "Marteau à énergie" => WeaponStyle.Hammer,
         "Frappe d'artillerie" or "Tourelle automatique" or "Champ de soin" or "Bombardement en ligne" => WeaponStyle.Device,

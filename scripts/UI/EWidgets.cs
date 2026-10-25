@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Rempart;
@@ -204,6 +205,14 @@ public partial class SoldierPortrait : TextureRect
         _model = SoldierModel.Create(cls);
         _pivot.AddChild(_model);
         _model.RotationDegrees = new Vector3(0, Yaw, 0);
+        // Arme tenue : la première arme équipée de la classe (pas le cœur plasma).
+        if (Profile.I?.Equipped(cls).FirstOrDefault(w => w.T.Spec?.Kind != Edf5Kind.Core) is { } first) _model.SetWeapon(first.T);
+    }
+
+    /// <summary>Arme montrée dans les mains du soldat (arme survolée dans l'arsenal).</summary>
+    public void SetWeapon(WeaponTemplate t)
+    {
+        if (t?.Spec?.Kind != Edf5Kind.Core) _model?.SetWeapon(t);
     }
 
     public override void _Process(double delta)

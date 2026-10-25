@@ -87,7 +87,15 @@ public partial class ArsenalMenu : Control
         _cols.Clear();
         var slots = Classes.Get(_cls).WeaponSlots;
         if (_slot >= slots) _slot = 0;
-        var cats = Weapons.CategoriesFor(_cls);
+        // Plus de MaxPerPage types (Wing Diver : 8 types + cœurs) : pages de colonnes ; la page suit l'arme sélectionnée.
+        var all = Weapons.CategoriesFor(_cls);
+        _pages = Math.Max(1, (all.Count + MaxPerPage - 1) / MaxPerPage);
+        _perPage = (all.Count + _pages - 1) / _pages;
+        if (_selected != null && _selected.T.Class == _cls && all.IndexOf(_selected.T.Category) is var ci and >= 0 && _followSelection)
+            _page = ci / _perPage;
+        _followSelection = true;
+        _page = Math.Clamp(_page, 0, _pages - 1);
+        var cats = all.Skip(_page * _perPage).Take(_perPage).ToList();
         var colW = (TableW - ColGap * (cats.Count - 1)) / Math.Max(1, cats.Count);
         var owned = Profile.I.Data.Arsenal.Where(w => w.T.Class == _cls).ToList();
         for (var i = 0; i < cats.Count; i++)
@@ -197,6 +205,21 @@ public partial class ArsenalMenu : Control
     /// <summary>Colonnes étroites (plus de cinq types d'arme, ex. les sept types du Ranger d'EDF 5) : étiquettes compactes.</summary>
     private bool Narrow => _cols.Count > 5;
 
+    /// <summary>Types d'arme par page de l'arsenal (au plus MaxPerPage, répartis également) ; page affichée et nombre de pages.</summary>
+    private const int MaxPerPage = 7;
+    private int _page, _pages = 1, _perPage = MaxPerPage;
+    private bool _followSelection = true;
+
+    private void ChangePage(int dir)
+    {
+        if (_pages <= 1) return;
+        _page = (_page + dir + _pages) % _pages;
+        _followSelection = false;
+        _selected = null;
+        Sfx.Ui("ui_click", -8f, 1.05f);
+        Rebuild();
+    }
+
     /// <summary>Corps des noms d'arme (plus petit dans les colonnes étroites).</summary>
     private float NameFont => Narrow ? 12.5f : 14f;
 
@@ -208,6 +231,7 @@ public partial class ArsenalMenu : Control
     {
         var changed = _selected != r.W;
         _selected = r.W;
+        _portrait.SetWeapon(r.W.T);
         EnsureVisible(r);
         if (changed) Sfx.Ui("ui_hover", -12f, 1f, 60);
         if (r.W.IsNew)
@@ -287,6 +311,12 @@ public partial class ArsenalMenu : Control
         {
             if (k.PhysicalKeycode == Key.Q) dir = -1;
             else if (k.PhysicalKeycode == Key.E) dir = 1;
+            else if (k.PhysicalKeycode is Key.Pageup or Key.Pagedown)
+            {
+                ChangePage(k.PhysicalKeycode == Key.Pagedown ? 1 : -1);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
         }
         else if (e is InputEventJoypadButton { Pressed: true } j)
         {
@@ -338,6 +368,7 @@ public partial class ArsenalMenu : Control
         _selected = null;
         _slot = 0;
         _armed = false;
+        _page = 0;
         Sfx.Ui("ui_click", -8f, 1f);
         Rebuild();
     }
@@ -579,6 +610,7 @@ public partial class ArsenalMenu : Control
             var label = Classes.HasWeaponSets(_cls) ? $"Emplacement {_slot + 1} (jeu {_slot / Classes.SetSize + 1})" : $"Emplacement {_slot + 1}";
             items.Add(("Q / E", label, () => ChangeSlot(1), true));
         }
+        if (_pages > 1) items.Add(("PgSuiv", $"Page {_page + 1}/{_pages}", () => ChangePage(1), true));
         items.Add(("Tab", "Classe", () => ChangeClass(1), true));
 
         const float gap = 22, keyPad = 5, keyGap = 7;

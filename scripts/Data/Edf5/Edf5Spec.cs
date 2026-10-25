@@ -9,7 +9,18 @@ public enum Edf5Kind
 {
     Bullet, Rocket, GuidedRocket, Missile, HandGrenade, GrenadeLauncher, Napalm,
     Acid, Flame, Firecracker, BoundGun, Bomb, Impulse, Reverser, ReverseShooter,
+    // Wing Diver : arcs de plasma (Rapier, Phalanx), lances (rayon instantané), éclairs qui ricochent, rayons continus
+    // (blasters), impulsions explosives, lasers de longue portée, obus de plasma, lances guidées, sphères d'énergie, cœur plasma.
+    Arc, Lance, Spark, Beam, Pulse, Laser, PlasmaShot, Homing, Orb, Core,
 }
+
+/// <summary>
+/// Alimentation des armes de la Wing Diver (atwiki EDF5, « エネルギー供給方式 ») : Ammo = munitions classiques (Ranger) ;
+/// Reload = chargeur, recharge payée en énergie (même arme rangée) ; Charge = bouton tenu pour charger (énergie), tir au
+/// relâchement, puissance selon la charge ; ChargeBurst = le chargeur se remplit en tenant le bouton puis se vide en rafale ;
+/// Direct = un tir puis recharge immédiate payée en énergie (armes guidées, sphères).
+/// </summary>
+public enum Edf5Supply { Ammo, Reload, Charge, ChargeBurst, Direct }
 
 /// <summary>
 /// Caractéristique à étoiles : valeur au maximum d'étoiles <see cref="Stars"/> (celle des tables d'EDF 5) ;
@@ -44,6 +55,16 @@ public sealed class Edf5Spec(string id, string name, string category, Edf5Kind k
     public readonly Edf5Kind Kind = kind;
     public readonly int Level = level;
     public int Dlc;
+    /// <summary>Classe qui porte l'arme (fixée par <see cref="Edf5Weapons.Template"/>).</summary>
+    public SoldierClass Class;
+    public Edf5Supply Supply = Edf5Supply.Ammo;
+    /// <summary>Wing Diver : énergie consommée par une recharge (ou une charge complète).</summary>
+    public Edf5Stat Energy;
+    // Cœurs plasma : énergie maximale (étoiles), recharge permanente, recharge d'urgence (mêmes étoiles), coûts du vol et de
+    // la poussée, gain de vitesse de poussée (avant, côté, arrière), vitesse de charge des armes, vitesse de vol.
+    public Edf5Stat MaxEnergy, EmergencyCharge;
+    public float EnergyCharge, FlightCost, BoostCost, WeaponCharge, FlightSpeed;
+    public (float Forward, float Side, float Back) BoostSpeed;
     public Edf5Stat Ammo, Rof, Damage, Reload, Range, Speed, Blast, LockRange, LockTime, Search;
     /// <summary>Précision : rang (0 = S++ … 14 = F) au maximum d'étoiles.</summary>
     public (int Grade, int Stars) Accuracy = (-1, 0);
@@ -57,7 +78,7 @@ public sealed class Edf5Spec(string id, string name, string category, Edf5Kind k
     /// <summary>Retard d'explosion des grenades (s) ; 0 = à l'impact.</summary>
     public float Fuse;
 
-    public static readonly string[] Grades = { "S++", "S+", "S", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "E", "F" };
+    public static readonly string[] Grades = { "S++", "S+", "S", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "E", "F", "G" };
 
     /// <summary>Demi-angle de dispersion (degrés) d'un rang de précision.</summary>
     public static float GradeSpread(float grade) => grade <= 0 ? 0f : 0.1f * MathF.Pow(1.47f, grade - 1f);
@@ -69,34 +90,40 @@ public static partial class Edf5Weapons
     /// Modèle d'arme du jeu pour une arme d'EDF 5 : les champs communs (lus par le HUD, l'IA des bots…) prennent
     /// les valeurs à ★5 ; les valeurs réelles selon les étoiles viennent de <see cref="WeaponInstance"/>.
     /// </summary>
-    public static WeaponTemplate Template(Edf5Spec s)
+    public static WeaponTemplate Template(Edf5Spec s) => Template(s, SoldierClass.Rifleman);
+
+    public static WeaponTemplate Template(Edf5Spec s, SoldierClass cls)
     {
         var kind = s.Kind switch
         {
-            Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Acid => WeaponKind.Hitscan,
+            Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Acid or Edf5Kind.Arc or Edf5Kind.Lance or Edf5Kind.Spark
+                or Edf5Kind.Beam or Edf5Kind.Laser => WeaponKind.Hitscan,
             Edf5Kind.Flame or Edf5Kind.Reverser => WeaponKind.Beam,
             _ => WeaponKind.Projectile,
         };
         var rof = s.Rof.Present ? s.Rof.At(5, RaRof, false) : 1f;
-        var cls = SoldierClass.Rifleman;
+        s.Class = cls;
         return new WeaponTemplate(s.Id, s.Name, cls, kind, s.Category,
             s.Damage.At(5, RaDamage, false), rof, Math.Max(1, (int)MathF.Round(s.Ammo.Present ? s.Ammo.At(5, RaAmmo, false) : 1)),
             s.Reload.Present ? s.Reload.At(5, RaReload, true) : 0.5f, s.Range.Present ? s.Range.At(5, RaRange, false) : 300f,
             s.Accuracy.Grade >= 0 ? Edf5Spec.GradeSpread(s.Accuracy.Grade) : 0f, s.Pellets, s.Blast.Present ? s.Blast.At(5, RaBlast, false) : 0f,
             s.Speed.Present ? s.Speed.At(5, RaRange, false) : 0f, 0f, s.Zoom,
-            // Armes automatiques : cadence d'au moins 4 coups/s (fusils d'assaut, lance-flammes…).
-            rof >= 4f && s.Burst == 1 && s.Kind is Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Acid or Edf5Kind.BoundGun or Edf5Kind.Reverser,
+            // Armes automatiques : cadence d'au moins 4 coups/s (fusils d'assaut, lance-flammes, rapières, blasters…) ;
+            // Wing Diver à alimentation directe : le tir continue tant que le bouton est tenu.
+            s.Supply == Edf5Supply.Direct || rof >= 4f && s.Burst == 1
+                && (s.Kind is Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Acid or Edf5Kind.BoundGun or Edf5Kind.Reverser || s.Supply == Edf5Supply.Reload),
             s.Level, s);
     }
 
     // Coefficients Ra de la formule des étoiles (Mu = 0,5) : dégâts et munitions connus (0,5) ; les autres sont estimés.
-    public const float RaDamage = 0.5f, RaAmmo = 0.5f, RaRof = 0.25f, RaReload = 0.3f, RaRange = 0.3f, RaBlast = 0.3f, RaLockTime = 0.5f, RaLockRange = 0.3f;
+    public const float RaDamage = 0.5f, RaAmmo = 0.5f, RaRof = 0.25f, RaReload = 0.3f, RaRange = 0.3f, RaBlast = 0.3f, RaLockTime = 0.5f, RaLockRange = 0.3f,
+        RaEnergy = 0.3f, RaCapacity = 0.3f;
 
     /// <summary>Rangs de précision perdus par étoile manquante.</summary>
     public const float GradePerStar = 0.5f;
 
     /// <summary>Toutes les armes d'EDF 5 reprises dans le jeu, par identifiant.</summary>
     /// <remarks>Construit à la première demande : l'ordre d'initialisation des champs statiques entre les fichiers partiels n'est pas garanti.</remarks>
-    public static Dictionary<string, Edf5Spec> ById => _byId ??= Ranger.ToDictionary(s => s.Id);
+    public static Dictionary<string, Edf5Spec> ById => _byId ??= Ranger.Concat(WingDiver).ToDictionary(s => s.Id);
     private static Dictionary<string, Edf5Spec> _byId;
 }

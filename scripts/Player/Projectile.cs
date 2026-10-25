@@ -2,7 +2,7 @@ using Godot;
 
 namespace Rempart;
 
-public enum ProjectileKind { Rocket = 0, Plasma = 1, Grenade = 2, Missile = 3, Shell = 4, Acid = 10, Stinger = 11, AcidBig = 12, Web = 13, Laser = 14, Bomb = 15, Bolt = 16, HeavyBolt = 17 }
+public enum ProjectileKind { Rocket = 0, Plasma = 1, Grenade = 2, Missile = 3, Shell = 4, Energy = 5, Acid = 10, Stinger = 11, AcidBig = 12, Web = 13, Laser = 14, Bomb = 15, Bolt = 16, HeavyBolt = 17 }
 
 /// <summary>
 /// Projectile simulé localement. S'il appartient au joueur local (ou à l'hôte pour les ennemis),
@@ -71,6 +71,7 @@ public partial class Projectile : Node3D
         {
             case ProjectileKind.Rocket: case ProjectileKind.Missile: case ProjectileKind.Shell: color = new Color(1f, 0.7f, 0.3f); size = 0.18f; break;
             case ProjectileKind.Plasma: color = new Color(0.4f, 0.75f, 1f); size = 0.6f; break;
+            case ProjectileKind.Energy: color = new Color(0.55f, 0.85f, 1f); size = 0.12f; break; // lances guidées de la Wing Diver
             case ProjectileKind.Grenade: color = new Color(0.25f, 0.3f, 0.2f); size = 0.14f; break;
             case ProjectileKind.Stinger: color = new Color(1f, 0.85f, 0.4f); size = 0.12f; break;
             case ProjectileKind.AcidBig: color = new Color(0.7f, 0.95f, 0.15f); size = 0.9f; break;
@@ -89,7 +90,7 @@ public partial class Projectile : Node3D
             MaterialOverride = glow ? Mats.Glow(color, kind is ProjectileKind.Bolt or ProjectileKind.HeavyBolt ? 6f : enemyShot ? 2.5f : 5f) : Mats.Metal(color),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Scale = kind is ProjectileKind.Rocket or ProjectileKind.Missile or ProjectileKind.Shell or ProjectileKind.Stinger or ProjectileKind.Bomb ? new Vector3(1, 1, 4)
-                : kind == ProjectileKind.Laser ? new Vector3(1, 1, 10) : kind == ProjectileKind.Bolt ? new Vector3(1, 1, 16)
+                : kind is ProjectileKind.Laser or ProjectileKind.Energy ? new Vector3(1, 1, 10) : kind == ProjectileKind.Bolt ? new Vector3(1, 1, 16)
                 : kind == ProjectileKind.HeavyBolt ? new Vector3(1, 1, 5) : Vector3.One,
         });
         if (kind is ProjectileKind.Bolt or ProjectileKind.HeavyBolt)

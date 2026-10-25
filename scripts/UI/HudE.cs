@@ -309,7 +309,7 @@ public partial class HudArmor : HudBlock
             DrawRect(new Rect2(172, 94, 218, 6), HudE.Line, false, 1f);
         }
         else if (p.Def.Id == SoldierClass.Support) DrawCallCredits(p);
-        else if (p.Def.Id == SoldierClass.Airborne) DrawClassGauge("Énergie", p.Energy / 100f, p.Overheated, p.Flying, false);
+        else if (p.Def.Id == SoldierClass.Airborne) DrawClassGauge("Énergie", p.Energy / Mathf.Max(p.MaxEnergy, 1f), p.Overheated, p.Flying, false);
         else if (p.Def.Id == SoldierClass.Heavy) DrawClassGauge("Chaleur", p.Heat / 100f, p.Overheated, p.Heat > 1f, true);
     }
 

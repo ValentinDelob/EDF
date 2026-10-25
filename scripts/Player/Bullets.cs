@@ -105,16 +105,13 @@ public partial class Bullets : Node3D
                 var dmg = s.Damage * (s.Far + (1f - s.Far) * Mathf.Pow(frac, s.FalloffExp));
                 if (col is Enemy e && e.State != EnemyState.Dead)
                 {
-                    if (s.Local)
+                    if (s.Blast > 0) Blast(at, s.Blast, dmg, s.Local, ref perEnemy);
+                    else if (s.Local)
                     {
-                        if (s.Blast > 0) Blast(at, s.Blast, dmg);
-                        else
-                        {
-                            var weak = e.IsWeakShape(hit["shape"].AsInt32());
-                            perEnemy ??= new Dictionary<Enemy, (float, Vector3, bool)>();
-                            perEnemy.TryGetValue(e, out var acc);
-                            perEnemy[e] = (acc.dmg + dmg * (weak ? 1.5f : 1f) * (_world.LocalPlayer?.DamageMul ?? 1f), at, acc.weak || weak);
-                        }
+                        var weak = e.IsWeakShape(hit["shape"].AsInt32());
+                        perEnemy ??= new Dictionary<Enemy, (float, Vector3, bool)>();
+                        perEnemy.TryGetValue(e, out var acc);
+                        perEnemy[e] = (acc.dmg + dmg * (weak ? 1.5f : 1f) * (_world.LocalPlayer?.DamageMul ?? 1f), at, acc.weak || weak);
                     }
                     if (s.Pierce && s.Blast <= 0)
                     {
@@ -127,10 +124,10 @@ public partial class Bullets : Node3D
                     break;
                 }
                 // Décor, sol, immeuble : ricochet (Bound Gun) ou arrêt.
-                if (s.Local)
+                if (s.Blast > 0) Blast(at, s.Blast, dmg, s.Local, ref perEnemy);
+                else if (s.Local)
                 {
-                    if (s.Blast > 0) Blast(at, s.Blast, dmg);
-                    else if (col is AlienShield sh) sh.LocalHit(at);
+                    if (col is AlienShield sh) sh.LocalHit(at);
                     else if (col is Building b && !b.Destroyed) Net.I.SendBuildingDamage(b.Id, dmg * 0.06f, at);
                     else _world.Decor?.LocalHit(col, hit["shape"].AsInt32(), dmg, from);
                 }
@@ -159,8 +156,26 @@ public partial class Bullets : Node3D
             }
     }
 
-    private void Blast(Vector3 at, float radius, float dmg) =>
-        Net.I.SendExplosion(at, radius, dmg * (_world.LocalPlayer?.DamageMul ?? 1f), radius < 2f ? 3 : 0);
+    /// <summary>
+    /// Balle explosive (impulsions de la Wing Diver, Minion Buster…) : effet sur chaque pair (tous simulent la balle) ; dégâts
+    /// de zone calculés par le tireur et regroupés par ennemi pour l'image (pas un message réseau par explosion).
+    /// </summary>
+    private void Blast(Vector3 at, float radius, float dmg, bool local, ref Dictionary<Enemy, (float dmg, Vector3 at, bool weak)> perEnemy)
+    {
+        Effects.Explosion(_world, at, Mathf.Max(radius, 1f), radius < 3f ? ExplosionFx.Plasma : ExplosionFx.Explosive);
+        if (!local) return;
+        var mul = _world.LocalPlayer?.DamageMul ?? 1f;
+        foreach (var e in _world.EnemiesById.Values)
+        {
+            if (e.State == EnemyState.Dead) continue;
+            var d = e.BodyDistance(at) - e.Def.Size * 1.2f;
+            if (d > radius) continue;
+            var f = Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
+            perEnemy ??= new Dictionary<Enemy, (float, Vector3, bool)>();
+            perEnemy.TryGetValue(e, out var acc);
+            perEnemy[e] = (acc.dmg + dmg * f * mul, e.Center, acc.weak);
+        }
+    }
 
     public override void _Process(double delta)
     {

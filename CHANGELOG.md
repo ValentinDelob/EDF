@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.13.0 — Armes de la Wing Diver d'EDF 5 et cœurs plasma
+
+- **Les 239 armes de la Wing Diver d'EDF 5** remplacent celles du Commando aéroporté, avec leurs noms et valeurs officielles : courte portée (Rapier, Phalanx, Power Lance, Dragoon Lance, Spark Vine / Whip, Monster Lance), blasters (Mag Blaster, Destroyer, Spine, Reflectron), électriques (Lightning Bow, Bolt Gun, Thunder Crossbow), impulsions (Pulse Machine Gun et ses versions N-Way, Stardust Cannon, Pulse Buster), longue portée (Closed Laser, MONSTER, Bolt Shooter, Raijin), artillerie plasma (Plasma Cannon, Plasmafall, Big / Heavy / Burst Cannon, Grit, Splasher, Blink Ball), armes guidées (Mirage, Geist, Ghost Chaser, Fenrir, Psiblade) et spéciales (Diffuser, Gleipnir, Thunder Cluster, Heaven's Gate, Psi Cluster, Final Days).
+- **Énergie comme dans EDF 5** : armes à recharge payée en énergie (même rangées), armes à charge (tenir pour charger, relâcher pour tirer : la puissance suit la charge), rafales chargées et armes à alimentation directe ; changer d'arme perd la charge.
+- **38 cœurs plasma** (nouvel emplacement du Commando) : énergie maximale, recharge, recharge d'urgence, coût du vol et de la poussée, poussées renforcées (Turbo, Jet, Return), charge des armes accélérée (Rush), vol plus rapide (Bird)… Quand l'énergie est vide, recharge d'urgence jusqu'au plein.
+- **40 modèles 3D** dans le style de la Wing Diver (coque claire, bandes lumineuses) et un son par famille.
+- Les anciennes armes du Commando sont converties en l'arme d'EDF 5 du même genre.
+- **Arsenal** : pages de colonnes quand une classe a plus de sept types d'armes (PgPréc / PgSuiv).
+- Les balles explosives (impulsions, Minion Buster) calculent leurs dégâts de zone chez le tireur : beaucoup moins de messages réseau.
+
 ## v0.12.0 — Armes du Ranger d'EDF 5, morsure des fourmis, arsenal
 
 - **Les 260 armes du Ranger d'EDF 5** remplacent celles du Fusilier, avec leurs noms et leurs valeurs officielles (dégâts, cadence, munitions, rechargement, portée, vitesse des balles, précision S++ à F, explosion, verrouillage) : fusils d'assaut (PA-11, M1 Raven, Minion Buster, Slugger, G&M, Stork, X-Orchid, Slade, Blazer…), fusils à pompe (Slaughter, SGN, Breecher, Monsoon…), fusils de précision (KFF, Lysander, Fang, Dunkel, Ptarmigan, Penetrator…), lance-roquettes (Grant, Leopard guidé, Goliath, Volcano…), lance-missiles à verrouillage (Emerald, MLRA, Air Tortoise, Prominence…), grenades (MG, DNG, lance-grenades UM, BRUTE, Stampede, grenades collantes et rebondissantes, napalm, Flame Geyser), armes spéciales (acide, lance-flammes, pétards, Bound Gun, bombes C, mines Impulse, Reverser).

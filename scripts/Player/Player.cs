@@ -18,6 +18,22 @@ public partial class Player : CharacterBody3D
     public float Energy = 100f;      // Commando aéroporté
     public float Heat;               // Grenadier blindé
     public bool Overheated;
+    /// <summary>Cœur plasma équipé (Wing Diver d'EDF 5) : énergie maximale, recharges, coûts du vol et de la poussée.</summary>
+    public WeaponInstance Core;
+    public float MaxEnergy => Core != null ? Core.CoreCapacity : 100f;
+    private float _dashMul = 1f;
+
+    /// <summary>
+    /// Prélève de l'énergie (recharge ou charge d'une arme de la Wing Diver). Faux en recharge d'urgence ; si l'énergie tombe
+    /// à zéro, la recharge d'urgence commence (ni vol ni recharge d'arme jusqu'au plein).
+    /// </summary>
+    public bool DrawEnergy(float amount)
+    {
+        if (Overheated) return false;
+        Energy -= amount;
+        if (Energy <= 0) { Energy = 0; Overheated = true; Sfx.Ui("empty", 0, 0.6f); }
+        return true;
+    }
     public float CallCredits;        // Opérateur d'appui
     /// <summary>Opérateur d'appui : véhicule choisi pour l'appel (<see cref="CallIns"/>), changé par un appui bref sur la touche d'appel.</summary>
     public int CallChoice;
@@ -105,7 +121,14 @@ public partial class Player : CharacterBody3D
     {
         var p = new Player { World = world, Def = Classes.Get(cls), Name = "LocalPlayer", CollisionLayer = 1 << 1, CollisionMask = 1 | 1 << 5 }; // couche 6 : camions du convoi (MissionObjective)
         p.MaxHealth = p.Health = maxArmor;
-        foreach (var w in loadout) p.Weapons.Add(new WeaponState(w));
+        foreach (var w in loadout)
+        {
+            // Cœur plasma (Wing Diver) : équipement, pas une arme tenue.
+            if (w.T.Spec?.Kind == Edf5Kind.Core) p.Core = w;
+        }
+        foreach (var w in loadout)
+            if (w.T.Spec?.Kind != Edf5Kind.Core) p.Weapons.Add(p.Arm(w));
+        if (p.Core != null) p.Energy = p.MaxEnergy;
         p.AddChild(new CollisionShape3D
         {
             Shape = new CapsuleShape3D { Radius = cls == SoldierClass.Heavy ? 0.5f : 0.38f, Height = cls == SoldierClass.Heavy ? 2.1f : 1.8f },
@@ -220,6 +243,7 @@ public partial class Player : CharacterBody3D
     {
         if (i < 0 || i >= Weapons.Count || i == Current || SetSwapLeft > 0) return;
         Current = i;
+        DropCharge();
         Weapon.Cooldown = Mathf.Max(Weapon.Cooldown, 0.25f);
         Sfx.Ui("reload", -8f, 1.3f);
     }
@@ -348,27 +372,44 @@ public partial class Player : CharacterBody3D
                 if (jumpPressed && onFloor) v.Y = 7.5f;
                 break;
             case SoldierClass.Airborne:
+            {
+                // Cœur plasma d'EDF 5 : coûts et recharges du cœur (recharge permanente, même en vol) ; sans cœur, réglages d'origine.
+                var core = Core?.T.Spec;
+                var flySpeed = 1f + (core?.FlightSpeed ?? 0f);
+                var flightCost = core?.FlightCost ?? 26f;
+                var boostCost = core?.BoostCost ?? 15f;
                 if (!Overheated && jumpHeld && Energy > 0)
                 {
                     Flying = true;
-                    v.Y = Mathf.MoveToward(v.Y, 10f, 45f * dt);
-                    Energy -= 26f * dt;
-                    speed = 11f;
+                    v.Y = Mathf.MoveToward(v.Y, 10f * flySpeed, 45f * dt);
+                    Energy -= flightCost * dt;
+                    speed = 11f * flySpeed;
                 }
                 else if (!onFloor) speed = 10f;
-                if (!Overheated && (sprintPressed || dodgePressed) && Energy > 15 && wish.LengthSquared() > 0.01f)
+                if (!Overheated && (sprintPressed || dodgePressed) && Energy > boostCost && wish.LengthSquared() > 0.01f)
                 {
                     _dashTime = 0.35f;
                     _dashDir = wish.Normalized();
-                    Energy -= 15;
+                    // Gain de poussée du cœur selon la direction (avant, côté, arrière) par rapport à la caméra.
+                    var fwd = -camBasis.Z with { Y = 0 };
+                    var d = fwd.LengthSquared() > 0.01f ? _dashDir.Dot(fwd.Normalized()) : 1f;
+                    var b = core?.BoostSpeed ?? default;
+                    _dashMul = 1f + (d > 0.5f ? b.Forward : d < -0.5f ? b.Back : b.Side);
+                    Energy -= boostCost;
                     Jet.Boost();
                 }
                 if (Energy <= 0 && !Overheated) { Overheated = true; Energy = 0; Sfx.Ui("empty", 0, 0.6f); }
-                var regen = Flying ? 0 : (onFloor ? 34f : 16f);
-                if (Overheated) regen = 25f;
-                Energy = Mathf.Min(100f, Energy + regen * dt);
-                if (Overheated && Energy >= 100f) Overheated = false;
+                float regen;
+                if (core != null) regen = Overheated ? Core.CoreEmergency : core.EnergyCharge;
+                else
+                {
+                    regen = Flying ? 0 : (onFloor ? 34f : 16f);
+                    if (Overheated) regen = 25f;
+                }
+                Energy = Mathf.Min(MaxEnergy, Energy + regen * dt);
+                if (Overheated && Energy >= MaxEnergy) Overheated = false;
                 break;
+            }
             case SoldierClass.Heavy:
                 if (!Overheated && (sprintPressed || dodgePressed) && _dashTime <= 0)
                 {
@@ -396,7 +437,7 @@ public partial class Player : CharacterBody3D
         if (Flying) accel = 6f;
         horiz = horiz.Lerp(target, Mathf.Clamp(accel * dt, 0, 1));
         if (_dodgeTime > 0) horiz = _dodgeDir * 12f;
-        if (_dashTime > 0) horiz = _dashDir * (Def.Id == SoldierClass.Heavy ? 19f : 22f);
+        if (_dashTime > 0) horiz = _dashDir * (Def.Id == SoldierClass.Heavy ? 19f : 22f * _dashMul);
         _dodgeTime -= dt;
         _dashTime -= dt;
 
@@ -1187,8 +1228,8 @@ public partial class Player : CharacterBody3D
         // Le bot du Commando aéroporté vole par intermittence (teste vol, énergie et surchauffe).
         if (Def.Id == SoldierClass.Airborne)
         {
-            if (!Overheated && Energy > 60) Input.ActionPress("jump");
-            else if (Energy < 25 || Overheated) Input.ActionRelease("jump");
+            if (!Overheated && Energy > 0.6f * MaxEnergy) Input.ActionPress("jump");
+            else if (Energy < 0.25f * MaxEnergy || Overheated) Input.ActionRelease("jump");
         }
     }
 

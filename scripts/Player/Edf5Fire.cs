@@ -11,6 +11,9 @@ namespace Rempart;
 /// </summary>
 public static class Edf5Fire
 {
+    /// <summary>Cibles verrouillées pour le prochain coup d'une arme guidée de la Wing Diver (null : tir droit devant).</summary>
+    public static System.Collections.Generic.List<Node3D> HomingTargets;
+
     /// <summary>Gravité des grenades, de l'acide et des pétards (m/s²).</summary>
     public const float GrenadeGravity = 18f, AcidGravity = 9f;
 
@@ -29,16 +32,17 @@ public static class Edf5Fire
     /// <paramref name="aim"/> : point visé (guidage des roquettes Leopard / Ibis, côté local seulement).
     /// </summary>
     public static void Shoot(World world, Edf5Spec s, WeaponInstance w, Vector3 from, Vector3 dir, int seed, bool local,
-        Player shooter = null, Func<Vector3> aim = null, Node3D lockTarget = null)
+        Player shooter = null, Func<Vector3> aim = null, Node3D lockTarget = null, float power = 1f)
     {
         var rng = new RandomNumberGenerator { Seed = (ulong)(uint)seed };
         var t = w?.T ?? Weapons.Get(s.Id);
-        var dmg = w?.Damage ?? t.Damage;
+        var dmg = (w?.Damage ?? t.Damage) * power;
         var spread = Mathf.DegToRad(w?.Spread ?? t.Spread) * (shooter is { Aiming: true } ? 0.6f : 1f);
         var range = w?.Range ?? t.Range;
         var speed = w?.ShotSpeed ?? (t.ProjectileSpeed > 0 ? t.ProjectileSpeed : 300f);
         var blast = w?.BlastRadius ?? t.BlastRadius;
         var bullets = Bullets.For(world);
+        if (WingDiverShot(world, s, w, t, from, dir, rng, local, shooter, dmg, spread, range, speed, blast, power)) return;
         switch (s.Kind)
         {
             case Edf5Kind.Bullet:
@@ -189,6 +193,107 @@ public static class Edf5Fire
                 break;
             }
         }
+    }
+
+    private static readonly Color ArcBlue = new(0.55f, 0.82f, 1f), Electric = new(0.75f, 0.7f, 1f), PulseCyan = new(0.35f, 1f, 0.95f),
+        LaserRed = new(1f, 0.35f, 0.25f);
+
+    /// <summary>Coups des armes de la Wing Diver (faux pour les autres natures).</summary>
+    private static bool WingDiverShot(World world, Edf5Spec s, WeaponInstance w, WeaponTemplate t, Vector3 from, Vector3 dir,
+        RandomNumberGenerator rng, bool local, Player shooter, float dmg, float spread, float range, float speed, float blast, float power)
+    {
+        var bullets = Bullets.For(world);
+        var mul = shooter?.DamageMul ?? 1f;
+        // Armes à charge à projectiles multiples (Thunder Crossbow, Stardust Cannon…) : autant de projectiles que la charge.
+        var pellets = Math.Max(1, s.Pellets);
+        if (s.Supply == Edf5Supply.Charge && pellets > 1)
+        {
+            pellets = Math.Max(1, (int)MathF.Round(pellets * power));
+            dmg /= Mathf.Max(power, 0.05f);
+        }
+        void Add(Vector3 d, float sp, float rangeM, float width, float len, Color c, int bounces = 0, float grav = 0f, bool pierce = false, float bl = 0f, float far = -1f) =>
+            bullets.Add(new Bullets.Shot
+            {
+                Pos = from, Vel = d * sp, Life = rangeM / sp, MaxLife = rangeM / sp, Damage = dmg, Far = far >= 0 ? far : s.FarDamage, FalloffExp = 1f,
+                Pierce = pierce || s.Pierce, Blast = bl, Local = local, Gravity = grav, Bounces = bounces, Color = c, Length = len, Width = width,
+            });
+        switch (s.Kind)
+        {
+            case Edf5Kind.Arc:
+                // Lames d'arc de plasma : gerbe à très courte portée (Rapier), décharge plus longue et plus dense (Phalanx).
+                for (var i = 0; i < pellets; i++)
+                {
+                    var d = s.Family == "phalanx" && s.Name.Contains("W") ? dir.Rotated(Vector3.Up, (rng.Randf() - 0.5f) * spread * 2.5f) : Spread(dir, spread, rng);
+                    Add(d, 420f, range * (0.75f + 0.25f * rng.Randf()), 0.05f, 2.2f, ArcBlue);
+                }
+                return true;
+            case Edf5Kind.Lance:
+                Add(dir, 2400f, range, s.Family == "dragoon" ? 0.2f : 0.13f, Mathf.Min(range * 0.6f, 70f), ArcBlue, pierce: s.Family == "dragoon");
+                Effects.Beam(world, from, from + dir * Mathf.Min(range, 60f), ArcBlue, s.Family == "dragoon" ? 0.12f : 0.07f);
+                return true;
+            case Edf5Kind.Spark:
+            {
+                var sp = speed > 0 ? speed : 400f;
+                for (var i = 0; i < pellets; i++)
+                    Add(Spread(dir, Mathf.Max(spread, Mathf.DegToRad(s.Family is "sparkwhip" or "boltgun" ? 9f : 3f)), rng), sp, range, 0.06f, 3f, Electric, 3);
+                return true;
+            }
+            case Edf5Kind.Beam:
+                for (var i = 0; i < pellets; i++)
+                    Add(Spread(dir, spread, rng), 1400f, range, s.Family == "destroyer" ? 0.05f : 0.09f, 9f, s.Family == "spine" ? Electric : ArcBlue,
+                        s.Family == "reflectron" ? 2 : 0);
+                return true;
+            case Edf5Kind.Pulse:
+            {
+                var sp = speed > 0 ? speed : 150f;
+                var way = s.Name.Contains("Way") ? pellets : 0;
+                for (var i = 0; i < pellets; i++)
+                {
+                    var d = way > 1 ? dir.Rotated(Vector3.Up, Mathf.Lerp(-1f, 1f, i / (float)(way - 1)) * Mathf.DegToRad(4f + 2.5f * way)) : Spread(dir, spread, rng);
+                    Add(d, sp, range, 0.22f, 1.1f, PulseCyan, bl: Mathf.Max(blast, 0.8f), far: 1f);
+                }
+                return true;
+            }
+            case Edf5Kind.Laser:
+                for (var i = 0; i < pellets; i++)
+                    Add(Spread(dir, spread, rng), speed > 0 ? Mathf.Min(speed, 3500f) : 3000f, range, 0.06f, Mathf.Min(range * 0.25f, 60f), LaserRed);
+                return true;
+            case Edf5Kind.PlasmaShot:
+            {
+                var sp = Mathf.Clamp(speed > 0 ? speed : 120f, 40f, 180f);
+                for (var i = 0; i < pellets; i++)
+                {
+                    Vector3 d;
+                    if (s.Family == "splasher") d = (dir + Vector3.Up * 0.6f + RandomOnSphere(rng) * 0.35f).Normalized();
+                    else if (pellets > 1 && s.Family != "plasmafall") d = dir.Rotated(Vector3.Up, Mathf.Lerp(-1f, 1f, i / (float)(pellets - 1)) * Mathf.DegToRad(5f));
+                    else d = Spread(dir, spread, rng);
+                    var up = s.Family == "plasmafall" ? Vector3.Up * (i * 0.08f) : Vector3.Zero;
+                    var p = Projectile.Spawn(world, ProjectileKind.Plasma, from, (d + up).Normalized() * sp * (s.Family == "splasher" ? 0.45f : 1f), local, dmg * mul, Mathf.Max(blast, 2f));
+                    p.Gravity = s.Family == "plasmafall" ? 28f : s.Family is "bigcannon" or "heavycannon" ? 14f : 9f;
+                    p.Life = Mathf.Clamp(range / sp, 2f, 14f);
+                }
+                return true;
+            }
+            case Edf5Kind.Homing:
+            {
+                var targets = HomingTargets;
+                var sp = s.Family switch { "geist" => 28f, "fenrir" => 160f, "ghostchaser" => 55f, "psiblade" => 80f, _ => 95f };
+                var turn = s.Homing >= 0 ? Mathf.Lerp(8f, 1.5f, s.Homing / 12f) : 4f;
+                for (var i = 0; i < pellets; i++)
+                {
+                    var d = s.Family == "ghostchaser" ? (dir + RandomOnSphere(rng) * 0.9f).Normalized()
+                        : pellets > 1 ? Spread(dir, Mathf.DegToRad(18f), rng) : dir;
+                    var p = Projectile.Spawn(world, ProjectileKind.Energy, from, d * sp, local, dmg * mul, blast > 0 ? blast : 1.2f);
+                    p.Life = 6f;
+                    if (targets is { Count: > 0 }) p.SetHoming(targets[i % targets.Count], turn);
+                }
+                return true;
+            }
+            case Edf5Kind.Orb:
+                EnergyOrb.Spawn(world, s, dmg * mul, from, dir, local);
+                return true;
+        }
+        return false;
     }
 
     public static Vector3 Spread(Vector3 dir, float rad, RandomNumberGenerator rng)

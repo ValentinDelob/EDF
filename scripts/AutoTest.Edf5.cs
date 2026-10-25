@@ -32,7 +32,7 @@ public static partial class AutoTest
         }
         if (Screenshot.CmdArg("edf5-fire") is { } filter)
         {
-            Profile.I.Data.SelectedClass = SoldierClass.Rifleman;
+            if (Screenshot.CmdArg("class") == null) Profile.I.Data.SelectedClass = SoldierClass.Rifleman;
             Enemy.Frozen = true;
             WhenPlayerReady(app, 2f, p => FireRange(app, p, filter));
         }
@@ -67,7 +67,7 @@ public static partial class AutoTest
         {
             if (i >= list.Count || !GodotObject.IsInstanceValid(p)) return;
             var id = list[i++];
-            p.Weapons[0] = new WeaponState(Grant(id));
+            p.Weapons[0] = p.Arm(Grant(id));
             p.Current = 0;
             p.Aiming = true;
             GD.Print($"[arme] {id} « {Weapons.Get(id).Name} »");
@@ -79,8 +79,11 @@ public static partial class AutoTest
 
     private static void FireRange(App app, Player p, string filter)
     {
-        var specs = Edf5Weapons.Ranger.Where(s => filter is "" or "all" || s.Family == filter || s.Id == filter || s.Category == filter
-                                                  || s.Kind.ToString() == filter).ToList();
+        var source = p.Def.Id == SoldierClass.Airborne ? Edf5Weapons.WingDiver : Edf5Weapons.Ranger;
+        var specs = source.Where(s => s.Kind != Edf5Kind.Core && (filter is "" or "all" || s.Family == filter || s.Id == filter || s.Category == filter
+                                                  || s.Kind.ToString() == filter)).ToList();
+        // Wing Diver : cœur le plus puissant (les armes de haut niveau coûtent plus que l'énergie d'un cœur de départ).
+        if (p.Def.Id == SoldierClass.Airborne) { p.Core = Grant("vzplasmacore"); p.Energy = p.MaxEnergy; }
         GD.Print($"[edf5] stand de tir : {specs.Count} armes");
         Player.BotStill = true;
         Player.BotForceFire = true;
@@ -105,6 +108,9 @@ public static partial class AutoTest
                 Edf5Kind.Firecracker or Edf5Kind.HandGrenade => 16f,
                 Edf5Kind.Bomb => 9f,
                 Edf5Kind.Impulse => 14f,
+                Edf5Kind.Arc => s.Family == "phalanx" ? 20f : 12f,
+                Edf5Kind.Lance or Edf5Kind.Spark or Edf5Kind.Beam => 26f,
+                Edf5Kind.Orb => 22f,
                 _ when s.Category == "Fusil à pompe" => 18f,
                 _ => 34f,
             };
@@ -119,7 +125,7 @@ public static partial class AutoTest
             // Éloigne les autres insectes (figés) de la ligne de tir.
             foreach (var e in w.EnemiesById.Values)
                 if (e != target && e.GlobalPosition.DistanceTo(p.GlobalPosition) < 60f) e.GlobalPosition += (e.GlobalPosition - p.GlobalPosition).Normalized() * 120f;
-            var ws = new WeaponState(Grant(s.Id));
+            var ws = p.Arm(Grant(s.Id));
             p.Weapons[0] = ws;
             p.Current = 0;
             Player.BotLookAt = target.Center;

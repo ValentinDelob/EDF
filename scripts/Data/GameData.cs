@@ -29,8 +29,8 @@ public static class Classes
             "Fusée de ralliement", "Les alliés proches infligent +30 % de dégâts pendant 15 s. Roulade d'esquive.",
             new Color(0.36f, 0.42f, 0.30f), new Color(0.18f, 0.2f, 0.17f), 2),
         new(SoldierClass.Airborne, "Commando aéroporté", "Assaut aérien", 150, 7.0f, 14f,
-            "Piqué", "Vol au réacteur dorsal. Le piqué inflige des dégâts de zone à l'impact.",
-            new Color(0.75f, 0.77f, 0.8f), new Color(0.2f, 0.35f, 0.6f), 2),
+            "Piqué", "Vol au réacteur dorsal alimenté par le cœur plasma. Le piqué inflige des dégâts de zone à l'impact.",
+            new Color(0.75f, 0.77f, 0.8f), new Color(0.2f, 0.35f, 0.6f), 3), // deux armes + cœur plasma
         new(SoldierClass.Support, "Opérateur d'appui", "Soutien et frappes", 200, 5.5f, 8f,
             "Balise prioritaire", "Frappes d'artillerie, tourelles et champ de soin. Gagne des crédits d'appel : barrage d'artillerie ou véhicule (char, hélicoptère).",
             new Color(0.55f, 0.48f, 0.34f), new Color(0.75f, 0.55f, 0.15f), 3),
@@ -49,6 +49,15 @@ public static class Classes
 
     /// <summary>Nombre d'armes par jeu (Grenadier blindé).</summary>
     public const int SetSize = 2;
+
+    /// <summary>
+    /// Équipement du dernier emplacement (EDF 5) : cœur plasma de la Wing Diver. Cet emplacement n'accepte que ce type,
+    /// les autres refusent ; null : tous les emplacements sont des armes.
+    /// </summary>
+    public static string EquipCategory(SoldierClass c) => c == SoldierClass.Airborne ? "Cœurs plasma" : null;
+
+    /// <summary>Indice de l'emplacement d'équipement (-1 sans équipement).</summary>
+    public static int EquipSlot(SoldierClass c) => EquipCategory(c) != null ? Get(c).WeaponSlots - 1 : -1;
 }
 
 /// <summary>
@@ -74,7 +83,8 @@ public enum WeaponKind { Hitscan, Projectile, Beam, Melee, Airstrike, Turret, He
 
 /// <summary>Caractéristiques d'une arme qui portent des étoiles (0 = minimum, <see cref="WeaponInstance.MaxStars"/> = maximum).</summary>
 /// <remarks>Blast, LockTime, LockRange : armes d'EDF 5 seulement (explosion, temps et portée de verrouillage).</remarks>
-public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5, Blast = 6, LockTime = 7, LockRange = 8 }
+/// <remarks>Energy : coût en énergie d'une recharge (Wing Diver) ; Capacity : énergie maximale d'un cœur plasma.</remarks>
+public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5, Blast = 6, LockTime = 7, LockRange = 8, Energy = 9, Capacity = 10 }
 
 /// <summary>Modèle d'arme : valeurs de base au niveau 0, sans étoile.</summary>
 public record WeaponTemplate(
@@ -102,11 +112,6 @@ public static class Weapons
 {
     private static readonly WeaponTemplate[] Legacy =
     {
-        // Commando aéroporté
-        new("lz1", "LZ-1 Lumen", SoldierClass.Airborne, WeaponKind.Beam, "Laser à rayon", 70, 1, 100, 1.4f, 220, 0, EnergyCost: 30),
-        new("ae3", "AE-3 Foudre", SoldierClass.Airborne, WeaponKind.Hitscan, "Lance électrique", 26, 2.5f, 1, 0.8f, 45, 6f, Pellets: 8, EnergyCost: 18, Automatic: false),
-        new("pl7", "PL-7 Nova", SoldierClass.Airborne, WeaponKind.Projectile, "Canon à plasma", 160, 1, 1, 1.8f, 300, 0.2f, BlastRadius: 8, ProjectileSpeed: 70, EnergyCost: 35, Automatic: false),
-        new("pr9", "PR-9 Aiguille", SoldierClass.Airborne, WeaponKind.Hitscan, "Fusil à particules", 180, 1, 1, 1.6f, 800, 0, Zoom: 3f, EnergyCost: 28, Automatic: false, MinLevel: 10),
         // Opérateur d'appui
         new("pdw5", "PDW-5 Écho", SoldierClass.Support, WeaponKind.Hitscan, "Arme de défense", 7, 11, 45, 1.4f, 180, 2f),
         new("art1", "Balise ARTY-1", SoldierClass.Support, WeaponKind.Airstrike, "Frappe d'artillerie", 220, 1, 1, 14f, 300, 0, BlastRadius: 10, Pellets: 6, Automatic: false),
@@ -119,9 +124,6 @@ public static class Weapons
         new("mh2", "MH-2 Enclume", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 220, 1.1f, 1, 0.6f, 6, 0, BlastRadius: 4, Automatic: false),
         new("ms6", "MS-6 Essaim", SoldierClass.Heavy, WeaponKind.Projectile, "Lance-missiles", 60, 6, 6, 3f, 350, 4f, BlastRadius: 4, ProjectileSpeed: 60, MinLevel: 12),
         // Armes de haut niveau (difficultés élevées)
-        new("lz5", "LZ-5 Faisceau", SoldierClass.Airborne, WeaponKind.Beam, "Laser à rayon", 150, 1, 100, 1.6f, 260, 0, EnergyCost: 38, MinLevel: 30),
-        new("ae9", "AE-9 Arc", SoldierClass.Airborne, WeaponKind.Hitscan, "Lance électrique", 48, 2.2f, 1, 0.9f, 55, 7f, Pellets: 10, EnergyCost: 22, Automatic: false, MinLevel: 25),
-        new("pl12", "PL-12 Supernova", SoldierClass.Airborne, WeaponKind.Projectile, "Canon à plasma", 420, 1, 1, 2.6f, 320, 0.2f, BlastRadius: 13, ProjectileSpeed: 65, EnergyCost: 55, Automatic: false, MinLevel: 45),
         new("pdw9", "PDW-9 Rafale", SoldierClass.Support, WeaponKind.Hitscan, "Arme de défense", 13, 13, 60, 1.5f, 200, 1.6f, MinLevel: 25),
         new("trt5", "Tourelle TR-5 Lourde", SoldierClass.Support, WeaponKind.Turret, "Tourelle automatique", 22, 9, 1, 30f, 100, 2f, Automatic: false, MinLevel: 30),
         new("art8", "Balise SALVE-8", SoldierClass.Support, WeaponKind.Airstrike, "Bombardement en ligne", 330, 1, 1, 22f, 300, 0, BlastRadius: 10, Pellets: 16, Automatic: false, MinLevel: 40),
@@ -131,7 +133,8 @@ public static class Weapons
     };
 
     /// <summary>Toutes les armes : Fusilier = armes du Ranger d'EDF 5 ; autres classes : armes propres au jeu (en attendant EDF 5).</summary>
-    public static readonly WeaponTemplate[] All = Edf5Weapons.Ranger.Select(Edf5Weapons.Template).Concat(Legacy).ToArray();
+    public static readonly WeaponTemplate[] All = Edf5Weapons.Ranger.Select(e => Edf5Weapons.Template(e, SoldierClass.Rifleman))
+        .Concat(Edf5Weapons.WingDiver.Select(e => Edf5Weapons.Template(e, SoldierClass.Airborne))).Concat(Legacy).ToArray();
 
     private static readonly Dictionary<string, WeaponTemplate> ById = All.ToDictionary(w => w.Id);
 
@@ -165,6 +168,15 @@ public static class Weapons
         "Lance-missiles" => "Lance-missiles",
         "Grenades" => "Grenades",
         "Armes spéciales" => "Spéciales",
+        "Courte portée" => "Courte portée",
+        "Blasters" => "Blasters",
+        "Électriques" => "Électriques",
+        "Pulsation" => "Pulsation",
+        "Longue portée" => "Longue portée",
+        "Artillerie plasma" => "Artillerie plasma",
+        "Guidées" => "Guidées",
+        "Spéciales" => "Spéciales",
+        "Cœurs plasma" => "Cœurs plasma",
         _ => category,
     };
 
@@ -177,6 +189,10 @@ public static class Weapons
         "Lance-roquettes" => "Roquettes",
         "Lance-missiles" => "Missiles",
         "Armes spéciales" => "Spéciales",
+        "Courte portée" => "Courte",
+        "Longue portée" => "Longue",
+        "Artillerie plasma" => "Artillerie",
+        "Cœurs plasma" => "Cœurs",
         _ => CategoryTitle(category),
     };
 
@@ -221,16 +237,47 @@ public static class Weapons
             Edf5Kind.Impulse => "Pose une mine qui tire une gerbe de projectiles sur l'ennemi qui s'approche.",
             Edf5Kind.Reverser => "Soigne le soldat allié visé (rayon continu).",
             Edf5Kind.ReverseShooter => "Tire une charge de soin : soigne les soldats dans la zone d'impact.",
-            _ => "",
+            Edf5Kind.Core => $"Cœur plasma : alimente le vol, la poussée et la recharge des armes. Recharge {e.EnergyCharge:0.#}/s, "
+                             + $"vol {e.FlightCost:0.#}/s, poussée {e.BoostCost:0.#}." + CoreExtras(e),
+            _ => Edf5SupplyText(e) + (e.Kind switch
+            {
+                Edf5Kind.Arc => e.Supply == Edf5Supply.Reload ? " Lames d'arc de plasma à très courte portée, en éventail." : " Décharge d'arcs de plasma : plus la charge est longue, plus elle porte loin et frappe fort.",
+                Edf5Kind.Lance => " Rayon de particules instantané, qui perd de sa force avec la distance." + (e.Pierce ? " Traverse les ennemis." : ""),
+                Edf5Kind.Spark => " Éclairs qui ricochent sur les ennemis et le décor.",
+                Edf5Kind.Beam => " Rayon continu" + (e.Pierce ? " perforant" : "") + (e.Family == "reflectron" ? " qui se réfléchit sur le décor" : "") + " ; il faiblit quand le chargeur se vide.",
+                Edf5Kind.Pulse => " Impulsions d'énergie qui explosent à l'impact (rayon " + (e.Blast.Present ? $"{e.Blast.Max:0.#} m" : "réduit") + ").",
+                Edf5Kind.Laser => " Laser de longue portée à vitesse quasi instantanée.",
+                Edf5Kind.PlasmaShot => " Obus de plasma en cloche qui explosent à l'impact.",
+                Edf5Kind.Homing => " Verrouille les ennemis devant soi et lance des projectiles d'énergie guidés.",
+                Edf5Kind.Orb => " Lance une sphère d'énergie qui frappe seule les ennemis alentour pendant plusieurs secondes.",
+                Edf5Kind.HandGrenade => " Grenade de plasma lancée à la main, rechargée sans énergie.",
+                _ => "",
+            }),
         };
     }
+
+    private static string Edf5SupplyText(Edf5Spec e) => e.Supply switch
+    {
+        Edf5Supply.Reload => "Rechargé avec l'énergie du cœur, même rangé.",
+        Edf5Supply.Charge => "Arme à charge : tenir le bouton pour charger (énergie), relâcher pour tirer.",
+        Edf5Supply.ChargeBurst => "Arme à charge : tenir le bouton remplit le chargeur, relâcher le vide en rafale.",
+        Edf5Supply.Direct => "Alimentation directe : chaque tir est aussitôt rechargé avec l'énergie du cœur.",
+        _ => "",
+    };
+
+    private static string CoreExtras(Edf5Spec e) =>
+        (e.WeaponCharge != 0 ? $" Charge des armes {e.WeaponCharge * 100:+0;-0} %." : "")
+        + (e.FlightSpeed != 0 ? $" Vitesse de vol {e.FlightSpeed * 100:+0;-0} %." : "")
+        + (e.BoostSpeed.Forward > 0 ? $" Poussée avant +{e.BoostSpeed.Forward * 100:0} %." : "")
+        + (e.BoostSpeed.Side > 0 ? $" Poussée latérale +{e.BoostSpeed.Side * 100:0} %." : "")
+        + (e.BoostSpeed.Back > 0 ? $" Poussée arrière +{e.BoostSpeed.Back * 100:0} %." : "");
 
     public static IEnumerable<WeaponTemplate> ForClass(SoldierClass c) => All.Where(w => w.Class == c);
 
     public static readonly Dictionary<SoldierClass, string[]> StarterLoadout = new()
     {
         [SoldierClass.Rifleman] = new[] { "pa11", "grantm31" }, // départ du Ranger d'EDF 5
-        [SoldierClass.Airborne] = new[] { "lz1", "pl7" },
+        [SoldierClass.Airborne] = new[] { "rapier", "powerlance", "plasmacore" }, // départ de la Wing Diver d'EDF 5
         [SoldierClass.Support] = new[] { "pdw5", "art1", "med3" },
         [SoldierClass.Heavy] = new[] { "gt40", "cs90", "mh2", "ms6" }, // jeu 1 : mitrailleuse + canon ; jeu 2 : marteau + missiles
     };
@@ -259,7 +306,7 @@ public class WeaponInstance
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyRarity { get; set; }
 
-    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée", "Explosion", "Verrouillage", "Portée de verrouillage" };
+    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée", "Explosion", "Verrouillage", "Portée de verrouillage", "Énergie", "Capacité" };
 
     // Bonus par étoile (relatifs à la valeur sans étoile au niveau de l'arme).
     public const float DamagePerStar = 0.06f;
@@ -319,6 +366,8 @@ public class WeaponInstance
             WeaponStat.Blast => e.Blast.Stars,
             WeaponStat.LockTime => e.LockTime.Stars,
             WeaponStat.LockRange => e.LockRange.Stars,
+            WeaponStat.Energy => e.Energy.Stars,
+            WeaponStat.Capacity => e.MaxEnergy.Stars,
             _ => 0,
         };
     }
@@ -337,6 +386,8 @@ public class WeaponInstance
         WeaponStat.Blast => e.Blast.Present,
         WeaponStat.LockTime => e.LockTime.Present,
         WeaponStat.LockRange => e.LockRange.Present,
+        WeaponStat.Energy => e.Energy.Present,
+        WeaponStat.Capacity => e.MaxEnergy.Present,
         _ => false,
     } : s switch
     {
@@ -370,6 +421,15 @@ public class WeaponInstance
         : T.Range * (1f + 0.002f * Level) * (1f + RangePerStar * s);
     private float BlastAt(int s) => E5 is { } e ? (e.Blast.Present ? e.Blast.At(s, Edf5Weapons.RaBlast, false) : 0f) : T.BlastRadius * (1f + 0.003f * Level);
     private float LockTimeAt(int s) => E5 is { LockTime.Present: true } e ? e.LockTime.At(s, Edf5Weapons.RaLockTime, true) : 0f;
+    private float EnergyAt(int s) => E5 is { Energy.Present: true } e ? e.Energy.At(s, Edf5Weapons.RaEnergy, true) : 0f;
+    private float CapacityAt(int s) => E5 is { MaxEnergy.Present: true } e ? e.MaxEnergy.At(s, Edf5Weapons.RaCapacity, false) : 0f;
+    /// <summary>Wing Diver : énergie d'une recharge complète (ou d'une charge).</summary>
+    [JsonIgnore] public float EnergyCost => EnergyAt(StarsOf(WeaponStat.Energy));
+    /// <summary>Cœur plasma : énergie maximale et recharge d'urgence (mêmes étoiles, comme dans EDF 5).</summary>
+    [JsonIgnore] public float CoreCapacity => CapacityAt(StarsOf(WeaponStat.Capacity));
+    [JsonIgnore] public float CoreEmergency => E5 is { EmergencyCharge.Present: true } e
+        ? e.EmergencyCharge.At(StarsOf(WeaponStat.Capacity), Edf5Weapons.RaCapacity, false) : 15f;
+
     private float LockRangeAt(int s) => E5 is { LockRange.Present: true } e ? e.LockRange.At(s, Edf5Weapons.RaLockRange, false) : 0f;
 
     /// <summary>Rang de précision d'EDF 5 avec les étoiles actuelles (« A- »…), null pour les autres armes.</summary>
@@ -437,7 +497,7 @@ public class WeaponInstance
             case WeaponStat.Damage:
             {
                 var pel = T.Pellets > 1 && T.Kind is WeaponKind.Hitscan or WeaponKind.Projectile ? $" ×{T.Pellets}" : "";
-                return ($"{Fr(Damage, "0")}{pel}", $"+{Small(Damage - DamageAt(0))}");
+                return ($"{Fr(Damage, Damage < 10 ? "0.#" : "0")}{pel}", $"+{Small(Damage - DamageAt(0))}");
             }
             case WeaponStat.FireRate:
                 return ($"{Fr(FireRate * 60f, "0")}/min", $"+{Fr((FireRate - FireRateAt(0)) * 60f, "0")}/min");
@@ -456,6 +516,10 @@ public class WeaponInstance
                 return ($"{Fr(BlastRadius, "0.0")} m", $"+{Fr(BlastRadius - BlastAt(0), "0.0")} m");
             case WeaponStat.LockTime:
                 return ($"{Fr(LockTime, LockTime < 1 ? "0.00" : "0.0")} s", $"−{Fr(LockTimeAt(0) - LockTime, "0.00")} s");
+            case WeaponStat.Energy:
+                return ($"{Fr(EnergyCost, EnergyCost < 10 ? "0.0" : "0")}", $"−{Fr(EnergyAt(0) - EnergyCost, "0.0")}");
+            case WeaponStat.Capacity:
+                return ($"{Fr(CoreCapacity, "0")}", $"+{Fr(CoreCapacity - CapacityAt(0), "0")}");
             case WeaponStat.LockRange:
                 return ($"{Fr(LockRange, "0")} m / {LockTargets}", $"+{Fr(LockRange - LockRangeAt(0), "0")} m");
             case WeaponStat.Range:

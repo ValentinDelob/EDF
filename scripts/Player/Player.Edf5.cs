@@ -25,10 +25,86 @@ public partial class Player
 
     private bool IsEdf5(WeaponState ws) => ws?.W.T.Spec != null;
 
+    /// <summary>Armes à charge : bouton tenu à l'image précédente (le tir part au relâchement).</summary>
+    private bool _chargeHeld;
+    /// <summary>Rafale d'une arme à charge en cours de décharge (Phalanx, Lightning Bow, Pulse, Closed Laser, MONSTER…).</summary>
+    private bool _discharging;
+    private float _shotPower = 1f;
+
+    /// <summary>
+    /// Arme à charge (Wing Diver) : bouton tenu = charge payée en énergie (0 → 1 en « Charge Time », plus vite avec un cœur
+    /// de charge) ; relâché = tir dont la puissance suit la charge ; les lances multiples tirent une rafale.
+    /// </summary>
+    private void HandleCharge(WeaponState ws, float dt, bool held)
+    {
+        var s = ws.W.T.Spec;
+        if (held && ws.Charge < 1f)
+        {
+            var step = Mathf.Min(1f - ws.Charge, dt * ws.ChargeSpeed / Mathf.Max(ws.W.Reload, 0.01f));
+            if (DrawEnergy(ws.W.EnergyCost * step)) ws.Charge += step;
+        }
+        var release = _chargeHeld && !held;
+        _chargeHeld = held;
+        if (!release || ws.Charge < 0.05f) return;
+        var power = ws.Charge;
+        ws.Charge = 0f;
+        _lastFireTime = Time.GetTicksMsec() / 1000f;
+        if (ws.W.Magazine > 1)
+        {
+            // Double / Triple / Twin Lance, Plasma Burst Cannon : rafale d'autant de coups que la charge le permet.
+            _burstLeft = Mathf.Max(1, Mathf.RoundToInt(ws.W.Magazine * power));
+            _burstT = 0;
+            _shotPower = 1f;
+            ws.Ammo = _burstLeft;
+            return;
+        }
+        ws.Ammo = 1;
+        _shotPower = power;
+        ShootOnce(ws);
+        _shotPower = 1f;
+    }
+
+    /// <summary>
+    /// Arme à rafale chargée : bouton tenu = le chargeur se remplit (énergie par coup) ; relâché = il se vide en rafale à la
+    /// cadence de l'arme, jusqu'au dernier coup.
+    /// </summary>
+    private void HandleChargeBurst(WeaponState ws, float dt, bool held)
+    {
+        if (_discharging)
+        {
+            if (ws.Ammo <= 0) { _discharging = false; return; }
+            if (ws.Cooldown > 0) return;
+            // Cadence supérieure à l'image (60 coups/s) : plusieurs coups dans la même image.
+            var n = Mathf.Clamp(Mathf.RoundToInt(dt * ws.W.FireRate), 1, 4);
+            for (var i = 0; i < n && ws.Ammo > 0; i++) ShootOnce(ws);
+            ws.Cooldown = n / Mathf.Max(ws.W.FireRate, 0.05f);
+            _lastFireTime = Time.GetTicksMsec() / 1000f;
+            return;
+        }
+        if (held && ws.Ammo < ws.W.Magazine)
+        {
+            var rate = ws.W.Magazine * ws.ChargeSpeed / Mathf.Max(ws.W.Reload, 0.01f);
+            ws.Charge += rate * dt;
+            var whole = Mathf.Min((int)ws.Charge, ws.W.Magazine - ws.Ammo);
+            if (whole > 0)
+            {
+                if (DrawEnergy(ws.W.EnergyCost * whole / Mathf.Max(ws.W.Magazine, 1))) ws.Ammo += whole;
+                ws.Charge -= whole;
+            }
+        }
+        var release = _chargeHeld && !held;
+        _chargeHeld = held;
+        if (release && ws.Ammo > 0) { _discharging = true; ws.Charge = 0; }
+    }
+
     private void HandleFireEdf5(WeaponState ws, float dt, bool held, bool pressed)
     {
         var s = ws.W.T.Spec;
         UpdateLocks(ws, dt);
+        // Bot : relâche la détente d'une arme à charge quand la charge est pleine.
+        if (Bot && held && (s.Supply == Edf5Supply.Charge && ws.Charge >= 1f || s.Supply == Edf5Supply.ChargeBurst && ws.Ammo >= ws.W.Magazine)) held = false;
+        if (s.Supply == Edf5Supply.Charge && _burstLeft <= 0) { HandleCharge(ws, dt, held); return; }
+        if (s.Supply == Edf5Supply.ChargeBurst) { HandleChargeBurst(ws, dt, held); return; }
         if (ws.Reloading) { _burstLeft = 0; _salvoLeft = 0; return; }
 
         // Rafale en cours (Minion Buster Burst, Volcano…) : coups espacés, sans nouvelle pression.
@@ -37,10 +113,10 @@ public partial class Player
             _burstT -= dt;
             if (_burstT <= 0 && ws.Ammo > 0)
             {
-                _burstT = s.Kind is Edf5Kind.Rocket ? 0.12f : 0.06f;
+                _burstT = s.Kind is Edf5Kind.Rocket ? 0.12f : s.Kind is Edf5Kind.PlasmaShot ? 0.15f : 0.06f;
                 _burstLeft--;
                 ShootOnce(ws);
-                if (ws.Ammo <= 0) { _burstLeft = 0; Reload(); }
+                if (ws.Ammo <= 0) { _burstLeft = 0; if (s.Supply != Edf5Supply.Charge) Reload(); }
             }
             return;
         }
@@ -108,9 +184,19 @@ public partial class Player
         var aim = AimPoint(Mathf.Max(range, 60f), out _);
         var muzzle = MuzzlePos;
         var dir = (aim - muzzle).Normalized();
-        if (s.Kind is Edf5Kind.HandGrenade or Edf5Kind.Bomb) { muzzle = GlobalPosition + Vector3.Up * 1.6f; dir = (-Camera.GlobalBasis.Z).Normalized(); }
+        if (s.Kind is Edf5Kind.HandGrenade or Edf5Kind.Bomb or Edf5Kind.Orb) { muzzle = GlobalPosition + Vector3.Up * 1.6f; dir = (-Camera.GlobalBasis.Z).Normalized(); }
         var seed = (int)World.Rng.Randi();
-        Edf5Fire.Shoot(World, s, ws.W, muzzle, dir, seed, true, this, () => AimPoint(800f, out _), target);
+        // Blasters : la puissance baisse quand le chargeur se vide (Mag Blaster, Reflectron : min + (max − min) × (reste)²).
+        var power = _shotPower;
+        if (s.Family is "magblaster" or "reflectron")
+        {
+            var frac = Mathf.Clamp((ws.Ammo + 1f) / Mathf.Max(ws.W.Magazine, 1), 0f, 1f);
+            power *= 0.2f + 0.8f * frac * frac;
+        }
+        // Armes guidées de la Wing Diver : les projectiles se répartissent entre les cibles verrouillées.
+        if (s.Kind == Edf5Kind.Homing) Edf5Fire.HomingTargets = Locks.Where(e => IsInstanceValid(e)).Cast<Node3D>().ToList();
+        Edf5Fire.Shoot(World, s, ws.W, muzzle, dir, seed, true, this, () => AimPoint(800f, out _), target, power);
+        Edf5Fire.HomingTargets = null;
         Net.I.SendEdf5Shot(s.Id, muzzle, dir, seed);
         Edf5Sounds.Fire(s, muzzle, true);
         if (s.Kind is Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.GrenadeLauncher)
@@ -168,7 +254,7 @@ public partial class Player
     private void UpdateLocks(WeaponState ws, float dt)
     {
         var s = ws.W.T.Spec;
-        if (s.Kind != Edf5Kind.Missile || Downed)
+        if (s.Kind is not (Edf5Kind.Missile or Edf5Kind.Homing) || Downed)
         {
             if (Locks.Count > 0) Locks.Clear();
             LockPending = null;
@@ -192,6 +278,25 @@ public partial class Player
         _lockT = 0;
         LockPending = null;
         Sfx.Ui("hitmarker", -10f, 1.6f, 30);
+    }
+
+    /// <summary>État d'une arme tenue : énergie (recharge payée par le cœur plasma) et vitesse de charge du cœur.</summary>
+    public WeaponState Arm(WeaponInstance w)
+    {
+        var ws = new WeaponState(w);
+        if (w.T.Spec?.Energy.Present == true) ws.Drain = DrawEnergy;
+        if (Core != null) ws.ChargeSpeed = 1f + Core.T.Spec.WeaponCharge;
+        if (w.T.Spec?.Supply == Edf5Supply.Charge) ws.Ammo = 1;
+        return ws;
+    }
+
+    /// <summary>Changement d'arme : la charge en cours est perdue (comme dans EDF 5).</summary>
+    private void DropCharge()
+    {
+        _discharging = false;
+        _chargeHeld = false;
+        _burstLeft = 0;
+        foreach (var w in Weapons) w.Charge = 0f;
     }
 
     /// <summary>Test (--edf5-fire) : déclenche les bombes C posées.</summary>

@@ -14,10 +14,11 @@ public class ProfileData
     /// (les anciens champs « Credits » et « ClassXp » sont simplement ignorés à la lecture) ;
     /// 4 : le Grenadier blindé a quatre emplacements (deux jeux de deux armes) : son équipement est complété
     /// avec les nouvelles armes de départ (MH-2 Enclume, MS-6 Essaim) sans toucher aux deux premiers emplacements ;
+    /// 6 : le Commando aéroporté passe aux armes de la Wing Diver d'EDF 5 (même conversion) et reçoit un emplacement de cœur plasma ;
     /// 5 : le Fusilier passe aux armes du Ranger d'EDF 5 : chaque ancienne arme devient l'arme d'EDF 5 du même type
     /// au niveau le plus proche (sans le dépasser), étoiles ramenées à l'échelle de chaque caractéristique.
     /// </summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
     public int Version { get; set; } = CurrentVersion;
     public SoldierClass SelectedClass { get; set; } = SoldierClass.Rifleman;
     public Dictionary<string, float> ArmorBonus { get; set; } = new();
@@ -90,22 +91,37 @@ public partial class Profile : Node
         Data.ArmorBonus[c.ToString()] = b + amount;
     }
 
+    /// <summary>
+    /// L'arme peut-elle occuper cet emplacement ? L'emplacement d'équipement (cœur plasma de la Wing Diver) n'accepte que
+    /// son type, les autres le refusent.
+    /// </summary>
+    public static bool Fits(SoldierClass c, int slot, WeaponInstance w)
+    {
+        var cat = Classes.EquipCategory(c);
+        return w != null && w.T.Class == c && (cat == null || (slot == Classes.EquipSlot(c)) == (w.T.Category == cat));
+    }
+
     public List<WeaponInstance> Equipped(SoldierClass c)
     {
         var slots = Classes.Get(c).WeaponSlots;
         if (!Data.Equipped.TryGetValue(c.ToString(), out var uids)) uids = new List<string>();
-        var list = uids.Select(u => Data.Arsenal.FirstOrDefault(w => w.Uid == u)).Where(w => w != null && w.T.Class == c).ToList();
-        // Complète avec l'équipement de départ si besoin.
-        foreach (var w in Data.Arsenal.Where(w => w.T.Class == c))
+        var saved = uids.Select(u => Data.Arsenal.FirstOrDefault(w => w.Uid == u)).ToList();
+        var list = new WeaponInstance[slots];
+        for (var i = 0; i < slots && i < saved.Count; i++)
+            if (Fits(c, i, saved[i]) && !list.Contains(saved[i])) list[i] = saved[i];
+        // Complète les emplacements vides avec ce qui leur convient (équipement de départ en premier).
+        for (var i = 0; i < slots; i++)
         {
-            if (list.Count >= slots) break;
-            if (!list.Contains(w)) list.Add(w);
+            if (list[i] != null) continue;
+            list[i] = Data.Arsenal.FirstOrDefault(w => Fits(c, i, w) && !list.Contains(w));
         }
-        return list.Take(slots).ToList();
+        return list.Where(w => w != null).ToList();
     }
 
     public void Equip(SoldierClass c, int slot, WeaponInstance w)
     {
+        // Un cœur va toujours dans l'emplacement d'équipement ; une arme visant cet emplacement prend le premier.
+        if (!Fits(c, slot, w)) slot = Classes.EquipSlot(c) is var es && es >= 0 && Fits(c, es, w) ? es : 0;
         var list = Equipped(c).Select(x => x.Uid).ToList();
         var existing = list.IndexOf(w.Uid);
         if (existing >= 0 && slot < list.Count) (list[existing], list[slot]) = (list[slot], list[existing]);
@@ -189,6 +205,7 @@ public partial class Profile : Node
         if (Data.Version < 2)
             foreach (var w in Data.Arsenal) w.MigrateLegacy();
         if (Data.Version < 5) MigrateRangerEdf5();
+        if (Data.Version < 6) MigrateToEdf5(AirborneCategoryOf, Edf5Weapons.WingDiver, "du Commando");
         // Armes disparues (modèle inconnu) : retirées, l'équipement est complété ensuite.
         Data.Arsenal.RemoveAll(w => !Weapons.Exists(w.TemplateId));
         foreach (var w in Data.Arsenal)
@@ -217,6 +234,45 @@ public partial class Profile : Node
         ["lr4"] = "Lance-roquettes", ["lr9"] = "Lance-roquettes",
         ["gl6"] = "Grenades",
     };
+
+    /// <summary>Ancienne arme du Commando → (type d'arme, famille) de la Wing Diver d'EDF 5 (version 6 du profil).</summary>
+    private static readonly Dictionary<string, (string cat, string fam)> AirborneCategoryOf = new()
+    {
+        ["lz1"] = ("Blasters", "magblaster"), ["lz5"] = ("Blasters", "magblaster"),
+        ["ae3"] = ("Courte portée", "sparkvine"), ["ae9"] = ("Courte portée", "sparkvine"),
+        ["pl7"] = ("Artillerie plasma", "plasmacannon"), ["pl12"] = ("Artillerie plasma", "plasmacannon"),
+        ["pr9"] = ("Longue portée", "closedlaser"),
+    };
+
+    /// <summary>
+    /// Conversion d'anciennes armes en armes d'EDF 5 : même type (et famille), niveau le plus haut sans dépasser l'ancien,
+    /// étoiles en proportion de chaque maximum ; l'équipement suit.
+    /// </summary>
+    private void MigrateToEdf5(Dictionary<string, (string cat, string fam)> map, Edf5Spec[] specs, string who)
+    {
+        var remap = new Dictionary<string, string>();
+        foreach (var w in Data.Arsenal.ToList())
+        {
+            if (!map.TryGetValue(w.TemplateId, out var m)) continue;
+            var pool = specs.Where(e => e.Category == m.cat && e.Family == m.fam && e.Dlc == 0).ToList();
+            var target = pool.Where(e => e.Level <= w.Level).OrderByDescending(e => e.Level).FirstOrDefault() ?? pool.OrderBy(e => e.Level).First();
+            var old = w.Stars ?? Array.Empty<int>();
+            var avg = old.Length > 0 ? (float)old.Average() / WeaponInstance.MaxStars : 0f;
+            var nw = new WeaponInstance { TemplateId = target.Id, Level = target.Level, IsNew = true, Stars = new int[WeaponInstance.StatCount] };
+            foreach (var st in Enum.GetValues<WeaponStat>())
+            {
+                var frac = (int)st < old.Length && (int)st < 6 ? (float)old[(int)st] / WeaponInstance.MaxStars : avg;
+                nw.Stars[(int)st] = (int)MathF.Round(frac * nw.MaxStarsOf(st));
+            }
+            var existing = Data.Arsenal.FirstOrDefault(x => x.TemplateId == target.Id);
+            if (existing != null) { existing.MergeFrom(nw); remap[w.Uid] = existing.Uid; }
+            else { Data.Arsenal.Add(nw); remap[w.Uid] = nw.Uid; }
+            Data.Arsenal.Remove(w);
+        }
+        foreach (var key in Data.Equipped.Keys.ToList())
+            Data.Equipped[key] = Data.Equipped[key].Select(u => remap.TryGetValue(u, out var n) ? n : u).Distinct().ToList();
+        if (remap.Count > 0) GD.Print($"Profil : {remap.Count} arme(s) {who} converties aux armes d'EDF 5.");
+    }
 
     /// <summary>
     /// Version 5 : chaque ancienne arme du Fusilier devient l'arme d'EDF 5 du même type au niveau le plus haut sans dépasser
@@ -298,17 +354,19 @@ public partial class Profile : Node
         {
             var key = def.Id.ToString();
             var list = Data.Equipped.TryGetValue(key, out var l) ? l : new List<string>();
-            // Références valides seulement (arme possédée, de la bonne classe, une seule fois).
-            var valid = list.Where(u => Data.Arsenal.Any(w => w.Uid == u && w.T.Class == def.Id)).Distinct().Take(def.WeaponSlots).ToList();
+            var slots = new WeaponInstance[def.WeaponSlots];
+            // Références valides seulement (arme possédée, de la bonne classe, une seule fois, adaptée à l'emplacement).
+            for (var i = 0; i < slots.Length && i < list.Count; i++)
+            {
+                var w = Data.Arsenal.FirstOrDefault(x => x.Uid == list[i]);
+                if (Fits(def.Id, i, w) && !slots.Contains(w)) slots[i] = w;
+            }
             var starters = Weapons.StarterLoadout.TryGetValue(def.Id, out var ids) ? ids : Array.Empty<string>();
             var candidates = starters.Select(id => Data.Arsenal.FirstOrDefault(w => w.TemplateId == id))
-                .Concat(Data.Arsenal.Where(w => w.T.Class == def.Id))
-                .Where(w => w != null && !valid.Contains(w.Uid)).Select(w => w.Uid).Distinct();
-            foreach (var u in candidates)
-            {
-                if (valid.Count >= def.WeaponSlots) break;
-                valid.Add(u);
-            }
+                .Concat(Data.Arsenal.Where(w => w.T.Class == def.Id)).Where(w => w != null).Distinct().ToList();
+            for (var i = 0; i < slots.Length; i++)
+                slots[i] ??= candidates.FirstOrDefault(w => Fits(def.Id, i, w) && !slots.Contains(w));
+            var valid = slots.Where(w => w != null).Select(w => w.Uid).ToList();
             if (valid.SequenceEqual(list)) continue;
             Data.Equipped[key] = valid;
             changed = true;

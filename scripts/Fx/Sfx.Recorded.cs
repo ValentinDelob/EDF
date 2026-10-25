@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Rempart;
@@ -69,7 +70,7 @@ public partial class Sfx
     /// </summary>
     private void LoadEdf5()
     {
-        foreach (var s in Edf5Weapons.Ranger)
+        foreach (var s in Edf5Weapons.Ranger.Concat(Edf5Weapons.WingDiver).Where(x => x.Kind != Edf5Kind.Core))
         {
             var name = "e5_" + s.Family;
             if (_variants.ContainsKey(name)) continue;
