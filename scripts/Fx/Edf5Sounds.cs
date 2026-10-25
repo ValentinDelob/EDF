@@ -37,10 +37,33 @@ public static class Edf5Sounds
         _ => ("rifle", -3f, 1f),
     };
 
+    /// <summary>Gain de lecture des sons enregistrés de la famille (celui du type de son sur lequel ils sont calés).</summary>
+    public static float GainDb(Edf5Spec s) => For(s).snd switch
+    {
+        "rifle" or "rifle_far" or "smg" => 4f,
+        "shotgun" or "sniper" => 6f,
+        "rocket" => 4.5f,
+        "launcher" or "dash" or "spit" or "jet_loop" => 3f,
+        _ => 0f,
+    };
+
+    /// <summary>
+    /// Son de tir : enregistrement propre à la famille (« e5_famille ») s'il existe, sinon son de base transposé.
+    /// Jets continus (lance-flammes, Reverser) : un son toutes les 0,3 s au plus.
+    /// </summary>
     public static void Fire(Edf5Spec s, Vector3 at, bool local)
     {
+        var interval = s.Kind is Edf5Kind.Flame or Edf5Kind.Reverser ? 300f : 20f;
+        var own = "e5_" + s.Family;
+        if (Sfx.Has(own))
+        {
+            var p = 1f + (GD.Randf() - 0.5f) * 0.04f;
+            if (local) Sfx.Ui(own, 0f, p, interval);
+            else Sfx.At(own, at, -2f, p, interval);
+            return;
+        }
         var (snd, db, pitch) = For(s);
-        if (local) Sfx.Ui(snd, db, pitch, 20);
-        else Sfx.At(snd == "rifle" ? "rifle_far" : snd, at, db + 1f, pitch);
+        if (local) Sfx.Ui(snd, db, pitch, interval);
+        else Sfx.At(snd == "rifle" ? "rifle_far" : snd, at, db + 1f, pitch, interval);
     }
 }

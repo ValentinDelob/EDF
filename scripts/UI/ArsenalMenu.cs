@@ -181,7 +181,7 @@ public partial class ArsenalMenu : Control
                 r.NameClip.Position = Vector2.Zero;
                 r.NameClip.Size = new Vector2(nameW, RowH) * _k;
                 r.NameInk.Size = r.NameClip.Size;
-                r.Overflow = new Pen(this, _k, Vector2.Zero).Measure(EStyle.Cond, r.W.T.Name, 14) > nameW - 10;
+                r.Overflow = new Pen(this, _k, Vector2.Zero).Measure(EStyle.Cond, r.W.T.Name, NameFont) > nameW - 10;
                 r.Node.QueueRedraw();
                 r.NameInk.QueueRedraw();
             }
@@ -192,7 +192,13 @@ public partial class ArsenalMenu : Control
     private int EquippedSlot(WeaponInstance w) => Profile.I.Equipped(_cls).IndexOf(w);
 
     /// <summary>Place réservée à droite du nom : étiquette « ÉQUIPÉE n » ou « NEW » (fixes, hors du bandeau défilant).</summary>
-    private float TagWidth(Row r) => EquippedSlot(r.W) >= 0 ? 52 : r.ShowNew ? 26 : 0;
+    private float TagWidth(Row r) => EquippedSlot(r.W) >= 0 ? (Narrow ? 24 : 52) : r.ShowNew ? (Narrow ? 10 : 26) : 0;
+
+    /// <summary>Colonnes étroites (plus de cinq types d'arme, ex. les sept types du Ranger d'EDF 5) : étiquettes compactes.</summary>
+    private bool Narrow => _cols.Count > 5;
+
+    /// <summary>Corps des noms d'arme (plus petit dans les colonnes étroites).</summary>
+    private float NameFont => Narrow ? 12.5f : 14f;
 
     private float NameWidth(Row r) => r.Col.W - LvW - StarW - TagWidth(r);
 
@@ -396,7 +402,7 @@ public partial class ArsenalMenu : Control
             p.VGrad(col.X, TableY, col.W, HeadH, new Color("2A563C"), new Color("173222"));
             p.Rect(col.X, TableY + HeadH - 2, col.W, 2, active ? EStyle.Frame : EStyle.FrameInner);
             var nameW = col.W - LvW - StarW - 8;
-            var title2 = Weapons.CategoryTitle(col.Category);
+            var title2 = Narrow ? Weapons.CategoryShort(col.Category) : Weapons.CategoryTitle(col.Category);
             var fs = 15f;
             while (fs > 11 && p.Measure(EStyle.CondBold, title2, fs) > nameW) fs -= 0.5f;
             p.Text(EStyle.CondBold, col.X + 8, TableY, HeadH - 2, title2, fs, active ? EStyle.White : EStyle.Text);
@@ -454,7 +460,9 @@ public partial class ArsenalMenu : Control
         var paragraphs = new[]
         {
             $"{t.Category}. {Weapons.Usage(t)}",
-            "Chaque étoile d'une caractéristique lui ajoute un bonus, indiqué entre parenthèses.",
+            t.Spec != null
+                ? "Chaque caractéristique a ses propres étoiles (★ : au maximum) ; le gain qu'elles apportent est indiqué entre parenthèses."
+                : "Chaque étoile d'une caractéristique lui ajoute un bonus, indiqué entre parenthèses.",
             (starter ? "Équipement de départ." : "Récompense de caisse d'arme.") + $" Niveau {w.Level}.",
         };
         var y = 384f;
@@ -471,18 +479,25 @@ public partial class ArsenalMenu : Control
 
         // Caractéristiques (à droite) : (☆n) Nom : valeur (+bonus).
         y = 382f;
+        var lines = Enum.GetValues<WeaponStat>().Count(w.HasStat) + 1;
+        var step = lines > 8 ? 24f : 26f;
         foreach (var s in Enum.GetValues<WeaponStat>())
         {
             if (!w.HasStat(s)) continue;
             var (value, bonus) = w.Describe(s);
             var n = w.StarsOf(s);
-            p.Text(EStyle.Mono, 556, y, 22, $"(☆{n})", 16, EStyle.Gold);
-            p.Text(EStyle.Mono, 612, y, 22, $"{WeaponInstance.StatNames[(int)s]} :", 16, EStyle.White);
+            var cap = w.MaxStarsOf(s);
+            // Armes d'EDF 5 : ★ quand la caractéristique est au maximum, rien pour une valeur fixe.
+            if (cap > 0) p.Text(EStyle.Mono, 556, y, 22, n >= cap && t.Spec != null ? $"(★{n})" : $"(☆{n})", 16, EStyle.Gold);
+            var label = WeaponInstance.StatNames[(int)s];
+            var lfs = 16f;
+            while (lfs > 11 && p.Measure(EStyle.Mono, label + " :", lfs) > 746 - 612 - 6) lfs -= 0.5f;
+            p.Text(EStyle.Mono, 612, y, 22, $"{label} :", lfs, EStyle.White);
             var vw = p.Text(EStyle.Mono, 746, y, 22, value, 16, EStyle.Cyan);
-            if (n > 0) p.Text(EStyle.Mono, 746 + vw + 8, y, 22, $"({bonus})", 16, EStyle.Bonus);
-            y += 26;
+            if (n > 0 && bonus != "") p.Text(EStyle.Mono, 746 + vw + 8, y, 22, $"({bonus})", 16, EStyle.Bonus);
+            y += step;
         }
-        if (t.BlastRadius > 0)
+        if (t.BlastRadius > 0 && t.Spec == null)
         {
             p.Text(EStyle.Mono, 612, y, 22, "Rayon :", 16, EStyle.White);
             p.Text(EStyle.Mono, 746, y, 22, $"{w.BlastRadius:0.0} m".Replace('.', ','), 16, EStyle.Cyan);
@@ -608,12 +623,14 @@ public partial class ArsenalMenu : Control
         p.Text(EStyle.Mono, lx + LvW, 0, RowH, $"{r.W.TotalStars}", 14, txt, HorizontalAlignment.Center, StarW);
         if (equipped)
         {
-            var tag = $"ÉQUIPÉE {slot + 1}";
+            var tag = Narrow ? $"É{slot + 1}" : $"ÉQUIPÉE {slot + 1}";
             var tw = p.Measure(EStyle.CondBold, tag, 9) + 8;
             var tx = lx - 4 - tw;
             p.Rect(tx, (RowH - 13) / 2f, tw, 13, EStyle.Bright);
             p.Text(EStyle.CondBold, tx, (RowH - 13) / 2f, 13, tag, 9, EStyle.Ink, HorizontalAlignment.Center, tw);
         }
+        else if (r.ShowNew && Narrow)
+            p.Rect(lx - 8, RowH / 2f - 2.5f, 5, 5, EStyle.Gold);
         else if (r.ShowNew)
             p.Text(EStyle.CondBold, lx - TagWidth(r), 0, RowH, "NEW", 9, EStyle.Gold, HorizontalAlignment.Center, TagWidth(r) - 4);
     }
@@ -627,13 +644,13 @@ public partial class ArsenalMenu : Control
         var name = r.W.T.Name;
         if (!r.Overflow)
         {
-            p.Text(EStyle.Cond, 8, 0, RowH, name, 14, color);
+            p.Text(EStyle.Cond, 8, 0, RowH, name, NameFont, color);
             return;
         }
         // Bandeau en boucle (maquette : pause 18 % puis défilement d'une longueur sur 7 s).
-        var span = p.Measure(EStyle.Cond, name, 14) + 24;
+        var span = p.Measure(EStyle.Cond, name, NameFont) + 24;
         var ph = (float)(_t % 7.0 / 7.0);
         var off = ph < 0.18f ? 0f : (ph - 0.18f) / 0.82f * span;
-        for (var k = 0; k < 2; k++) p.Text(EStyle.Cond, 8 - off + k * span, 0, RowH, name, 14, color);
+        for (var k = 0; k < 2; k++) p.Text(EStyle.Cond, 8 - off + k * span, 0, RowH, name, NameFont, color);
     }
 }

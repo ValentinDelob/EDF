@@ -174,6 +174,7 @@ public static class Edf5Fire
                 break;
             }
             case Edf5Kind.ReverseShooter:
+            case Edf5Kind.Reverser: // Reverse Gun : tir de soin (les Reverser à jet continu ne passent pas ici)
             {
                 var p = Projectile.Spawn(world, ProjectileKind.Plasma, from, dir * 90f, false, 0, 0);
                 p.Life = 6f;

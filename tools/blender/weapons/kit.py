@@ -386,7 +386,7 @@ def bipod(part, u, z, folded=True, mat=METAL):
             part.add(tube(0.0045, 0.0045, u + 0.01, u + 0.2, s * 0.012, z - 0.008, 8), mat)
         else:
             bm = tube(0.0045, 0.0045, 0, 0.2, 0, 0, 8)
-            m = Matrix.Translation(P(s * 0.012, u, z)) @ Matrix.Rotation(math.radians(-70), 4, 'X') @ Matrix.Rotation(math.radians(s * 12), 4, 'Y')
+            m = Matrix.Translation(P(s * 0.012, u, z)) @ Matrix.Rotation(math.radians(70), 4, 'X') @ Matrix.Rotation(math.radians(s * 12), 4, 'Y')
             part.add(bm, mat, m)
 
 

@@ -60,7 +60,36 @@ public partial class Sfx
             _gain[name] = gain;
         }
         LoadRecordedLoops();
+        LoadEdf5();
     }
+
+    /// <summary>
+    /// Sons des familles d'armes d'EDF 5 (<c>res://assets/sfx/edf5/famille_i.wav</c>, tools/edf5/make_weapon_sfx.py), nommés
+    /// « e5_famille », au gain du type de son sur lequel ils sont calés.
+    /// </summary>
+    private void LoadEdf5()
+    {
+        foreach (var s in Edf5Weapons.Ranger)
+        {
+            var name = "e5_" + s.Family;
+            if (_variants.ContainsKey(name)) continue;
+            var list = new List<AudioStreamWav>();
+            for (var i = 0; i < 4; i++)
+            {
+                var path = $"res://assets/sfx/edf5/{s.Family}_{i}.wav";
+                if (!ResourceLoader.Exists(path) || GD.Load<AudioStreamWav>(path) is not { } file) continue;
+                list.Add(new AudioStreamWav { Format = file.Format, MixRate = file.MixRate, Stereo = file.Stereo, Data = file.Data });
+                file.Dispose();
+            }
+            if (list.Count == 0) continue;
+            _variants[name] = list.ToArray();
+            _sounds[name] = list[0];
+            _gain[name] = Edf5Sounds.GainDb(s);
+        }
+    }
+
+    /// <summary>Un son (synthétisé ou enregistré) de ce nom existe-t-il ?</summary>
+    public static bool Has(string name) => I != null && I._sounds.ContainsKey(name);
 
     private void LoadRecordedLoops()
     {

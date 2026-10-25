@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.12.0 — Armes du Ranger d'EDF 5, morsure des fourmis, arsenal
+
+- **Les 260 armes du Ranger d'EDF 5** remplacent celles du Fusilier, avec leurs noms et leurs valeurs officielles (dégâts, cadence, munitions, rechargement, portée, vitesse des balles, précision S++ à F, explosion, verrouillage) : fusils d'assaut (PA-11, M1 Raven, Minion Buster, Slugger, G&M, Stork, X-Orchid, Slade, Blazer…), fusils à pompe (Slaughter, SGN, Breecher, Monsoon…), fusils de précision (KFF, Lysander, Fang, Dunkel, Ptarmigan, Penetrator…), lance-roquettes (Grant, Leopard guidé, Goliath, Volcano…), lance-missiles à verrouillage (Emerald, MLRA, Air Tortoise, Prominence…), grenades (MG, DNG, lance-grenades UM, BRUTE, Stampede, grenades collantes et rebondissantes, napalm, Flame Geyser), armes spéciales (acide, lance-flammes, pétards, Bound Gun, bombes C, mines Impulse, Reverser).
+- **Étoiles comme dans EDF 5** : chaque caractéristique a son propre maximum (jusqu'à ★10) et suit la formule d'EDF 5 ; le niveau est celui de l'arme ; ★ quand une caractéristique est au maximum. Les armes du Fusilier déjà gagnées sont converties en l'arme d'EDF 5 du même type au niveau le plus proche.
+- **Balles réelles** : vitesse, portée, perte de puissance avec la distance, perforation, balles explosives, rafales ; missiles qui verrouillent plusieurs cibles, roquettes guidées sur le réticule, grenades à retardement qui rebondissent, collantes, napalm qui brûle au sol, lance-flammes, bombes à déclencher, mines automatiques, soin des coéquipiers.
+- **62 modèles 3D** (un par famille, faits dans Blender) avec leurs variantes (laser, lunette) et des matières d'arme (acier phosphaté, polymère grenu, peinture) ; **un son enregistré par famille**.
+- **Morsure des fourmis noires** refaite : la fourmi se cabre, lève les pattes avant, bondit, referme les mandibules sur sa cible puis la secoue ; les dégâts tombent quand les mandibules se ferment (on peut esquiver) ; portée d'attaque raccourcie pour que la tête atteigne vraiment le soldat.
+- **Arsenal** : cliquer sur une arme équipée (ou sur sa ligne dans la carte d'équipement) la marque « À REMPLACER » et la prochaine arme cliquée prend sa place, y compris pour le second emplacement ; colonnes compactes pour les sept types d'armes du Ranger.
+- Tests : `--edf5-fire` (stand de tir de toutes les armes), `--weapons=…`, `--weapon-cam=…`, `--grab=bite`.
+
 ## v0.11.2 — Nouvel hélicoptère
 
 - **Hélicoptère d'attaque entièrement remodelé** (dans Blender) : fuselage effilé, verrière en tandem à facettes et montants, flancs à caissons, nacelles moteur avec diffuseurs d'échappement infrarouge, ailerons à pylônes (rails de missiles et paniers de roquettes), train à roues avec bras tirés et roulette de queue, dérive en flèche, stabilisateur, radôme de mât, boule de capteurs sous le nez, tubes de Pitot, marchepieds, lance-leurres, feux de position.

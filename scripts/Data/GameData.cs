@@ -168,8 +168,20 @@ public static class Weapons
         _ => category,
     };
 
+    /// <summary>Intitulé court (colonnes étroites de l'arsenal, sept types du Ranger d'EDF 5).</summary>
+    public static string CategoryShort(string category) => category switch
+    {
+        "Fusil d'assaut" => "Assaut",
+        "Fusil à pompe" => "Pompe",
+        "Fusil de précision" => "Précision",
+        "Lance-roquettes" => "Roquettes",
+        "Lance-missiles" => "Missiles",
+        "Armes spéciales" => "Spéciales",
+        _ => CategoryTitle(category),
+    };
+
     /// <summary>Courte description d'usage selon la nature de l'arme (panneau de l'arsenal).</summary>
-    public static string Usage(WeaponTemplate t) => t.Kind switch
+    public static string Usage(WeaponTemplate t) => t.Spec is { } e ? Edf5Usage(e) : t.Kind switch
     {
         WeaponKind.Hitscan when t.Pellets > 1 => $"Tire une gerbe de {t.Pellets} projectiles, redoutable à courte portée.",
         WeaponKind.Hitscan when t.Zoom > 1 => "Tir de précision à longue portée, visée zoomée.",
@@ -183,6 +195,35 @@ public static class Weapons
         WeaponKind.HealField => "Déploie un champ qui soigne les alliés.",
         _ => "",
     };
+
+    /// <summary>Usage d'une arme d'EDF 5 selon sa nature de tir et ses particularités.</summary>
+    private static string Edf5Usage(Edf5Spec e)
+    {
+        var extra = (e.Pierce ? " Les balles traversent les ennemis." : "") + (e.Burst > 1 ? $" Tir en rafales de {e.Burst}." : "")
+                    + (e.Blast.Present && e.Kind == Edf5Kind.Bullet ? " Balles explosives." : "") + (e.LaserSight ? " Pointeur laser." : "")
+                    + (e.Zoom > 1 ? $" Visée ×{e.Zoom:0.#}." : "");
+        return e.Kind switch
+        {
+            Edf5Kind.Bullet when e.Pellets > 1 => $"Tire une gerbe de {e.Pellets} plombs, dévastatrice de près, qui perd sa force avec la distance.{extra}",
+            Edf5Kind.Bullet when e.FarDamage < 0.95f => $"Les balles perdent de leur puissance en fin de portée.{extra}",
+            Edf5Kind.Bullet => $"Balles à trajectoire tendue.{extra}",
+            Edf5Kind.Rocket => $"Roquettes explosives.{extra}",
+            Edf5Kind.GuidedRocket => $"Roquette guidée : elle suit le point visé jusqu'à l'impact.{extra}",
+            Edf5Kind.Missile => $"Verrouille les ennemis dans le réticule (portée et nombre de cibles), puis tire un missile par cible.{extra}",
+            Edf5Kind.HandGrenade => e.Fuse > 0 ? $"Grenade à main : rebondit et explose au bout de {e.Fuse:0} s." : "Grenade à main : explose à l'impact.",
+            Edf5Kind.GrenadeLauncher => e.Fuse > 0 ? $"Lance-grenades : les grenades explosent au bout de {e.Fuse:0} s.{extra}" : $"Lance-grenades : explosion à l'impact.{extra}",
+            Edf5Kind.Napalm => "Projette une charge incendiaire qui brûle tout ce qui reste dans les flammes (dégâts totaux sur la durée du feu).",
+            Edf5Kind.Acid => "Projette de l'acide en cloche : idéal par-dessus les obstacles.",
+            Edf5Kind.Flame => "Jet de flammes continu à courte portée ; brûle tout ce qu'il enveloppe.",
+            Edf5Kind.Firecracker => "Projette une gerbe de pétards explosifs à courte portée.",
+            Edf5Kind.BoundGun => "Les balles ricochent sur le décor.",
+            Edf5Kind.Bomb => "Pose des charges explosives (collées à ce qu'elles touchent) ; tir chargeur vide ou rechargement : mise à feu.",
+            Edf5Kind.Impulse => "Pose une mine qui tire une gerbe de projectiles sur l'ennemi qui s'approche.",
+            Edf5Kind.Reverser => "Soigne le soldat allié visé (rayon continu).",
+            Edf5Kind.ReverseShooter => "Tire une charge de soin : soigne les soldats dans la zone d'impact.",
+            _ => "",
+        };
+    }
 
     public static IEnumerable<WeaponTemplate> ForClass(SoldierClass c) => All.Where(w => w.Class == c);
 
