@@ -9,10 +9,15 @@ public partial class RemotePlayer : Node3D
     /// <summary>Arme d'EDF 5 tenue (vide : arme procédurale du style transmis dans l'état).</summary>
     public string GunId;
 
-    public void SetGun(string id)
+    /// <summary>« arme|bouclier » : arme tenue et bouclier du Fencer au bras gauche (vide : aucun).</summary>
+    public void SetGun(string ids)
     {
+        var parts = (ids ?? "").Split('|');
+        var id = parts[0];
         GunId = Weapons.Exists(id) ? id : null;
         if (GunId != null) Model.SetWeapon(Weapons.Get(GunId));
+        var sh = parts.Length > 1 && Weapons.Exists(parts[1]) ? Weapons.Get(parts[1]).Spec : null;
+        Model.SetShield(sh?.Kind == Edf5Kind.Shield ? sh : null);
     }
     public string PlayerName;
     public SoldierClass Class;
@@ -53,6 +58,10 @@ public partial class RemotePlayer : Node3D
         return r;
     }
 
+    /// <summary>Fencer en garde de bouclier (renvoi des projectiles chez l'hôte) et direction de la garde.</summary>
+    public bool Reflecting => (_flags & (1 << 12)) != 0;
+    public Vector3 GuardForward => new Basis(Vector3.Up, _netYaw) * Vector3.Back;
+
     public void ApplyState(Vector3 pos, float yaw, float pitch, int flags, float hp, Vector3 vel)
     {
         _netPos = pos;
@@ -65,6 +74,7 @@ public partial class RemotePlayer : Node3D
         Model.Visible = (flags & 128) == 0;
         if (string.IsNullOrEmpty(GunId)) Model.SetWeaponStyle((WeaponStyle)((flags >> 8) & 7));
         Model.Reloading = (flags & (1 << 11)) != 0;
+        Model.ShieldUp = (flags & (1 << 12)) != 0;
         if ((flags & 16) != 0) _recoil = 0.6f;
     }
 

@@ -43,6 +43,15 @@ public static class Edf5Sounds
         "plasmacannon" or "plasmafall" or "bigcannon" or "heavycannon" or "burstcannon" or "grit" or "splasher" => ("plasma", -1f, 0.85f),
         "mirage" or "geist" or "ghostchaser" or "fenrir" or "psiblade" => ("laser", -6f, 1.3f),
         "diffuser" or "gleipnir" or "thundercluster" or "heavensgate" or "psicluster" or "finaldays" or "blinkball" => ("dash", -8f, 1.3f),
+        // Fencer (repli si le son propre manque) : mêlée, canons rotatifs, canons lourds, mortiers, missiles.
+        "hammer" or "vulcan" or "blade" or "forceax" or "roller" or "haken" or "blasthole" or "twinspear" or "flashing" or "jackhammer"
+            => ("hammer", -2f, 0.9f),
+        "gatling" or "fgs" or "disruptor" => ("minigun", -3f, 0.9f),
+        "galleon" or "handcannon" or "gallic" or "powerdyne" or "spinedriver" => ("sniper", 1f, 0.75f),
+        "dexter" or "cannonshot" => ("shotgun", 0f, 0.8f),
+        "flamerevolver" => ("jet_loop", -10f, 0.6f),
+        "lightmortar" or "heavymortar" or "dispersal" or "crusher" => ("launcher", 0f, 0.7f),
+        "armhound" or "bloodstorm" or "haytal" or "leviathan" or "arcane" or "fgimpact" or "phoenix" => ("rocket", -2f, 1f),
         _ => ("rifle", -3f, 1f),
     };
 
@@ -50,6 +59,8 @@ public static class Edf5Sounds
     public static float GainDb(Edf5Spec s) => For(s).snd switch
     {
         "rifle" or "rifle_far" or "smg" => 4f,
+        "hammer" => 3f,
+        "minigun" => 1f,
         "shotgun" or "sniper" => 6f,
         "rocket" => 4.5f,
         "launcher" or "dash" or "spit" or "jet_loop" => 3f,

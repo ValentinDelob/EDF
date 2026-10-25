@@ -33,6 +33,11 @@ public static class HudWeaponArt
     /// <summary>Icône d'une arme d'EDF 5 selon sa nature de tir.</summary>
     public static HudWeaponIcon IconFor(Edf5Spec s) => s.Kind switch
     {
+        Edf5Kind.Strike or Edf5Kind.Pierce or Edf5Kind.Shield => HudWeaponIcon.Hammer,
+        Edf5Kind.Mortar => HudWeaponIcon.Siege,
+        Edf5Kind.Bullet when s.Family is "gatling" or "fgs" or "disruptor" => HudWeaponIcon.Gatling,
+        Edf5Kind.Bullet when s.Family is "dexter" or "cannonshot" => HudWeaponIcon.Shotgun,
+        Edf5Kind.Bullet when s.Family is "galleon" or "handcannon" or "gallic" or "powerdyne" => HudWeaponIcon.Siege,
         Edf5Kind.Rocket or Edf5Kind.GuidedRocket => HudWeaponIcon.Rocket,
         Edf5Kind.Missile => HudWeaponIcon.Missile,
         Edf5Kind.HandGrenade or Edf5Kind.GrenadeLauncher or Edf5Kind.Napalm or Edf5Kind.Firecracker => HudWeaponIcon.Grenade,
@@ -53,6 +58,8 @@ public static class HudWeaponArt
         Edf5Kind.Impulse => "Mines",
         Edf5Kind.Reverser or Edf5Kind.ReverseShooter => "Soin",
         Edf5Kind.Firecracker => "Pétards",
+        Edf5Kind.Strike or Edf5Kind.Pierce => "Frappes",
+        Edf5Kind.Shield => "Durabilité",
         _ => AmmoName(i),
     };
 
@@ -258,6 +265,17 @@ public partial class HudWeapons : HudBlock
             e.Key = int.MinValue;
         }
         var beam = w.T.Kind == WeaponKind.Beam && w.T.Spec == null; // EDF 5 : lance-flammes et Reverser ont des munitions
+        // Bouclier du Fencer : durabilité en pour cent.
+        if (w.T.Spec?.Kind == Edf5Kind.Shield)
+        {
+            var pct = Mathf.RoundToInt(ws.Charge * 100);
+            e.Reloading = ws.Reloading;
+            e.SetCur(pct);
+            e.SetMax(100);
+            e.Bar = ws.Reloading ? ws.ReloadProgress : ws.Charge;
+            e.Empty = pct <= 0;
+            return;
+        }
         // Arme à charge de la Wing Diver : charge en pour cent.
         if (w.T.Spec?.Supply == Edf5Supply.Charge)
         {

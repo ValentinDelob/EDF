@@ -18,7 +18,7 @@ public class ProfileData
     /// 5 : le Fusilier passe aux armes du Ranger d'EDF 5 : chaque ancienne arme devient l'arme d'EDF 5 du même type
     /// au niveau le plus proche (sans le dépasser), étoiles ramenées à l'échelle de chaque caractéristique.
     /// </summary>
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
     public int Version { get; set; } = CurrentVersion;
     public SoldierClass SelectedClass { get; set; } = SoldierClass.Rifleman;
     public Dictionary<string, float> ArmorBonus { get; set; } = new();
@@ -92,14 +92,11 @@ public partial class Profile : Node
     }
 
     /// <summary>
-    /// L'arme peut-elle occuper cet emplacement ? L'emplacement d'équipement (cœur plasma de la Wing Diver) n'accepte que
-    /// son type, les autres le refusent.
+    /// L'arme peut-elle occuper cet emplacement ? Les emplacements d'équipement (cœur plasma de la Wing Diver, équipements de
+    /// soutien du Fencer) n'acceptent que leurs types, les autres les refusent.
     /// </summary>
-    public static bool Fits(SoldierClass c, int slot, WeaponInstance w)
-    {
-        var cat = Classes.EquipCategory(c);
-        return w != null && w.T.Class == c && (cat == null || (slot == Classes.EquipSlot(c)) == (w.T.Category == cat));
-    }
+    public static bool Fits(SoldierClass c, int slot, WeaponInstance w) =>
+        w != null && w.T.Class == c && Classes.IsEquipSlot(c, slot) == Classes.IsEquipCategory(c, w.T.Category);
 
     public List<WeaponInstance> Equipped(SoldierClass c)
     {
@@ -120,7 +117,7 @@ public partial class Profile : Node
 
     public void Equip(SoldierClass c, int slot, WeaponInstance w)
     {
-        // Un cœur va toujours dans l'emplacement d'équipement ; une arme visant cet emplacement prend le premier.
+        // Un équipement va toujours dans un emplacement d'équipement ; une arme visant un tel emplacement prend le premier.
         if (!Fits(c, slot, w)) slot = Classes.EquipSlot(c) is var es && es >= 0 && Fits(c, es, w) ? es : 0;
         var list = Equipped(c).Select(x => x.Uid).ToList();
         var existing = list.IndexOf(w.Uid);
@@ -206,6 +203,7 @@ public partial class Profile : Node
             foreach (var w in Data.Arsenal) w.MigrateLegacy();
         if (Data.Version < 5) MigrateRangerEdf5();
         if (Data.Version < 6) MigrateToEdf5(AirborneCategoryOf, Edf5Weapons.WingDiver, "du Commando");
+        if (Data.Version < 7) MigrateToEdf5(HeavyCategoryOf, Edf5Weapons.Fencer, "du Grenadier");
         // Armes disparues (modèle inconnu) : retirées, l'équipement est complété ensuite.
         Data.Arsenal.RemoveAll(w => !Weapons.Exists(w.TemplateId));
         foreach (var w in Data.Arsenal)
@@ -242,6 +240,15 @@ public partial class Profile : Node
         ["ae3"] = ("Courte portée", "sparkvine"), ["ae9"] = ("Courte portée", "sparkvine"),
         ["pl7"] = ("Artillerie plasma", "plasmacannon"), ["pl12"] = ("Artillerie plasma", "plasmacannon"),
         ["pr9"] = ("Longue portée", "closedlaser"),
+    };
+
+    /// <summary>Ancienne arme du Grenadier blindé → (type d'arme, famille) du Fencer d'EDF 5 (version 7 du profil).</summary>
+    private static readonly Dictionary<string, (string cat, string fam)> HeavyCategoryOf = new()
+    {
+        ["gt40"] = ("Canons automatiques", "gatling"), ["gt60"] = ("Canons automatiques", "gatling"),
+        ["cs90"] = ("Artillerie", "handcannon"), ["cs150"] = ("Artillerie", "gallic"),
+        ["mh2"] = ("Frappe", "hammer"), ["mh6"] = ("Frappe", "hammer"),
+        ["ms6"] = ("Lance-missiles", "armhound"),
     };
 
     /// <summary>

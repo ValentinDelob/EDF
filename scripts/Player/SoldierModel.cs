@@ -877,7 +877,8 @@ public partial class SoldierModel : Node3D
         var swing = s * 0.55f * gaitW;
         var freeArm = Basis.FromEuler(new Vector3(swing - 0.05f + 0.2f * _flyBlend, 0, 0.12f));
         var freeFore = Basis.FromEuler(new Vector3(-0.35f - 0.6f * gaitW - 0.3f * _flyBlend, 0, 0));
-        SolveArm(_armL, _foreL, _handL, supP - supB * GripC, supB, poleL, Mathf.SmoothStep(0, 1, _freeL), freeArm, freeFore);
+        if (!PoseShield(dt, frame, torsoModel, pitch, poleL))
+            SolveArm(_armL, _foreL, _handL, supP - supB * GripC, supB, poleL, Mathf.SmoothStep(0, 1, _freeL), freeArm, freeFore);
 
         if (_jetFlames != null)
         {

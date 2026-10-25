@@ -12,7 +12,17 @@ public enum Edf5Kind
     // Wing Diver : arcs de plasma (Rapier, Phalanx), lances (rayon instantané), éclairs qui ricochent, rayons continus
     // (blasters), impulsions explosives, lasers de longue portée, obus de plasma, lances guidées, sphères d'énergie, cœur plasma.
     Arc, Lance, Spark, Beam, Pulse, Laser, PlasmaShot, Homing, Orb, Core,
+    // Fencer : frappe chargée (marteaux, lames, rouleaux, haken), perforation (lances, marteaux-piqueurs), boucliers,
+    // mortiers (obus en cloche), équipement de soutien (propulseurs, renforts de bouclier, stabilisateurs, exosquelettes).
+    Strike, Pierce, Shield, Mortar, Gear,
 }
+
+/// <summary>
+/// Attaque d'une arme de mêlée du Fencer : nom d'EDF 5 (« Clash Close Range », « Slash Midium », « Attack 2 »…), seuil de charge
+/// (unités de charge, atteintes à la vitesse de charge de l'arme), puissance relative aux dégâts de l'arme, nombre de coups
+/// (lames dispersées, lances jumelles), portée (m).
+/// </summary>
+public readonly record struct Edf5Strike(string Attack, float Charge, float Power, int Count, float Range);
 
 /// <summary>
 /// Alimentation des armes de la Wing Diver (atwiki EDF5, « エネルギー供給方式 ») : Ammo = munitions classiques (Ranger) ;
@@ -78,6 +88,23 @@ public sealed class Edf5Spec(string id, string name, string category, Edf5Kind k
     /// <summary>Retard d'explosion des grenades (s) ; 0 = à l'impact.</summary>
     public float Fuse;
 
+    // Fencer. Strikes : niveaux de charge (frappe) ou attaques enchaînées (lances) ; Swing : vitesse de charge ou d'attaque ;
+    // SpinUp : mise en rotation des canons automatiques (s) ; Guard : part des dégâts parée (bouclier, ou pendant une frappe) ;
+    // bouclier : durabilité, angle de garde (degrés), rayon et coût (part de la durabilité) du renvoi, vitesse de marche
+    // et de rotation portée / en garde.
+    public Edf5Strike[] Strikes;
+    public Edf5Stat Swing, Durability, SpinUp;
+    public float Guard, GuardAngle, ReflectRadius, ReflectCost;
+    public (float Speed, float Turn) Carry = (1f, 1f), Stance = (1f, 1f);
+    /// <summary>Missiles qui ne se verrouillent qu'avec le kit de guidage d'un Air Raider : tir droit sinon.</summary>
+    public bool GuideOnly;
+    // Équipement de soutien du Fencer (valeurs absentes = neutres) : poussées et sauts propulsés consécutifs, intervalle des
+    // poussées, vitesse horizontale des sauts ; consommation, durabilité, angle et réduction des dégâts des boucliers, réduction
+    // du recul ; impact du poids sur la vitesse et la rotation, vitesse de marche.
+    public int Dashes, Boosts;
+    public float DashInterval = 1f, BoostGain = 1f, ShieldUse = 1f, ShieldDurability = 1f, ShieldAngle, ShieldCut, KnockbackCut,
+        RecoilCut, WeightSpeed = 1f, WeightTurn = 1f, WalkSpeed = 1f;
+
     public static readonly string[] Grades = { "S++", "S+", "S", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "E", "F", "G" };
 
     /// <summary>Demi-angle de dispersion (degrés) d'un rang de précision.</summary>
@@ -99,6 +126,7 @@ public static partial class Edf5Weapons
             Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Acid or Edf5Kind.Arc or Edf5Kind.Lance or Edf5Kind.Spark
                 or Edf5Kind.Beam or Edf5Kind.Laser => WeaponKind.Hitscan,
             Edf5Kind.Flame or Edf5Kind.Reverser => WeaponKind.Beam,
+            Edf5Kind.Strike or Edf5Kind.Pierce or Edf5Kind.Shield => WeaponKind.Melee,
             _ => WeaponKind.Projectile,
         };
         var rof = s.Rof.Present ? s.Rof.At(5, RaRof, false) : 1f;
@@ -110,20 +138,20 @@ public static partial class Edf5Weapons
             s.Speed.Present ? s.Speed.At(5, RaRange, false) : 0f, 0f, s.Zoom,
             // Armes automatiques : cadence d'au moins 4 coups/s (fusils d'assaut, lance-flammes, rapières, blasters…) ;
             // Wing Diver à alimentation directe : le tir continue tant que le bouton est tenu.
-            s.Supply == Edf5Supply.Direct || rof >= 4f && s.Burst == 1
+            s.Supply == Edf5Supply.Direct || s.SpinUp.Present || s.Kind == Edf5Kind.Pierce && rof >= 2f || rof >= 4f && s.Burst == 1
                 && (s.Kind is Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Acid or Edf5Kind.BoundGun or Edf5Kind.Reverser || s.Supply == Edf5Supply.Reload),
             s.Level, s);
     }
 
     // Coefficients Ra de la formule des étoiles (Mu = 0,5) : dégâts et munitions connus (0,5) ; les autres sont estimés.
     public const float RaDamage = 0.5f, RaAmmo = 0.5f, RaRof = 0.25f, RaReload = 0.3f, RaRange = 0.3f, RaBlast = 0.3f, RaLockTime = 0.5f, RaLockRange = 0.3f,
-        RaEnergy = 0.3f, RaCapacity = 0.3f;
+        RaEnergy = 0.3f, RaCapacity = 0.3f, RaSwing = 0.3f, RaSpinUp = 0.5f;
 
     /// <summary>Rangs de précision perdus par étoile manquante.</summary>
     public const float GradePerStar = 0.5f;
 
     /// <summary>Toutes les armes d'EDF 5 reprises dans le jeu, par identifiant.</summary>
     /// <remarks>Construit à la première demande : l'ordre d'initialisation des champs statiques entre les fichiers partiels n'est pas garanti.</remarks>
-    public static Dictionary<string, Edf5Spec> ById => _byId ??= Ranger.Concat(WingDiver).ToDictionary(s => s.Id);
+    public static Dictionary<string, Edf5Spec> ById => _byId ??= Ranger.Concat(WingDiver).Concat(Fencer).ToDictionary(s => s.Id);
     private static Dictionary<string, Edf5Spec> _byId;
 }

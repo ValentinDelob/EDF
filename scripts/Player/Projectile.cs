@@ -37,6 +37,10 @@ public partial class Projectile : Node3D
     public float TurnRate = 3f;
     /// <summary>Impact remplaçant l'explosion standard (napalm, sous-munitions, soin…) : position, normale.</summary>
     public System.Action<Vector3, Vector3> CustomImpact;
+    /// <summary>Tir ennemi renvoyé par la garde d'un bouclier du Fencer : il frappe désormais les ennemis.</summary>
+    public bool Reflected;
+    /// <summary>Dégâts d'un tir ennemi renvoyé (multiple des dégâts infligés aux soldats : échelle des ennemis).</summary>
+    public const float ReflectDamageMul = 8f;
     private Node3D _stuckTo;
     private Vector3 _stuckOffset;
 
@@ -203,7 +207,14 @@ public partial class Projectile : Node3D
         Velocity += Vector3.Down * Gravity * dt;
         var from = GlobalPosition;
         var to2 = from + Velocity * dt;
-        var enemyShot = (int)Kind >= 10;
+        var enemyShot = (int)Kind >= 10 && !Reflected;
+        // Garde d'un bouclier du Fencer (hôte) : le tir repart vers son tireur.
+        if (enemyShot && Authoritative && _world.HostTryReflect(this))
+        {
+            Reflected = true;
+            enemyShot = false;
+            to2 = from + Velocity * dt;
+        }
         // Les tirs ennemis touchent le décor et les joueurs ; ceux des joueurs le décor et les ennemis.
         uint mask = enemyShot ? 1u : (1u | (1u << 2));
         var q = PhysicsRayQueryParameters3D.Create(from, to2, mask);
@@ -251,6 +262,12 @@ public partial class Projectile : Node3D
         _done = true;
         Impacted?.Invoke(pos, collider);
         var enemyShot = (int)Kind >= 10;
+        // Tir renvoyé : dégâts à l'ennemi touché (calculés par l'hôte), éclaboussure seule.
+        if (enemyShot && Reflected && Authoritative && collider is Enemy re && re.State != EnemyState.Dead)
+        {
+            Net.I.SendDamageEnemy(re.Id, Damage * ReflectDamageMul, pos, false);
+            _world.LocalHitFx(re, pos, true, Damage * ReflectDamageMul, false);
+        }
         if (enemyShot)
         {
             if (Kind is ProjectileKind.Laser or ProjectileKind.Bolt) Effects.Sparks(_world, pos, normal);
@@ -259,7 +276,7 @@ public partial class Projectile : Node3D
             else Effects.Goo(_world, pos, Kind == ProjectileKind.Web ? new Color(0.9f, 0.9f, 0.85f) : new Color(0.7f, 0.95f, 0.15f), Kind == ProjectileKind.AcidBig ? 2f : 0.8f, 8);
             // Gros jet d'acide : éclaboussure et gaz toxique (effet seul, sans feu).
             if (Kind == ProjectileKind.AcidBig) Effects.Explosion(_world, pos + normal * 0.2f, 3.5f, ExplosionFx.Acid);
-            if (Authoritative) _world.HostEnemyProjectileImpact(this, pos);
+            if (Authoritative && !Reflected) _world.HostEnemyProjectileImpact(this, pos);
         }
         else if (CustomImpact != null) CustomImpact(pos, normal);
         else if (Authoritative)

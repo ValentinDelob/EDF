@@ -206,7 +206,10 @@ public partial class SoldierPortrait : TextureRect
         _pivot.AddChild(_model);
         _model.RotationDegrees = new Vector3(0, Yaw, 0);
         // Arme tenue : la première arme équipée de la classe (pas le cœur plasma).
-        if (Profile.I?.Equipped(cls).FirstOrDefault(w => w.T.Spec?.Kind != Edf5Kind.Core) is { } first) _model.SetWeapon(first.T);
+        if (Profile.I?.Equipped(cls).FirstOrDefault(w => w.T.Spec?.Kind is not (Edf5Kind.Core or Edf5Kind.Gear or Edf5Kind.Shield)) is { } first) _model.SetWeapon(first.T);
+        // Fencer : bouclier du premier jeu au bras gauche.
+        if (cls == SoldierClass.Heavy && Profile.I?.Equipped(cls).Take(Classes.SetSize).FirstOrDefault(w => w.T.Spec?.Kind == Edf5Kind.Shield) is { } sh)
+            _model.SetShield(sh.T.Spec);
     }
 
     /// <summary>Arme montrée dans les mains du soldat (arme survolée dans l'arsenal).</summary>

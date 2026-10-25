@@ -113,6 +113,123 @@ SUPPLY = {
 SUPPLY_BY_NAME = {'Raijin Limit Custom': 'Reload', 'Psi Blast Wall': 'Reload'}
 
 
+# Fencer (Grenadier blindé). Armes de mêlée : frappe (trois niveaux de charge) et perforation ; boucliers ; canons
+# automatiques ; artillerie (canons à main, canons lourds, mortiers) ; lance-missiles ; quatre types d'équipement de soutien.
+FENCER = {
+    'CC Strikers': ('Frappe', [
+        (r'^Vulcan', 'vulcan'), (r'Roller', 'roller'), (r'Haken', 'haken'), (r'^Force Ax', 'forceax'),
+        (r'Blade', 'blade'), (r'Hammer', 'hammer'),
+    ], 'Strike'),
+    'CC Piercers': ('Perforation', [
+        (r'^Blasthole', 'blasthole'), (r'^Blast Twin', 'twinspear'), (r'^Flashing', 'flashing'), (r'^Jackhammer', 'jackhammer'),
+        (r'^Spine Driver', 'spinedriver'),
+    ], 'Pierce'),
+    'Shields': ('Boucliers', [
+        (r'Reflector', 'reflector'), (r'Ion Mirror', 'ionmirror'), (r'Tower|Great', 'tower'), (r'Deflection|Master', 'deflection'),
+    ], 'Shield'),
+    'Autocannons': ('Canons automatiques', [
+        (r'^FGS', 'fgs'), (r'Hand Gatling', 'gatling'), (r'^Galleon', 'galleon'), (r'^Dexter', 'dexter'),
+        (r'Flame Revolver', 'flamerevolver'), (r'Disruptor', 'disruptor'),
+    ], 'Bullet'),
+    'Cannons': ('Artillerie', [
+        (r'Hand Cannon', 'handcannon'), (r'Gallic|Battle Cannon|Rage Cannon', 'gallic'), (r'^Powerdyne', 'powerdyne'),
+        (r'Cannon Shot|Canister', 'cannonshot'), (r'^YH', 'dispersal'), (r'^Super-Heavy Crusher', 'crusher'),
+        (r'^FHD|^FHE', 'heavymortar'), (r'^FH', 'lightmortar'),
+    ], 'Bullet'),
+    'Missile Launchers': ('Lance-missiles', [
+        (r'Hound', 'armhound'), (r'Blood Storm', 'bloodstorm'), (r'Leviathan', 'leviathan'), (r'^Haytal', 'haytal'),
+        (r'^Arcane', 'arcane'), (r'High Altitude', 'fgimpact'), (r'^Phoenix', 'phoenix'),
+    ], 'Missile'),
+    'Enhanced Boosters': ('Propulseurs', [(r'^Dash Cell', 'dashcell'), (r'^Add Booster', 'addbooster'), (r'^Multi', 'multicharger')], 'Gear'),
+    'Enhanced Shields': ('Renforts de bouclier', [(r'^Deflect Cell', 'deflectcell'), (r'^Barricade', 'barricade'), (r'Protection Armor', 'shieldarmor')], 'Gear'),
+    'Enhanced Cannons': ('Stabilisateurs', [(r'Muzzle', 'muzzle')], 'Gear'),
+    'Enhanced Exoskeleton': ('Exosquelettes', [(r'Exoskeleton', 'exo')], 'Gear'),
+}
+F_KIND = {'flamerevolver': 'Flame', 'lightmortar': 'Mortar', 'heavymortar': 'Mortar', 'dispersal': 'Mortar', 'crusher': 'Mortar'}
+
+
+def strike(s):
+    """« Clash Close Range(★9) 0.0 / 56.6×2 / 48.3m » → (attaque, charge, dégâts, étoiles, nombre, portée)."""
+    if s is None or s.strip() in ('', '-'):
+        return None
+    m = re.match(r'\s*(.*?)\(★(\d+)\+?\)\s*([\d.]+)\s*/\s*([\d.]+)(?:×(\d+))?\s*/\s*([\d.]+)m', s)
+    if not m:
+        sys.exit(f'frappe illisible : {s}')
+    return (m.group(1).strip(), float(m.group(3)), float(m.group(4)), int(m.group(2)), int(m.group(5) or 1), float(m.group(6)))
+
+
+def thrust(s):
+    """« [PT]453.0×2 / 40.0m(★8) » → (dégâts, étoiles, nombre, portée)."""
+    if s is None or s.strip() in ('', '-'):
+        return None
+    m = re.match(r'\s*(?:\[PT\])?([\d.]+)(?:×(\d+))?\s*/\s*([\d.]+)m\(★(\d+)', s)
+    if not m:
+        sys.exit(f'attaque illisible : {s}')
+    return (float(m.group(1)), int(m.group(4)), int(m.group(2) or 1), float(m.group(3)))
+
+
+def pct_pair(s):
+    """« 70% / 50% [Heavy] » → (0.7, 0.5) ; « - / - » → None."""
+    v = re.findall(r'(\d+)%', s or '')
+    return (int(v[0]) / 100, int(v[1]) / 100) if len(v) == 2 else None
+
+
+def fencer_extra(r, fam, kind, p):
+    """Champs propres au Fencer. Vrai : la ligne est complète (frappe, bouclier, équipement)."""
+    if kind == 'Strike':
+        lv = [strike(get(r, k)) for k in ('Regular (Charge/Damage/Range)', 'High Voltage (Charge/Damage/Range)', 'Maximum (Charge/Damage/Range)')]
+        lv = [x for x in lv if x]
+        top = max(lv, key=lambda x: x[2] * x[4])
+        p.append(f'Damage = new({f(top[2])}, {max(x[3] for x in lv)})')
+        p.append(f'Range = new({f(max(x[5] for x in lv))}, 0)')
+        p.append('Strikes = new Edf5Strike[] { ' + ', '.join(
+            f'new({json.dumps(x[0])}, {f(x[1])}, {f(round(x[2] / top[2], 4))}, {x[4]}, {f(x[5])})' for x in lv) + ' }')
+        cs = stat(get(r, 'Charge Speed (sec)'))
+        if cs: p.append(f'Swing = {st(cs)}')
+        dd = num(get(r, 'Defense Damage(%)'))
+        if dd: p.append(f'Guard = {f(dd / 100)}')
+        return True
+    if kind == 'Pierce':
+        if get(r, 'Attack 1 (Damage/Range)'):
+            a1, a2 = thrust(get(r, 'Attack 1 (Damage/Range)')), thrust(get(r, 'Attack 2 (Damage/Range)'))
+            p.append(f'Damage = new({f(a2[0])}, {a2[1]})')
+            p.append('Pierce = true')
+            if a2[2] > 1: p.append(f'Pellets = {a2[2]}')
+            p.append(f'Range = new({f(a2[3])}, 0)')
+            p.append('Strikes = new Edf5Strike[] { ' + ', '.join(
+                f'new("{n}", 0f, {f(round(a[0] / a2[0], 4))}, {a[2]}, {f(a[3])})' for n, a in (('Attack 1', a1), ('Attack 2', a2))) + ' }')
+        sw = stat(get(r, 'Swing/Ready Speed'))
+        if sw: p.append(f'Swing = {st(sw)}')
+        return False
+    if kind == 'Shield':
+        p.append(f'Durability = {st(stat(get(r, "Durability")))}')
+        p.append(f'GuardAngle = {f(num(get(r, "Defense Angle")))}')
+        p.append(f'Guard = {f(num(get(r, "Damage Defense (%)")) / 100)}')
+        p.append(f'ReflectRadius = {f(num(get(r, "Physical Reverse Range (Radius)")))}')
+        p.append(f'ReflectCost = {f(num(get(r, "Reversal Durability Drop(%)")) / 100)}')
+        ns = pct_pair(get(r, 'Normal Speed (Speed/Roatation)'))
+        if ns: p.append(f'Carry = ({f(ns[0])}, {f(ns[1])})')
+        ss = pct_pair(get(r, 'Stance Speed (Speed/Rotation)'))
+        if ss: p.append(f'Stance = ({f(ss[0])}, {f(ss[1])})')
+        return True
+    if kind == 'Gear':
+        g = {
+            'Consecutive Dashes': 'Dashes', 'Consecutive Boosts': 'Boosts', 'Dash Interval (%)': 'DashInterval',
+            'Horizontal Boost Speed (%)': 'BoostGain', 'Shield Consumption (%)': 'ShieldUse', 'Shields Durability': 'ShieldDurability',
+            'Shield Defense Angle': 'ShieldAngle', 'Damage Deduction Rate (%)': 'ShieldCut', 'Knockback Reduction Rate (%)': 'KnockbackCut',
+            'Recoil Reduction (%)': 'RecoilCut', 'Weight Impact on Speed (%)': 'WeightSpeed', 'Weight Impact on Rotation Inertia (%)': 'WeightTurn',
+            'Walking Speed (%)': 'WalkSpeed',
+        }
+        for col, field in g.items():
+            v = num(get(r, col))
+            if v is None: continue
+            if field in ('Dashes', 'Boosts'): p.append(f'{field} = {int(v)}')
+            elif field == 'ShieldAngle': p.append(f'{field} = {f(v)}')
+            else: p.append(f'{field} = {f(v / 100)}')
+        return True
+    return False
+
+
 def boost(s):
     """« Forward+25%/Sideways+15% » → (avant, côté, arrière) en fractions."""
     out = {'Forward': 0.0, 'Sideways': 0.0, 'Backward': 0.0}
@@ -205,6 +322,13 @@ def gen_class(rows, table, kinds, supply=None):
         a = [f'"{wid}"', json.dumps(name, ensure_ascii=False), f'"{fr}"', f'Edf5Kind.{kind}', f'"{fam}"', r['LV']]
         p = []
         if dlc: p.append(f'Dlc = {dlc}')
+        if table is FENCER and fencer_extra(r, fam, kind, p):
+            ammo = stat(get(r, 'Ammo'))
+            if ammo and kind == 'Strike': p.append(f'Ammo = {st(ammo)}')
+            rl = stat(get(r, 'Reload (sec)'))
+            if rl and kind in ('Strike', 'Shield'): p.append(f'Reload = {st(rl)}')
+            lines.append(f'        new({", ".join(a)}) {{ {", ".join(p)} }},')
+            continue
         if supply is not None and kind != 'Core':
             p.append(f'Supply = Edf5Supply.{SUPPLY_BY_NAME.get(name, supply.get(fam, "Reload"))}')
         if kind == 'Core':
@@ -222,7 +346,7 @@ def gen_class(rows, table, kinds, supply=None):
             elif fs and num(fs): p.append(f'FlightSpeed = {f(num(fs) / 100)}')
             lines.append(f'        new({", ".join(a)}) {{ {", ".join(p)} }},')
             continue
-        d = damage(get(r, 'Damage', 'Damage/Amount Healed'))
+        d = None if any(x.startswith('Strikes') for x in p) else damage(get(r, 'Damage', 'Damage/Amount Healed'))
         ammo = stat(get(r, 'Ammo', 'Ammo/Number'))
         if ammo: p.append(f'Ammo = {st(ammo)}')
         rof = stat(get(r, 'Rate of Fire (Fire/sec)'))
@@ -238,22 +362,23 @@ def gen_class(rows, table, kinds, supply=None):
         en = stat(get(r, 'Energy Cost'))
         if en: p.append(f'Energy = {st(en)}')
         rg = stat(get(r, 'Range (m)', 'Range (sec)'))
-        if rg: p.append(f'Range = {st(rg)}')
+        if rg and not any(x.startswith('Range') for x in p): p.append(f'Range = {st(rg)}')
         sp = stat(get(r, 'Shot Speed (m/sec)'))
         if sp: p.append(f'Speed = {st(sp)}')
         acc = grade(get(r, 'Accuracy'))
         if acc: p.append(f'Accuracy = new({acc[0]}, {acc[1]})')
-        bl = stat(get(r, 'Blast Area (m)', 'Effective Area (Radius m)'))
+        bl = stat(get(r, 'Blast Area (m)', 'Effective Area (Radius m)', 'Blast Area (Radius m)'))
         if bl: p.append(f'Blast = {st(bl)}')
         z = get(r, 'Zoom')
         if z and num(z): p.append(f'Zoom = {f(num(z))}')
         if get(r, 'Laser Sight') == 'Equipped': p.append('LaserSight = true')
-        lo = get(r, 'Lock-On (Range/Targets)', 'Lock-on (Range/Targets)')
+        lo = get(r, 'Lock-On (Range/Targets)', 'Lock-on (Range/Targets)', 'Lock-on(Range/Targets)')
         if lo:
             m = re.match(r'\s*([\d.]+)m\s*/\s*(\d+) Targets', lo)
             ls = re.search(r'★(\d+)', lo)
             p.append(f'LockRange = new({f(float(m.group(1)))}, {ls.group(1) if ls else 0})')
             p.append(f'LockTargets = {m.group(2)}')
+            if 'Guide Kit' in lo: p.append('GuideOnly = true')
         lt = stat(get(r, 'Lock-On Time (sec)', 'Lock-on Time (sec)'))
         if lt: p.append(f'LockTime = {st(lt)}')
         h = get(r, 'Homing Capability')
@@ -261,6 +386,8 @@ def gen_class(rows, table, kinds, supply=None):
         det = get(r, 'Detonates by')
         if det == 'Timed':
             p.append(f'Fuse = {f(num(get(r, "Detonation Time (sec)") or "3"))}')
+        dl = stat(get(r, 'Delay (sec)'))
+        if dl: p.append(f'SpinUp = {st(dl)}')
         sd = stat(get(r, 'Search Distance'))
         if sd: p.append(f'Search = {st(sd)}')
         lines.append(f'        new({", ".join(a)}) {{ {", ".join(p)} }},')
@@ -283,6 +410,8 @@ def main():
     write('Ranger', "Armes du Ranger d'EDF 5 (Fusilier)", gen_class([r for r in rows if r['class'] == 'Ranger'], RANGER, KIND))
     write('WingDiver', "Armes et cœurs plasma de la Wing Diver d'EDF 5 (Commando aéroporté)",
           gen_class([r for r in rows if r['class'] == 'Wing Diver'], WINGDIVER, WD_KIND, SUPPLY))
+    write('Fencer', "Armes et équipements de soutien du Fencer d'EDF 5 (Grenadier blindé)",
+          gen_class([r for r in rows if r['class'] == 'Fencer'], FENCER, F_KIND))
 
 
 main()

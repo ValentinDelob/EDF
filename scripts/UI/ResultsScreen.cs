@@ -164,7 +164,7 @@ public partial class ResultsScreen : CanvasLayer
         if (lr.After.Level > lr.Before.Level)
             lines.Add(SubLine("Niveau", $"{lr.Before.Level} → {lr.After.Level}", null));
         foreach (var s in lr.ImprovedStats)
-            lines.Add(SubLine(WeaponInstance.StatNames[(int)s], $"☆{lr.Before.StarsOf(s)} → ☆{lr.After.StarsOf(s)}", $"({lr.After.Describe(s).bonus})"));
+            lines.Add(SubLine(WeaponInstance.StatLabel(lr.After.T, s), $"☆{lr.Before.StarsOf(s)} → ☆{lr.After.StarsOf(s)}", $"({lr.After.Describe(s).bonus})"));
         return lines;
     }
 

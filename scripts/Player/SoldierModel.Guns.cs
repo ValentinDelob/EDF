@@ -17,6 +17,9 @@ public partial class SoldierModel
     /// <summary>Affiche l'arme tenue : modèle de la famille pour une arme d'EDF 5, sinon style procédural.</summary>
     public void SetWeapon(WeaponTemplate t)
     {
+        // Équipements (cœur plasma, soutien du Fencer) : rien en main ; bouclier : porté au bras gauche (SetShield).
+        if (t?.Spec?.Kind is Edf5Kind.Core or Edf5Kind.Gear) return;
+        if (t?.Spec?.Kind == Edf5Kind.Shield) { SetShield(t.Spec); return; }
         if (t?.Spec is { } s && LoadGun(t, s)) return;
         if (GunId != null) { GunId = null; Style = (WeaponStyle)(-1); }
         SetWeaponStyle(t == null ? WeaponStyle.Rifle : StyleFor(t));
@@ -39,6 +42,31 @@ public partial class SoldierModel
         foreach (var c in _gun.GetChildren()) c.QueueFree();
         var model = scene.Instantiate<Node3D>();
         _gun.AddChild(model);
+        var tris = ApplyGunMats(model, s);
+        Vector3 Pt(string name, Vector3 fallback) => model.FindChild(name, true, false) is Node3D p ? p.Position : fallback;
+        var vertical = model.FindChild("SupportV", true, false) != null;
+        var hold = HoldFor(s);
+        _rig = new Rig
+        {
+            Hold = hold,
+            Grip = Pt("Grip", new Vector3(0, -0.1f, -0.07f)),
+            Support = vertical ? Pt("SupportV", Vector3.Zero) : Pt("Support", new Vector3(0, 0, 0.25f)),
+            Butt = Pt("Butt", new Vector3(0, -0.02f, -0.36f)),
+            Mag = Pt("Mag", new Vector3(0, -0.12f, 0.08f)),
+            GripB = PistolGripR,
+            SupB = hold == Hold.Launcher || vertical ? VerticalGripL : HandguardL,
+        };
+        Muzzle = new Node3D { Position = Pt("Muzzle", new Vector3(0, 0, 0.6f)) };
+        _gun.AddChild(Muzzle);
+        _gunTris = tris;
+        GunId = s.Id;
+        Style = (WeaponStyle)(-2);
+        return true;
+    }
+
+    /// <summary>Matières du jeu par nom de matériau et pièces optionnelles de la variante ; renvoie le nombre de triangles.</summary>
+    private static int ApplyGunMats(Node3D model, Edf5Spec s)
+    {
         var (paint, accent) = GunColors(s);
         var mats = new Dictionary<string, Material>
         {
@@ -75,30 +103,59 @@ public partial class SoldierModel
                 };
             }
         }
-        Vector3 Pt(string name, Vector3 fallback) => model.FindChild(name, true, false) is Node3D p ? p.Position : fallback;
-        var vertical = model.FindChild("SupportV", true, false) != null;
-        var hold = HoldFor(s);
-        _rig = new Rig
-        {
-            Hold = hold,
-            Grip = Pt("Grip", new Vector3(0, -0.1f, -0.07f)),
-            Support = vertical ? Pt("SupportV", Vector3.Zero) : Pt("Support", new Vector3(0, 0, 0.25f)),
-            Butt = Pt("Butt", new Vector3(0, -0.02f, -0.36f)),
-            Mag = Pt("Mag", new Vector3(0, -0.12f, 0.08f)),
-            GripB = PistolGripR,
-            SupB = hold == Hold.Launcher || vertical ? VerticalGripL : HandguardL,
-        };
-        Muzzle = new Node3D { Position = Pt("Muzzle", new Vector3(0, 0, 0.6f)) };
-        _gun.AddChild(Muzzle);
-        _gunTris = tris;
-        GunId = s.Id;
-        Style = (WeaponStyle)(-2);
+        return tris;
+    }
+
+    // ───────── Bouclier du Fencer (bras gauche) ─────────
+
+    private Node3D _shield;
+    /// <summary>Bouclier porté (null : aucun).</summary>
+    public string ShieldId { get; private set; }
+    /// <summary>Garde levée (bouton tenu, bouclier en main) : le bouclier passe devant le torse.</summary>
+    public bool ShieldUp;
+    private float _shieldBlend;
+
+    /// <summary>Bouclier du jeu actif, tenu de la main gauche devant le flanc (null : retiré).</summary>
+    public void SetShield(Edf5Spec s)
+    {
+        if (s?.Id == ShieldId) return;
+        _shield?.QueueFree();
+        _shield = null;
+        ShieldId = null;
+        if (s == null || _torso == null || GunScene(s.Family) is not { } scene) return;
+        _shield = new Node3D();
+        _torso.AddChild(_shield);
+        var model = scene.Instantiate<Node3D>();
+        _shield.AddChild(model);
+        ApplyGunMats(model, s);
+        ShieldId = s.Id;
+    }
+
+    /// <summary>Pose du bouclier (repère du torse) et main gauche sur sa poignée ; faux sans bouclier.</summary>
+    private bool PoseShield(float dt, Transform3D frame, Transform3D torsoModel, float pitch, Vector3 pole)
+    {
+        if (_shield == null) return false;
+        _shieldBlend = Mathf.MoveToward(_shieldBlend, ShieldUp ? 1f : 0f, dt * 6f);
+        var b = Mathf.SmoothStep(0, 1, _shieldBlend);
+        var p0 = new Vector3(0, 0.47f, 0);
+        // Repos : sur le flanc gauche, légèrement tourné ; garde : devant la poitrine, face à la visée.
+        var rest = new Transform3D(new Basis(Vector3.Up, 0.45f), p0 + V(0.34f, -0.12f, 0.2f));
+        var aimR = new Basis(Vector3.Right, -pitch * 0.6f);
+        var guard = new Transform3D(aimR, p0 + aimR * V(0.12f, -0.02f, 0.42f));
+        var sx = rest.InterpolateWith(guard, b);
+        var t = torsoModel.AffineInverse() * frame * sx;
+        _shield.Transform = t;
+        var gripB = t.Basis * VerticalGripL;
+        SolveArm(_armL, _foreL, _handL, t.Origin - gripB * GripC, gripB, pole, 0, default, default);
         return true;
     }
 
     /// <summary>Tenue selon la nature de l'arme.</summary>
     private static Hold HoldFor(Edf5Spec s) => s.Kind switch
     {
+        // Fencer : armes de mêlée à une main, canons à la hanche, lance-missiles à l'épaule.
+        Edf5Kind.Strike or Edf5Kind.Pierce => Hold.OneHand,
+        Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Mortar when s.Class == SoldierClass.Heavy => Hold.Hip,
         Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.Missile => Hold.Launcher,
         Edf5Kind.HandGrenade or Edf5Kind.Bomb or Edf5Kind.Impulse => Hold.OneHand,
         _ => Hold.Shoulder,
@@ -124,6 +181,15 @@ public partial class SoldierModel
         "raijin" => (new Color(0.12f, 0.13f, 0.15f), new Color(0.6f, 0.5f, 0.15f)),
         "heavycannon" => (new Color(0.55f, 0.57f, 0.6f), new Color(0.5f, 0.25f, 0.05f)),
         "finaldays" => (new Color(0.12f, 0.13f, 0.15f), new Color(0.55f, 0.1f, 0.1f)),
+        "vulcan" or "crusher" => (new Color(0.2f, 0.22f, 0.25f), new Color(0.6f, 0.33f, 0.08f)),
+        "leviathan" => (new Color(0.32f, 0.3f, 0.22f), new Color(0.07f, 0.075f, 0.08f)),
+        "ionmirror" => (new Color(0.5f, 0.52f, 0.56f), new Color(0.07f, 0.075f, 0.08f)),
+        "reflector" => (new Color(0.55f, 0.57f, 0.6f), new Color(0.6f, 0.33f, 0.08f)),
+        "tower" => (new Color(0.24f, 0.26f, 0.2f), new Color(0.07f, 0.075f, 0.08f)),
+        "flamerevolver" => (new Color(0.2f, 0.22f, 0.25f), new Color(0.45f, 0.12f, 0.06f)),
+        "disruptor" => (new Color(0.14f, 0.15f, 0.17f), new Color(0.6f, 0.33f, 0.08f)),
+        // Fencer : acier bleuté, gaines sombres (comme tools/blender/weapons/fencer.py).
+        _ when s.Class == SoldierClass.Heavy => (new Color(0.2f, 0.22f, 0.25f), new Color(0.07f, 0.075f, 0.08f)),
         _ when s.Class == SoldierClass.Airborne => (new Color(0.78f, 0.8f, 0.83f), new Color(0.12f, 0.13f, 0.15f)),
         _ => (new Color(0.16f, 0.17f, 0.12f), new Color(0.32f, 0.27f, 0.18f)),
     };

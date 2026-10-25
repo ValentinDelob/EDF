@@ -257,14 +257,14 @@ public static partial class AutoTest
         Profile.I.MergeDuplicates();
         var dupLeft = Profile.I.Data.Arsenal.GroupBy(x => x.TemplateId).Count(g => g.Count() > 1);
         GD.Print($"Fusion des doublons : {before} → {Profile.I.Data.Arsenal.Count} armes, doublons restants : {dupLeft}");
-        // Migration version 4 : un Grenadier d'ancien profil (2 emplacements) est complété à 4 sans toucher aux deux premiers.
+        // Migration version 4 : un Grenadier d'ancien profil (2 emplacements) est complété (armes et équipements) sans toucher aux deux premiers.
         var heavyKey = SoldierClass.Heavy.ToString();
         var oldHeavy = Profile.I.Data.Equipped[heavyKey].Take(2).ToList();
         Profile.I.Data.Equipped[heavyKey] = oldHeavy.ToList();
         Profile.I.FillEquipped();
         var newHeavy = Profile.I.Data.Equipped[heavyKey];
         GD.Print($"Migration Grenadier : {oldHeavy.Count} → {newHeavy.Count} emplacements ({string.Join(", ", Profile.I.Equipped(SoldierClass.Heavy).Select(x => x.T.Name))})"
-                 + (newHeavy.Count == 4 && newHeavy.Take(2).SequenceEqual(oldHeavy) && newHeavy.Distinct().Count() == 4 ? "" : " ERROR"));
+                 + (newHeavy.Count == Classes.Get(SoldierClass.Heavy).WeaponSlots && newHeavy.Take(2).SequenceEqual(oldHeavy) && newHeavy.Distinct().Count() == newHeavy.Count ? "" : " ERROR"));
         var tree = app.GetTree();
         void Key(Key k)
         {

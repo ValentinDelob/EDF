@@ -103,6 +103,8 @@ public partial class Player
     {
         var s = ws.W.T.Spec;
         UpdateLocks(ws, dt);
+        // Fencer : frappes, lances, boucliers, mise en rotation des canons automatiques.
+        if (Def.Id == SoldierClass.Heavy && HandleFencer(ws, s, dt, held, pressed)) return;
         // Bot : relâche la détente d'une arme à charge quand la charge est pleine.
         if (Bot && held && (s.Supply == Edf5Supply.Charge && ws.Charge >= 1f || s.Supply == Edf5Supply.ChargeBurst && ws.Ammo >= ws.W.Magazine)) held = false;
         if (s.Supply == Edf5Supply.Charge && _burstLeft <= 0) { HandleCharge(ws, dt, held); return; }
@@ -113,13 +115,16 @@ public partial class Player
         if (_burstLeft > 0)
         {
             _burstT -= dt;
-            if (_burstT <= 0 && ws.Ammo > 0)
+            // Longues rafales (Disruptor : 1200 coups à 60/s) : à la cadence de l'arme, plusieurs coups par image s'il le faut.
+            var gap = s.Burst >= 10 ? 1f / Mathf.Max(ws.W.FireRate, 1f) : s.Kind is Edf5Kind.Rocket ? 0.12f : s.Kind is Edf5Kind.PlasmaShot ? 0.15f : 0.06f;
+            for (var n = 0; n < 4 && _burstT <= 0 && ws.Ammo > 0 && _burstLeft > 0; n++)
             {
-                _burstT = s.Kind is Edf5Kind.Rocket ? 0.12f : s.Kind is Edf5Kind.PlasmaShot ? 0.15f : 0.06f;
+                _burstT += gap;
                 _burstLeft--;
                 ShootOnce(ws);
-                if (ws.Ammo <= 0) { _burstLeft = 0; if (s.Supply != Edf5Supply.Charge) Reload(); }
+                _lastFireTime = Time.GetTicksMsec() / 1000f;
             }
+            if (ws.Ammo <= 0) { _burstLeft = 0; if (s.Supply != Edf5Supply.Charge) Reload(); }
             return;
         }
         // Salve de missiles : un missile par cible verrouillée.
@@ -162,7 +167,7 @@ public partial class Player
         if (s.Kind == Edf5Kind.Missile)
         {
             // Une pression : tous les missiles du chargeur partent, un par cible verrouillée (en boucle s'il y a moins de cibles).
-            _salvoLeft = Mathf.Min(ws.Ammo, Mathf.Max(1, s.Family == "fork" ? 1 : Mathf.Max(Locks.Count, 1)));
+            _salvoLeft = Mathf.Min(ws.Ammo, Mathf.Max(1, s.Family == "fork" || s.GuideOnly ? 1 : Mathf.Max(Locks.Count, 1)));
             _salvoT = 0;
             _salvoIdx = 0;
             return;
@@ -173,6 +178,7 @@ public partial class Player
             _burstT = 0;
             return;
         }
+
         ShootOnce(ws);
         if (ws.Ammo <= 0 && s.Kind != Edf5Kind.Bomb) Reload();
     }
@@ -187,6 +193,8 @@ public partial class Player
         var muzzle = MuzzlePos;
         var dir = (aim - muzzle).Normalized();
         if (s.Kind is Edf5Kind.HandGrenade or Edf5Kind.Bomb or Edf5Kind.Orb) { muzzle = GlobalPosition + Vector3.Up * 1.6f; dir = (-Camera.GlobalBasis.Z).Normalized(); }
+        // Mortiers : vitesse de départ complète vers le point visé (cloche), transmise telle quelle.
+        if (s.Kind == Edf5Kind.Mortar) dir = FencerFire.MortarLaunch(s, muzzle, AimPoint(Mathf.Min(range, 1500f), out _), range);
         var seed = (int)World.Rng.Randi();
         // Blasters : la puissance baisse quand le chargeur se vide (Mag Blaster, Reflectron : min + (max − min) × (reste)²).
         var power = _shotPower;
@@ -203,11 +211,18 @@ public partial class Player
         Edf5Sounds.Fire(s, muzzle, true);
         if (s.Kind is Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.GrenadeLauncher)
             Effects.MuzzleFlash(World.FxRoot, muzzle, new Color(1f, 0.7f, 0.3f), s.Pellets > 1 || s.Kind != Edf5Kind.Bullet ? 0.75f : 0.45f);
-        var kick = s.Category switch
+        var kick = s.Family switch
         {
-            "Fusil de précision" => 1.4f, "Fusil à pompe" => 1.1f, "Lance-roquettes" => 1.2f, "Lance-missiles" => 0.6f,
-            "Grenades" => 0.7f, _ => s.Kind == Edf5Kind.Bullet ? 0.22f : 0.4f,
+            // Fencer : canons à main et canons lourds (recul réduit par les stabilisateurs et l'exosquelette de bombardement).
+            "handcannon" or "powerdyne" => 1.5f, "gallic" or "cannonshot" => 2.2f, "lightmortar" or "dispersal" => 0.8f,
+            "heavymortar" or "crusher" => 1.6f, "galleon" => 0.7f, "dexter" => 0.9f, "gatling" or "fgs" or "disruptor" => 0.1f,
+            _ => s.Category switch
+            {
+                "Fusil de précision" => 1.4f, "Fusil à pompe" => 1.1f, "Lance-roquettes" => 1.2f, "Lance-missiles" => 0.6f,
+                "Grenades" => 0.7f, _ => s.Kind == Edf5Kind.Bullet ? 0.22f : 0.4f,
+            },
         };
+        if (Def.Id == SoldierClass.Heavy) kick *= 1f - FGear.RecoilCut;
         _recoil = Mathf.Min(1.5f, _recoil + kick);
         _pitch += Mathf.DegToRad(kick * 1.1f) * (AnchorTime > 0 ? 0.2f : 1f);
     }
@@ -256,7 +271,7 @@ public partial class Player
     private void UpdateLocks(WeaponState ws, float dt)
     {
         var s = ws.W.T.Spec;
-        if (s.Kind is not (Edf5Kind.Missile or Edf5Kind.Homing) || Downed)
+        if (s.Kind is not (Edf5Kind.Missile or Edf5Kind.Homing) || s.GuideOnly || Downed)
         {
             if (Locks.Count > 0) Locks.Clear();
             LockPending = null;
@@ -289,6 +304,7 @@ public partial class Player
         if (w.T.Spec?.Energy.Present == true) ws.Drain = DrawEnergy;
         if (Core != null) ws.ChargeSpeed = 1f + Core.T.Spec.WeaponCharge;
         if (w.T.Spec?.Supply == Edf5Supply.Charge) ws.Ammo = 1;
+        if (w.T.Spec?.Kind == Edf5Kind.Shield) ws.Charge = 1f; // bouclier : durabilité restante 0..1
         return ws;
     }
 
@@ -298,7 +314,10 @@ public partial class Player
         _discharging = false;
         _chargeHeld = false;
         _burstLeft = 0;
-        foreach (var w in Weapons) w.Charge = 0f;
+        _spin = 0f;
+        Reflecting = false;
+        foreach (var w in Weapons)
+            if (w.W.T.Spec?.Kind != Edf5Kind.Shield) w.Charge = 0f;
     }
 
     /// <summary>Test (--edf5-fire) : déclenche les bombes C posées.</summary>

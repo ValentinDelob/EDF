@@ -520,7 +520,7 @@ public partial class ArsenalMenu : Control
             var cap = w.MaxStarsOf(s);
             // Armes d'EDF 5 : ★ quand la caractéristique est au maximum, rien pour une valeur fixe.
             if (cap > 0) p.Text(EStyle.Mono, 556, y, 22, n >= cap && t.Spec != null ? $"(★{n})" : $"(☆{n})", 16, EStyle.Gold);
-            var label = WeaponInstance.StatNames[(int)s];
+            var label = WeaponInstance.StatLabel(w.T, s);
             var lfs = 16f;
             while (lfs > 11 && p.Measure(EStyle.Mono, label + " :", lfs) > 746 - 612 - 6) lfs -= 0.5f;
             p.Text(EStyle.Mono, 612, y, 22, $"{label} :", lfs, EStyle.White);
@@ -558,35 +558,41 @@ public partial class ArsenalMenu : Control
 
         // Emplacements : celui visé par « Équiper » (Q / E) est mis en évidence.
         var slots = def.WeaponSlots;
-        var sets = Classes.HasWeaponSets(_cls) && slots > Classes.SetSize;
-        var blockH = 12 + 24 * slots;
+        var arms = Classes.ArmSlots(_cls);
+        var sets = Classes.HasWeaponSets(_cls) && arms > Classes.SetSize;
+        // Six emplacements (Grenadier : deux jeux et deux équipements) : lignes plus serrées.
+        var rh = slots > 4 ? 20f : 24f;
+        var blockH = 12 + rh * slots;
         p.Rect(x, y, w, blockH, panel);
         for (var i = 0; i < slots; i++)
         {
-            var ry = y + 6 + 24 * i;
+            var ry = y + 6 + rh * i;
             var target = i == _slot;
             if (target)
             {
-                p.HGrad(x + 4, ry, w - 8, 24, new Color("16CC62", 0.55f), new Color("09893E", 0.25f));
-                p.Rect(x + 4, ry, 3, 24, EStyle.Bright);
+                p.HGrad(x + 4, ry, w - 8, rh, new Color("16CC62", 0.55f), new Color("09893E", 0.25f));
+                p.Rect(x + 4, ry, 3, rh, EStyle.Bright);
                 // Emplacement choisi explicitement : la prochaine arme cliquée le remplace.
                 if (_armed)
                 {
-                    p.Inset(x + 4, ry, w - 8, 24, EStyle.Gold, 1);
-                    p.Text(EStyle.CondBold, x + w - 12 - 120, ry, 24, "À REMPLACER", 10, EStyle.Gold, HorizontalAlignment.Right, 120);
+                    p.Inset(x + 4, ry, w - 8, rh, EStyle.Gold, 1);
+                    p.Text(EStyle.CondBold, x + w - 12 - 120, ry, rh, "À REMPLACER", 10, EStyle.Gold, HorizontalAlignment.Right, 120);
                 }
             }
             var occupant = i < eq.Count ? eq[i] : null;
             var slot = i;
-            _hints.Add((new Rect2(x, ry, w, 24), () => TargetSlot(slot)));
+            _hints.Add((new Rect2(x, ry, w, rh), () => TargetSlot(slot)));
             // Grenadier : deux jeux de deux armes, séparés par un filet (« J1 » / « J2 » à droite du numéro).
-            if (sets && i > 0 && i % Classes.SetSize == 0) p.Rect(x + 10, ry - 0.5f, w - 20, 1, EStyle.FrameInner);
-            if (sets && i % Classes.SetSize == 0)
-                p.Text(EStyle.Mono, x + w - 12 - 96, ry, 24, $"J{i / Classes.SetSize + 1}", 12, target ? EStyle.Bright : EStyle.DimText, HorizontalAlignment.Right, 30);
-            p.Text(EStyle.Mono, x + 12, ry, 24, $"{i + 1}", 13, target ? EStyle.Bright : EStyle.DimText);
+            // Équipements (cœur plasma, soutien du Fencer) : après un filet, marqués « ÉQ ».
+            if (sets && i > 0 && i < arms && i % Classes.SetSize == 0 || i == arms && i > 0) p.Rect(x + 10, ry - 0.5f, w - 20, 1, EStyle.FrameInner);
+            if (sets && i < arms && i % Classes.SetSize == 0)
+                p.Text(EStyle.Mono, x + w - 12 - 96, ry, rh, $"J{i / Classes.SetSize + 1}", 12, target ? EStyle.Bright : EStyle.DimText, HorizontalAlignment.Right, 30);
+            if (i == arms)
+                p.Text(EStyle.Mono, x + w - 12 - 96, ry, rh, "ÉQ", 12, target ? EStyle.Bright : EStyle.DimText, HorizontalAlignment.Right, 30);
+            p.Text(EStyle.Mono, x + 12, ry, rh, $"{i + 1}", 13, target ? EStyle.Bright : EStyle.DimText);
             var name = occupant?.T.Name ?? "Vide";
-            p.Text(EStyle.Cond, x + 28, ry, 24, name, 16, occupant != null ? EStyle.White : EStyle.DimText);
-            if (occupant != null && !(target && _armed)) p.Text(EStyle.Mono, x + w - 12 - 60, ry, 24, $"Lv{occupant.Level}", 15, EStyle.White, HorizontalAlignment.Right, 60);
+            p.Text(EStyle.Cond, x + 28, ry, rh, name, 16, occupant != null ? EStyle.White : EStyle.DimText);
+            if (occupant != null && !(target && _armed)) p.Text(EStyle.Mono, x + w - 12 - 60, ry, rh, $"Lv{occupant.Level}", 15, EStyle.White, HorizontalAlignment.Right, 60);
         }
         y += blockH + 6;
         p.Rect(x, y, w, 34, panel);
@@ -607,7 +613,8 @@ public partial class ArsenalMenu : Control
         };
         if (Classes.Get(_cls).WeaponSlots > 1)
         {
-            var label = Classes.HasWeaponSets(_cls) ? $"Emplacement {_slot + 1} (jeu {_slot / Classes.SetSize + 1})" : $"Emplacement {_slot + 1}";
+            var label = Classes.IsEquipSlot(_cls, _slot) ? $"Emplacement {_slot + 1} (équipement)"
+                : Classes.HasWeaponSets(_cls) ? $"Emplacement {_slot + 1} (jeu {_slot / Classes.SetSize + 1})" : $"Emplacement {_slot + 1}";
             items.Add(("Q / E", label, () => ChangeSlot(1), true));
         }
         if (_pages > 1) items.Add(("PgSuiv", $"Page {_page + 1}/{_pages}", () => ChangePage(1), true));

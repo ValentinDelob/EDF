@@ -25,7 +25,9 @@ public static partial class AutoTest
         // --weapon-cam=id1,id2… : gros plan de profil sur le soldat, qui change d'arme toutes les 2,5 s (captures).
         if (Screenshot.CmdArg("weapon-cam") is { } cam)
         {
-            Profile.I.Data.SelectedClass = SoldierClass.Rifleman;
+            // Classe de la première arme de la liste (Fusilier par défaut).
+            var first = cam.Split(',').FirstOrDefault(Weapons.Exists);
+            Profile.I.Data.SelectedClass = first != null ? Weapons.Get(first).Class : SoldierClass.Rifleman;
             Enemy.Frozen = true;
             Player.BotStill = true;
             WhenPlayerReady(app, 2f, p => WeaponCam(app, p, cam));
@@ -79,8 +81,12 @@ public static partial class AutoTest
 
     private static void FireRange(App app, Player p, string filter)
     {
-        var source = p.Def.Id == SoldierClass.Airborne ? Edf5Weapons.WingDiver : Edf5Weapons.Ranger;
-        var specs = source.Where(s => s.Kind != Edf5Kind.Core && (filter is "" or "all" || s.Family == filter || s.Id == filter || s.Category == filter
+        var source = p.Def.Id switch
+        {
+            SoldierClass.Airborne => Edf5Weapons.WingDiver, SoldierClass.Heavy => Edf5Weapons.Fencer, _ => Edf5Weapons.Ranger,
+        };
+        // Équipements et boucliers : pas de tir (les boucliers ont leur propre essai, --shield-test).
+        var specs = source.Where(s => s.Kind is not (Edf5Kind.Core or Edf5Kind.Gear or Edf5Kind.Shield) && (filter is "" or "all" || s.Family == filter || s.Id == filter || s.Category == filter
                                                   || s.Kind.ToString() == filter)).ToList();
         // Wing Diver : cœur le plus puissant (les armes de haut niveau coûtent plus que l'énergie d'un cœur de départ).
         if (p.Def.Id == SoldierClass.Airborne) { p.Core = Grant("vzplasmacore"); p.Energy = p.MaxEnergy; }
@@ -111,6 +117,11 @@ public static partial class AutoTest
                 Edf5Kind.Arc => s.Family == "phalanx" ? 20f : 12f,
                 Edf5Kind.Lance or Edf5Kind.Spark or Edf5Kind.Beam => 26f,
                 Edf5Kind.Orb => 22f,
+                Edf5Kind.Strike => s.Family is "blade" or "forceax" or "roller" ? 12f : 6f,
+                Edf5Kind.Pierce => s.Family == "spinedriver" ? 30f : 7f,
+                Edf5Kind.Mortar => s.Family == "crusher" ? 90f : 60f,
+                _ when s.Family is "dexter" or "cannonshot" => 18f,
+                _ when s.Family == "flamerevolver" => 12f,
                 _ when s.Category == "Fusil à pompe" => 18f,
                 _ => 34f,
             };

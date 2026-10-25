@@ -28,9 +28,19 @@ public class WeaponState
 
     public float ReloadProgress => Reloading ? 1f - ReloadLeft / Mathf.Max(W.Reload, 0.01f) : 1f;
 
+    /// <summary>Arme sans rechargement (Disruptor du Fencer : un seul chargeur par mission, comme dans EDF 5).</summary>
+    public bool NoReload => W.T.Spec is { Kind: Edf5Kind.Bullet, Reload.Present: false, Category: "Canons automatiques" };
+
     public void StartReload()
     {
-        if (Reloading) return;
+        if (Reloading || NoReload) return;
+        // Bouclier du Fencer : rechargement de la durabilité (bouclier inutilisable pendant ce temps).
+        if (W.T.Spec?.Kind == Edf5Kind.Shield)
+        {
+            if (Charge >= 0.999f) return;
+            ReloadLeft = W.Reload;
+            return;
+        }
         if (W.T.Kind == WeaponKind.Beam) { if (BeamCharge >= 0.999f) return; }
         else if (Ammo >= W.Magazine) return;
         ReloadLeft = W.Reload;
@@ -50,6 +60,7 @@ public class WeaponState
                 ReloadLeft = 0;
                 Ammo = W.Magazine;
                 BeamCharge = 1f;
+                if (W.T.Spec?.Kind == Edf5Kind.Shield) Charge = 1f;
             }
         }
     }

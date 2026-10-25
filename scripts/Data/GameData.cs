@@ -35,8 +35,8 @@ public static class Classes
             "Balise prioritaire", "Frappes d'artillerie, tourelles et champ de soin. Gagne des crédits d'appel : barrage d'artillerie ou véhicule (char, hélicoptère).",
             new Color(0.55f, 0.48f, 0.34f), new Color(0.75f, 0.55f, 0.15f), 3),
         new(SoldierClass.Heavy, "Grenadier blindé", "Ligne de front", 400, 4.2f, 18f,
-            "Ancrage", "Exosquelette : -50 % de dégâts et aucun recul pendant 8 s. Poussées propulsées. Deux jeux de deux armes.",
-            new Color(0.3f, 0.32f, 0.35f), new Color(0.75f, 0.2f, 0.12f), 4),
+            "Ancrage", "Exosquelette : -50 % de dégâts et aucun recul pendant 8 s. Poussées et sauts propulsés. Deux jeux de deux armes et deux équipements de soutien.",
+            new Color(0.3f, 0.32f, 0.35f), new Color(0.75f, 0.2f, 0.12f), 6), // deux jeux de deux armes + deux équipements
     };
 
     public static ClassDef Get(SoldierClass c) => All[(int)c];
@@ -51,13 +51,31 @@ public static class Classes
     public const int SetSize = 2;
 
     /// <summary>
-    /// Équipement du dernier emplacement (EDF 5) : cœur plasma de la Wing Diver. Cet emplacement n'accepte que ce type,
-    /// les autres refusent ; null : tous les emplacements sont des armes.
+    /// Équipements des derniers emplacements (EDF 5) : cœur plasma de la Wing Diver, deux équipements de soutien du Fencer.
+    /// Ces emplacements n'acceptent que ces types, les autres les refusent ; vide : tous les emplacements sont des armes.
     /// </summary>
-    public static string EquipCategory(SoldierClass c) => c == SoldierClass.Airborne ? "Cœurs plasma" : null;
+    public static string[] EquipCategories(SoldierClass c) => c switch
+    {
+        SoldierClass.Airborne => new[] { "Cœurs plasma" },
+        SoldierClass.Heavy => FencerGear,
+        _ => System.Array.Empty<string>(),
+    };
 
-    /// <summary>Indice de l'emplacement d'équipement (-1 sans équipement).</summary>
-    public static int EquipSlot(SoldierClass c) => EquipCategory(c) != null ? Get(c).WeaponSlots - 1 : -1;
+    /// <summary>Types d'équipement de soutien du Fencer (deux emplacements, comme dans EDF 5).</summary>
+    public static readonly string[] FencerGear = { "Propulseurs", "Renforts de bouclier", "Stabilisateurs", "Exosquelettes" };
+
+    /// <summary>Nombre d'emplacements d'équipement (à la fin de la liste).</summary>
+    public static int EquipCount(SoldierClass c) => c switch { SoldierClass.Airborne => 1, SoldierClass.Heavy => 2, _ => 0 };
+
+    /// <summary>Premier emplacement d'équipement (-1 sans équipement).</summary>
+    public static int EquipSlot(SoldierClass c) => EquipCount(c) > 0 ? Get(c).WeaponSlots - EquipCount(c) : -1;
+
+    public static bool IsEquipSlot(SoldierClass c, int slot) => EquipCount(c) > 0 && slot >= EquipSlot(c);
+
+    public static bool IsEquipCategory(SoldierClass c, string category) => System.Array.IndexOf(EquipCategories(c), category) >= 0;
+
+    /// <summary>Emplacements d'armes (hors équipement).</summary>
+    public static int ArmSlots(SoldierClass c) => Get(c).WeaponSlots - EquipCount(c);
 }
 
 /// <summary>
@@ -84,7 +102,8 @@ public enum WeaponKind { Hitscan, Projectile, Beam, Melee, Airstrike, Turret, He
 /// <summary>Caractéristiques d'une arme qui portent des étoiles (0 = minimum, <see cref="WeaponInstance.MaxStars"/> = maximum).</summary>
 /// <remarks>Blast, LockTime, LockRange : armes d'EDF 5 seulement (explosion, temps et portée de verrouillage).</remarks>
 /// <remarks>Energy : coût en énergie d'une recharge (Wing Diver) ; Capacity : énergie maximale d'un cœur plasma.</remarks>
-public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5, Blast = 6, LockTime = 7, LockRange = 8, Energy = 9, Capacity = 10 }
+public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5, Blast = 6, LockTime = 7, LockRange = 8, Energy = 9, Capacity = 10,
+    Speed = 11, Durability = 12 }
 
 /// <summary>Modèle d'arme : valeurs de base au niveau 0, sans étoile.</summary>
 public record WeaponTemplate(
@@ -118,23 +137,19 @@ public static class Weapons
         new("trt2", "Tourelle TR-2", SoldierClass.Support, WeaponKind.Turret, "Tourelle automatique", 8, 9, 1, 25f, 80, 2f, Automatic: false),
         new("med3", "Champ médical M-3", SoldierClass.Support, WeaponKind.HealField, "Champ de soin", 12, 1, 1, 30f, 10, 0, BlastRadius: 9, Automatic: false),
         new("art5", "Balise SALVE-5", SoldierClass.Support, WeaponKind.Airstrike, "Bombardement en ligne", 160, 1, 1, 20f, 300, 0, BlastRadius: 8, Pellets: 12, Automatic: false, MinLevel: 15),
-        // Grenadier blindé
-        new("gt40", "GT-40 Ouragan", SoldierClass.Heavy, WeaponKind.Hitscan, "Mitrailleuse rotative", 10, 16, 200, 3.5f, 220, 2.6f),
-        new("cs90", "CS-90 Bélier", SoldierClass.Heavy, WeaponKind.Projectile, "Canon de siège", 260, 0.5f, 1, 2.5f, 450, 0.2f, BlastRadius: 9, ProjectileSpeed: 110, Automatic: false),
-        new("mh2", "MH-2 Enclume", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 220, 1.1f, 1, 0.6f, 6, 0, BlastRadius: 4, Automatic: false),
-        new("ms6", "MS-6 Essaim", SoldierClass.Heavy, WeaponKind.Projectile, "Lance-missiles", 60, 6, 6, 3f, 350, 4f, BlastRadius: 4, ProjectileSpeed: 60, MinLevel: 12),
         // Armes de haut niveau (difficultés élevées)
         new("pdw9", "PDW-9 Rafale", SoldierClass.Support, WeaponKind.Hitscan, "Arme de défense", 13, 13, 60, 1.5f, 200, 1.6f, MinLevel: 25),
         new("trt5", "Tourelle TR-5 Lourde", SoldierClass.Support, WeaponKind.Turret, "Tourelle automatique", 22, 9, 1, 30f, 100, 2f, Automatic: false, MinLevel: 30),
         new("art8", "Balise SALVE-8", SoldierClass.Support, WeaponKind.Airstrike, "Bombardement en ligne", 330, 1, 1, 22f, 300, 0, BlastRadius: 10, Pellets: 16, Automatic: false, MinLevel: 40),
-        new("gt60", "GT-60 Typhon", SoldierClass.Heavy, WeaponKind.Hitscan, "Mitrailleuse rotative", 18, 20, 300, 4f, 240, 2.2f, MinLevel: 30),
-        new("cs150", "CS-150 Colosse", SoldierClass.Heavy, WeaponKind.Projectile, "Canon de siège", 700, 0.35f, 1, 3.2f, 500, 0.15f, BlastRadius: 14, ProjectileSpeed: 120, Automatic: false, MinLevel: 45),
-        new("mh6", "MH-6 Marteau-pilon", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 520, 0.9f, 1, 0.7f, 7, 0, BlastRadius: 5.5f, Automatic: false, MinLevel: 35),
     };
 
-    /// <summary>Toutes les armes : Fusilier = armes du Ranger d'EDF 5 ; autres classes : armes propres au jeu (en attendant EDF 5).</summary>
+    /// <summary>
+    /// Toutes les armes : Fusilier = Ranger d'EDF 5, Commando aéroporté = Wing Diver, Grenadier blindé = Fencer ; Opérateur
+    /// d'appui : armes propres au jeu (en attendant l'Air Raider).
+    /// </summary>
     public static readonly WeaponTemplate[] All = Edf5Weapons.Ranger.Select(e => Edf5Weapons.Template(e, SoldierClass.Rifleman))
-        .Concat(Edf5Weapons.WingDiver.Select(e => Edf5Weapons.Template(e, SoldierClass.Airborne))).Concat(Legacy).ToArray();
+        .Concat(Edf5Weapons.WingDiver.Select(e => Edf5Weapons.Template(e, SoldierClass.Airborne)))
+        .Concat(Edf5Weapons.Fencer.Select(e => Edf5Weapons.Template(e, SoldierClass.Heavy))).Concat(Legacy).ToArray();
 
     private static readonly Dictionary<string, WeaponTemplate> ById = All.ToDictionary(w => w.Id);
 
@@ -177,6 +192,15 @@ public static class Weapons
         "Guidées" => "Guidées",
         "Spéciales" => "Spéciales",
         "Cœurs plasma" => "Cœurs plasma",
+        "Frappe" => "Frappe",
+        "Perforation" => "Perforation",
+        "Boucliers" => "Boucliers",
+        "Canons automatiques" => "Canons automatiques",
+        "Artillerie" => "Artillerie",
+        "Propulseurs" => "Propulseurs",
+        "Renforts de bouclier" => "Renforts de bouclier",
+        "Stabilisateurs" => "Stabilisateurs",
+        "Exosquelettes" => "Exosquelettes",
         _ => category,
     };
 
@@ -193,6 +217,12 @@ public static class Weapons
         "Longue portée" => "Longue",
         "Artillerie plasma" => "Artillerie",
         "Cœurs plasma" => "Cœurs",
+        "Perforation" => "Perfor.",
+        "Canons automatiques" => "Canons auto",
+        "Renforts de bouclier" => "Renforts",
+        "Stabilisateurs" => "Stabilis.",
+        "Exosquelettes" => "Exos",
+        "Propulseurs" => "Propuls.",
         _ => CategoryTitle(category),
     };
 
@@ -220,6 +250,14 @@ public static class Weapons
                     + (e.Zoom > 1 ? $" Visée ×{e.Zoom:0.#}." : "");
         return e.Kind switch
         {
+            Edf5Kind.Strike or Edf5Kind.Pierce or Edf5Kind.Shield or Edf5Kind.Mortar or Edf5Kind.Gear => FencerUsage(e),
+            Edf5Kind.Bullet when e.Family is "handcannon" or "gallic" or "powerdyne" or "galleon" =>
+                "Obus à trajectoire tendue" + (e.Pierce ? " qui traverse les ennemis alignés" : "") + (e.Burst > 1 ? $", tirés par rafales de {e.Burst}" : "")
+                + (e.FarDamage < 0.95f ? " ; il perd de sa puissance en fin de portée" : "") + "." + (e.Zoom > 1 ? $" Visée ×{e.Zoom:0.#}." : ""),
+            Edf5Kind.Bullet when e.Family == "cannonshot" => $"Canon à mitraille : gerbe de {e.Pellets} éclats perforants, dévastatrice de près.",
+            Edf5Kind.Bullet when e.SpinUp.Present => (e.Family == "disruptor" ? "" : "Mise en rotation avant le tir (bouton tenu). ")
+                                                     + (e.Pellets > 1 ? $"Gerbe de {e.Pellets} plombs." : "Les balles perdent de leur puissance en fin de portée.") + extra,
+            Edf5Kind.Bullet when e.Family == "disruptor" => $"Une pression lance une rafale continue de {e.Burst} coups qui ne s'arrête pas ; ne se recharge pas.{extra}",
             Edf5Kind.Bullet when e.Pellets > 1 => $"Tire une gerbe de {e.Pellets} plombs, dévastatrice de près, qui perd sa force avec la distance.{extra}",
             Edf5Kind.Bullet when e.FarDamage < 0.95f => $"Les balles perdent de leur puissance en fin de portée.{extra}",
             Edf5Kind.Bullet => $"Balles à trajectoire tendue.{extra}",
@@ -256,6 +294,78 @@ public static class Weapons
         };
     }
 
+    /// <summary>Usage des armes de mêlée, boucliers, mortiers et équipements du Fencer.</summary>
+    private static string FencerUsage(Edf5Spec e)
+    {
+        switch (e.Kind)
+        {
+            case Edf5Kind.Strike:
+            {
+                var lv = string.Join(" ; ", e.Strikes.Select((s, i) => $"{i + 1}. {StrikeName(s.Attack)}{(s.Count > 1 ? $" ×{s.Count}" : "")}"));
+                return "Tenir le bouton pour charger, relâcher pour frapper (niveaux : " + lv + ")."
+                       + (e.Guard > 0 ? $" Pare {e.Guard * 100:0} % des dégâts pendant la frappe." : "");
+            }
+            case Edf5Kind.Pierce:
+                return e.Strikes != null
+                    ? "Coup de lance perforant ; une seconde pression enchaîne l'attaque 2, plus forte." + (e.Pellets > 1 ? " Deux lances à la fois." : "")
+                    : e.Family == "spinedriver" ? "Projette un pieu d'acier à moyenne portée." : "Coups perforants rapides à courte portée (bouton tenu).";
+            case Edf5Kind.Shield:
+                return $"Dans le jeu actif, pare {e.Guard * 100:0} % des dégâts venus de face (angle {e.GuardAngle:0}°) en usant sa durabilité. "
+                       + $"Tenu en main : bouton tenu = garde, qui renvoie les projectiles proches ({e.ReflectRadius:0} m)."
+                       + (e.Carry.Speed < 1f ? $" Lourd : marche à {e.Carry.Speed * 100:0} %." : "");
+            case Edf5Kind.Mortar:
+                return e.Family switch
+                {
+                    "dispersal" => $"Mortier à dispersion : {e.Pellets} obus retombent autour du point visé.",
+                    "crusher" => "Obus géant lent qui écrase une très large zone.",
+                    _ => "Obus en cloche qui retombe sur le point visé et explose.",
+                } + (e.Zoom > 1 ? $" Visée ×{e.Zoom:0.#}." : "");
+            default:
+                return GearText(e);
+        }
+    }
+
+    /// <summary>Nom français d'une attaque de mêlée d'EDF 5.</summary>
+    public static string StrikeName(string attack) => attack switch
+    {
+        "Clash Close Range" => "choc proche",
+        "Clash Midium Range" => "choc moyen",
+        "Clash Wide Range" => "choc large",
+        "Midium Range" => "explosion moyenne",
+        "Wide Range" => "explosion large",
+        "Slash Small" or "Slash Close Range" => "lame courte",
+        "Slash Midium" or "Slash Midium Range" => "lame moyenne",
+        "Slash Long Range" => "lame longue",
+        "Slash Dispersal" => "lames dispersées",
+        "Front Dispersal" => "dispersion avant",
+        "Back Dispersal" => "dispersion arrière",
+        "Front Charge" => "charge avant",
+        "Charge Close Range" => "charge courte",
+        "Charge Midium Range" => "charge moyenne",
+        "Charge Long Range" => "charge longue",
+        _ => attack.ToLowerInvariant(),
+    };
+
+    private static string GearText(Edf5Spec e)
+    {
+        var parts = new List<string>();
+        if (e.Dashes > 0) parts.Add($"{e.Dashes} poussées consécutives");
+        if (e.Boosts > 0) parts.Add($"{e.Boosts} sauts propulsés consécutifs");
+        if (e.DashInterval < 1f) parts.Add($"intervalle des poussées {e.DashInterval * 100:0} %");
+        if (e.BoostGain > 1f) parts.Add($"vitesse horizontale des sauts {e.BoostGain * 100:0} %");
+        if (e.ShieldUse != 1f) parts.Add($"usure des boucliers {e.ShieldUse * 100:0} %");
+        if (e.ShieldDurability > 1f) parts.Add($"durabilité des boucliers {e.ShieldDurability * 100:0} %");
+        if (e.ShieldAngle > 0) parts.Add($"angle de garde +{e.ShieldAngle:0}°");
+        if (e.ShieldCut > 0) parts.Add($"dégâts traversant le bouclier −{e.ShieldCut * 100:0} %");
+        if (e.KnockbackCut > 0) parts.Add($"recul à la parade −{e.KnockbackCut * 100:0} %");
+        if (e.RecoilCut > 0) parts.Add($"recul des armes −{e.RecoilCut * 100:0} %");
+        if (e.WeightSpeed < 1f) parts.Add($"effet du poids sur la vitesse {e.WeightSpeed * 100:0} %");
+        if (e.WeightTurn < 1f) parts.Add($"effet du poids sur la rotation {e.WeightTurn * 100:0} %");
+        if (e.WalkSpeed != 1f) parts.Add($"vitesse de marche {e.WalkSpeed * 100:0} %");
+        var text = parts.Count > 0 ? char.ToUpper(parts[0][0]) + string.Join(", ", parts)[1..] + "." : "";
+        return "Équipement de soutien. " + text + " Deux équipements du même type : seul le plus fort compte.";
+    }
+
     private static string Edf5SupplyText(Edf5Spec e) => e.Supply switch
     {
         Edf5Supply.Reload => "Rechargé avec l'énergie du cœur, même rangé.",
@@ -279,7 +389,8 @@ public static class Weapons
         [SoldierClass.Rifleman] = new[] { "pa11", "grantm31" }, // départ du Ranger d'EDF 5
         [SoldierClass.Airborne] = new[] { "rapier", "powerlance", "plasmacore" }, // départ de la Wing Diver d'EDF 5
         [SoldierClass.Support] = new[] { "pdw5", "art1", "med3" },
-        [SoldierClass.Heavy] = new[] { "gt40", "cs90", "mh2", "ms6" }, // jeu 1 : mitrailleuse + canon ; jeu 2 : marteau + missiles
+        // Départ du Fencer d'EDF 5 : jeu 1 lance + bouclier, jeu 2 gatling + canon à main ; exosquelette et Deflect Cell.
+        [SoldierClass.Heavy] = new[] { "blastholespear", "deflectionshield", "fg7handgatling", "nc101handcannon", "v1exoskeleton", "deflectcell" },
     };
 }
 
@@ -306,7 +417,18 @@ public class WeaponInstance
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyRarity { get; set; }
 
-    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée", "Explosion", "Verrouillage", "Portée de verrouillage", "Énergie", "Capacité" };
+    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée", "Explosion", "Verrouillage", "Portée de verrouillage", "Énergie", "Capacité",
+        "Vitesse", "Durabilité" };
+
+    /// <summary>Intitulé d'une caractéristique pour ce modèle (vitesse : charge des frappes, attaque des lances, mise en rotation).</summary>
+    public static string StatLabel(WeaponTemplate t, WeaponStat s) => s switch
+    {
+        WeaponStat.Speed when t.Spec?.SpinUp.Present == true => "Mise en rotation",
+        WeaponStat.Speed when t.Spec?.Kind == Edf5Kind.Strike => "Vitesse de charge",
+        WeaponStat.Speed => "Vitesse d'attaque",
+        WeaponStat.Magazine when t.Spec?.Kind is Edf5Kind.Strike or Edf5Kind.Pierce => "Frappes",
+        _ => StatNames[(int)s],
+    };
 
     // Bonus par étoile (relatifs à la valeur sans étoile au niveau de l'arme).
     public const float DamagePerStar = 0.06f;
@@ -368,6 +490,8 @@ public class WeaponInstance
             WeaponStat.LockRange => e.LockRange.Stars,
             WeaponStat.Energy => e.Energy.Stars,
             WeaponStat.Capacity => e.MaxEnergy.Stars,
+            WeaponStat.Speed => Math.Max(e.Swing.Stars, e.SpinUp.Stars),
+            WeaponStat.Durability => e.Durability.Stars,
             _ => 0,
         };
     }
@@ -388,6 +512,8 @@ public class WeaponInstance
         WeaponStat.LockRange => e.LockRange.Present,
         WeaponStat.Energy => e.Energy.Present,
         WeaponStat.Capacity => e.MaxEnergy.Present,
+        WeaponStat.Speed => e.Swing.Present || e.SpinUp.Present,
+        WeaponStat.Durability => e.Durability.Present,
         _ => false,
     } : s switch
     {
@@ -429,6 +555,16 @@ public class WeaponInstance
     [JsonIgnore] public float CoreCapacity => CapacityAt(StarsOf(WeaponStat.Capacity));
     [JsonIgnore] public float CoreEmergency => E5 is { EmergencyCharge.Present: true } e
         ? e.EmergencyCharge.At(StarsOf(WeaponStat.Capacity), Edf5Weapons.RaCapacity, false) : 15f;
+
+    private float SwingAt(int s) => E5 is { Swing.Present: true } e ? e.Swing.At(s, Edf5Weapons.RaSwing, false) : 1f;
+    private float SpinUpAt(int s) => E5 is { SpinUp.Present: true } e ? e.SpinUp.At(s, Edf5Weapons.RaSpinUp, true) : 0f;
+    private float DurabilityAt(int s) => E5 is { Durability.Present: true } e ? e.Durability.At(s, Edf5Weapons.RaCapacity, false) : 0f;
+    /// <summary>Fencer : vitesse de charge (frappes) ou d'attaque (lances), valeur d'EDF 5 (1,9 pour un marteau).</summary>
+    [JsonIgnore] public float Swing => SwingAt(StarsOf(WeaponStat.Speed));
+    /// <summary>Fencer : mise en rotation des canons automatiques avant le premier coup (s).</summary>
+    [JsonIgnore] public float SpinUp => SpinUpAt(StarsOf(WeaponStat.Speed));
+    /// <summary>Fencer : durabilité d'un bouclier.</summary>
+    [JsonIgnore] public float Durability => DurabilityAt(StarsOf(WeaponStat.Durability));
 
     private float LockRangeAt(int s) => E5 is { LockRange.Present: true } e ? e.LockRange.At(s, Edf5Weapons.RaLockRange, false) : 0f;
 
@@ -516,6 +652,12 @@ public class WeaponInstance
                 return ($"{Fr(BlastRadius, "0.0")} m", $"+{Fr(BlastRadius - BlastAt(0), "0.0")} m");
             case WeaponStat.LockTime:
                 return ($"{Fr(LockTime, LockTime < 1 ? "0.00" : "0.0")} s", $"−{Fr(LockTimeAt(0) - LockTime, "0.00")} s");
+            case WeaponStat.Speed when E5?.SpinUp.Present == true:
+                return ($"{Fr(SpinUp, "0.00")} s", $"−{Fr(SpinUpAt(0) - SpinUp, "0.00")} s");
+            case WeaponStat.Speed:
+                return ($"{Fr(Swing, "0.00")}", $"+{Fr(Swing - SwingAt(0), "0.00")}");
+            case WeaponStat.Durability:
+                return ($"{Fr(Durability, "0")}", $"+{Small(Durability - DurabilityAt(0))}");
             case WeaponStat.Energy:
                 return ($"{Fr(EnergyCost, EnergyCost < 10 ? "0.0" : "0")}", $"−{Fr(EnergyAt(0) - EnergyCost, "0.0")}");
             case WeaponStat.Capacity:

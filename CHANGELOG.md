@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.14.0 — Armes du Fencer d'EDF 5 et équipements de soutien
+
+- **Les 175 armes du Fencer d'EDF 5** remplacent celles du Grenadier blindé, avec leurs noms et valeurs officielles : frappe (Vibro Hammer, Vulcan Hammer, Force Blade, Dynamo Blade, Force Ax, Vibro Roller, Vibro / Quake Haken), perforation (Blasthole Spear, Blast Twin Spears, Flashing Spear, Jackhammer, Spine Driver), boucliers (Deflection, Ion Mirror, Tower, Reflector, Master, Great Shield), canons automatiques (Hand Gatling, FGS, Galleon, Dexter, Flame Revolver, Disruptor), artillerie (canons à main NC, Gallic, Powerdyne, Cannon Shot, mortiers FH / FHD / YH, Super-Heavy Crusher) et lance-missiles (Arm Hound, Blood Storm, Leviathan, Haytal, Arcane, FG High Altitude Impact, Phoenix).
+- **Frappes chargées** : tenir pour charger jusqu'à trois niveaux, relâcher pour frapper (onde de choc, lames d'énergie qui volent, dispersions, explosion, charge vers l'avant) ; parade pendant la frappe. **Lances** à deux attaques enchaînées.
+- **Boucliers** : dans le jeu actif, ils parent les coups venus de face en s'usant ; en main, la garde renvoie les projectiles ennemis vers leur tireur.
+- **Canons rotatifs** à mise en rotation, mortiers en cloche qui retombent sur le point visé, Disruptor à rafale continue.
+- **50 équipements de soutien** (deux emplacements) : propulseurs (poussées et sauts propulsés consécutifs), renforts de bouclier, stabilisateurs de recul, exosquelettes (vitesse de marche, effet du poids). Les poussées et sauts propulsés remplacent la jauge de chaleur.
+- **36 modèles 3D** montés sur l'avant-bras de l'exosquelette, bouclier tenu au bras gauche, et un son par famille.
+- Les anciennes armes du Grenadier sont converties en l'arme d'EDF 5 du même genre.
+
 ## v0.13.0 — Armes de la Wing Diver d'EDF 5 et cœurs plasma
 
 - **Les 239 armes de la Wing Diver d'EDF 5** remplacent celles du Commando aéroporté, avec leurs noms et valeurs officielles : courte portée (Rapier, Phalanx, Power Lance, Dragoon Lance, Spark Vine / Whip, Monster Lance), blasters (Mag Blaster, Destroyer, Spine, Reflectron), électriques (Lightning Bow, Bolt Gun, Thunder Crossbow), impulsions (Pulse Machine Gun et ses versions N-Way, Stardust Cannon, Pulse Buster), longue portée (Closed Laser, MONSTER, Bolt Shooter, Raijin), artillerie plasma (Plasma Cannon, Plasmafall, Big / Heavy / Burst Cannon, Grit, Splasher, Blink Ball), armes guidées (Mirage, Geist, Ghost Chaser, Fenrir, Psiblade) et spéciales (Diffuser, Gleipnir, Thunder Cluster, Heaven's Gate, Psi Cluster, Final Days).

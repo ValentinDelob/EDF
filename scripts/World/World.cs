@@ -1022,6 +1022,36 @@ public partial class World : Node3D
         p.SourceEnemy = e;
     }
 
+    /// <summary>
+    /// Hôte : un tir ennemi entre-t-il dans la garde d'un Fencer qui tient son bouclier (rayon de renvoi, devant lui) ? Il
+    /// repart alors vers l'ennemi qui l'a tiré (ou tout droit en arrière) ; le joueur local paie la durabilité.
+    /// </summary>
+    public bool HostTryReflect(Projectile p)
+    {
+        var pos = p.GlobalPosition;
+        bool Guards(Vector3 at, Vector3 fwd, float radius)
+        {
+            var to = pos - (at + Vector3.Up * 1.1f);
+            if (radius <= 0 || to.Length() > radius) return false;
+            var flat = new Vector3(to.X, 0, to.Z);
+            return flat.LengthSquared() < 0.25f || fwd.AngleTo(flat.Normalized()) < Mathf.DegToRad(75f);
+        }
+        var hit = false;
+        if (LocalPlayer is { Downed: false } lp && Guards(lp.GlobalPosition, lp.GuardForward, lp.ReflectRadius)) { hit = true; lp.OnShieldReflect(); }
+        else
+            foreach (var r in Remotes.Values)
+                if (r.Class == SoldierClass.Heavy && r.Reflecting && !r.Downed && Guards(r.GlobalPosition, r.GuardForward, 10f)) { hit = true; break; }
+        if (!hit) return false;
+        var speed = p.Velocity.Length();
+        var back = p.SourceEnemy != null && IsInstanceValid(p.SourceEnemy) && p.SourceEnemy.State != EnemyState.Dead
+            ? (p.SourceEnemy.Center - pos).Normalized() : -p.Velocity / Mathf.Max(speed, 0.01f);
+        p.Velocity = back * Mathf.Max(speed, 40f) * 1.2f;
+        p.Gravity *= 0.3f;
+        Effects.Sparks(this, pos, back);
+        Sfx.At("e5_reflect", pos, -2f, 1f);
+        return true;
+    }
+
     public bool HostProjectileHitsPlayer(Projectile p, Vector3 a, Vector3 b)
     {
         foreach (var (peer, pos) in PlayerTargets())

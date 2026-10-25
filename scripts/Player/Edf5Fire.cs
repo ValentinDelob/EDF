@@ -43,6 +43,7 @@ public static class Edf5Fire
         var blast = w?.BlastRadius ?? t.BlastRadius;
         var bullets = Bullets.For(world);
         if (WingDiverShot(world, s, w, t, from, dir, rng, local, shooter, dmg, spread, range, speed, blast, power)) return;
+        if (FencerFire.Shot(world, s, w, t, from, dir, seed, rng, local, shooter, dmg, spread, range, speed, blast)) return;
         switch (s.Kind)
         {
             case Edf5Kind.Bullet:
@@ -51,8 +52,10 @@ public static class Edf5Fire
             {
                 var acid = s.Kind == Edf5Kind.Acid;
                 // Fusils à pompe : atténuation forte (x = 2,5) ; fusils d'assaut et de précision : linéaire (x = 1).
-                var shotgun = s.Category == "Fusil à pompe";
+                var shotgun = s.Category == "Fusil à pompe" || s.Family is "dexter" or "cannonshot";
                 var sniper = s.Category == "Fusil de précision";
+                // Fencer : obus des canons à main et canons lourds (traits épais), canons Galleon.
+                var shell = s.Family is "handcannon" or "gallic" or "powerdyne" or "galleon";
                 var life = range / Mathf.Max(speed, 1f);
                 for (var i = 0; i < Math.Max(1, s.Pellets); i++)
                 {
@@ -62,8 +65,8 @@ public static class Edf5Fire
                         Pos = from, Vel = d * speed, Life = life, MaxLife = life, Damage = dmg, Far = s.FarDamage,
                         FalloffExp = shotgun ? 2.5f : 1f, Pierce = s.Pierce, Blast = blast, Local = local,
                         Gravity = acid ? AcidGravity : 0f, Bounces = s.Kind == Edf5Kind.BoundGun ? 3 : 0,
-                        Color = TracerColor(s), Length = sniper ? Mathf.Min(speed * 0.04f, 30f) : Mathf.Clamp(speed * 0.022f, 1.2f, 9f),
-                        Width = sniper ? 0.07f : acid ? 0.16f : s.Pellets > 1 ? 0.035f : 0.05f,
+                        Color = TracerColor(s), Length = sniper || shell ? Mathf.Min(speed * 0.04f, 30f) : Mathf.Clamp(speed * 0.022f, 1.2f, 9f),
+                        Width = shell ? (s.Family == "gallic" ? 0.22f : 0.14f) : sniper ? 0.07f : acid ? 0.16f : s.Pellets > 1 ? (s.Family == "cannonshot" ? 0.07f : 0.035f) : 0.05f,
                     });
                 }
                 break;
@@ -101,14 +104,23 @@ public static class Edf5Fire
             {
                 // Missiles : départ vers le haut (Air Tortoise, Prominence : très haut puis piqué), guidage selon le rang.
                 var turn = s.Homing >= 0 ? Mathf.Lerp(7f, 1.2f, s.Homing / 12f) : 2.5f;
-                var n = s.Family == "fork" ? Math.Max(1, s.Pellets) : 1;
+                var n = s.Family is "fork" or "bloodstorm" or "haytal" ? Math.Max(1, s.Pellets) : 1;
                 for (var i = 0; i < n; i++)
                 {
-                    var up = s.Family is "tortoise" or "prominence" ? 0.85f : 0.35f;
-                    var d = (dir + Vector3.Up * up + RandomOnSphere(rng) * (n > 1 ? 0.6f : 0.12f)).Normalized();
-                    var ms = s.Family is "tortoise" ? 45f : s.Family == "prominence" ? 70f : 85f;
+                    // Départ vers le haut (Air Tortoise, Prominence, FG High Altitude Impact : très haut puis piqué) ; missiles à
+                    // kit de guidage du Fencer (Leviathan, Haytal, Phoenix) : tir droit sans verrouillage.
+                    var up = s.Family is "tortoise" or "prominence" or "fgimpact" ? 0.85f : s.GuideOnly ? 0.04f : 0.35f;
+                    var scatter = s.GuideOnly ? (n > 1 ? 0.22f : 0.02f) : n > 1 ? 0.6f : 0.12f;
+                    var d = (dir + Vector3.Up * up + RandomOnSphere(rng) * scatter).Normalized();
+                    var ms = s.Family switch
+                    {
+                        "tortoise" => 45f, "prominence" => 70f, "leviathan" => 55f, "phoenix" => 160f, "armhound" => 110f,
+                        "bloodstorm" => 75f, "fgimpact" => 80f, _ => 85f,
+                    };
                     var p = Projectile.Spawn(world, ProjectileKind.Missile, from, d * ms, local, dmg * (shooter?.DamageMul ?? 1f), blast);
-                    p.Life = 12f;
+                    p.Life = s.Family == "leviathan" ? 20f : 12f;
+                    if (s.Family is "leviathan" or "phoenix") p.Scale = Vector3.One * (s.Family == "leviathan" ? 3.2f : 1.8f);
+                    else if (s.Family == "bloodstorm") p.Scale = Vector3.One * 0.6f;
                     if (lockTarget != null) p.SetHoming(lockTarget, turn);
                 }
                 break;

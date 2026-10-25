@@ -70,14 +70,18 @@ public partial class Sfx
     /// </summary>
     private void LoadEdf5()
     {
-        foreach (var s in Edf5Weapons.Ranger.Concat(Edf5Weapons.WingDiver).Where(x => x.Kind != Edf5Kind.Core))
+        // Familles qui tirent, plus les sons de parade et de renvoi des boucliers du Fencer.
+        var families = Edf5Weapons.Ranger.Concat(Edf5Weapons.WingDiver).Concat(Edf5Weapons.Fencer)
+            .Where(x => x.Kind is not (Edf5Kind.Core or Edf5Kind.Gear or Edf5Kind.Shield))
+            .Select(x => (x.Family, Edf5Sounds.GainDb(x))).Concat(new[] { ("shieldblock", 3f), ("reflect", 0f) });
+        foreach (var (family, gain) in families)
         {
-            var name = "e5_" + s.Family;
+            var name = "e5_" + family;
             if (_variants.ContainsKey(name)) continue;
             var list = new List<AudioStreamWav>();
             for (var i = 0; i < 4; i++)
             {
-                var path = $"res://assets/sfx/edf5/{s.Family}_{i}.wav";
+                var path = $"res://assets/sfx/edf5/{family}_{i}.wav";
                 if (!ResourceLoader.Exists(path) || GD.Load<AudioStreamWav>(path) is not { } file) continue;
                 list.Add(new AudioStreamWav { Format = file.Format, MixRate = file.MixRate, Stereo = file.Stereo, Data = file.Data });
                 file.Dispose();
@@ -85,7 +89,7 @@ public partial class Sfx
             if (list.Count == 0) continue;
             _variants[name] = list.ToArray();
             _sounds[name] = list[0];
-            _gain[name] = Edf5Sounds.GainDb(s);
+            _gain[name] = gain;
         }
     }
 

@@ -123,11 +123,13 @@ public partial class Player : CharacterBody3D
         p.MaxHealth = p.Health = maxArmor;
         foreach (var w in loadout)
         {
-            // Cœur plasma (Wing Diver) : équipement, pas une arme tenue.
+            // Cœur plasma (Wing Diver), équipement de soutien (Fencer) : pas des armes tenues.
             if (w.T.Spec?.Kind == Edf5Kind.Core) p.Core = w;
+            else if (w.T.Spec?.Kind == Edf5Kind.Gear) p.Gear.Add(w);
         }
+        if (cls == SoldierClass.Heavy) p.SetupFencer();
         foreach (var w in loadout)
-            if (w.T.Spec?.Kind != Edf5Kind.Core) p.Weapons.Add(p.Arm(w));
+            if (w.T.Spec?.Kind is not (Edf5Kind.Core or Edf5Kind.Gear)) p.Weapons.Add(p.Arm(w));
         if (p.Core != null) p.Energy = p.MaxEnergy;
         p.AddChild(new CollisionShape3D
         {
@@ -357,6 +359,7 @@ public partial class Player : CharacterBody3D
 
         var speed = Def.WalkSpeed;
         if (AnchorTime > 0) speed *= 0.35f;
+        if (Def.Id == SoldierClass.Heavy) speed *= FencerSpeedMul();
 
         switch (Def.Id)
         {
@@ -411,22 +414,7 @@ public partial class Player : CharacterBody3D
                 break;
             }
             case SoldierClass.Heavy:
-                if (!Overheated && (sprintPressed || dodgePressed) && _dashTime <= 0)
-                {
-                    _dashTime = 0.28f;
-                    _dashDir = wish.LengthSquared() > 0.01f ? wish.Normalized() : -camBasis.Z;
-                    Heat += 24f;
-                    Sfx.At("dash", GlobalPosition, 0f, 0.8f);
-                }
-                if (!Overheated && jumpPressed && onFloor)
-                {
-                    v.Y = 13f;
-                    Heat += 18f;
-                    Sfx.At("dash", GlobalPosition, -2f, 0.7f);
-                }
-                if (Heat >= 100f && !Overheated) { Overheated = true; Sfx.Ui("empty", 0, 0.5f); }
-                Heat = Mathf.Max(0, Heat - (Overheated ? 22f : 30f) * dt);
-                if (Overheated && Heat <= 0) Overheated = false;
+                HeavyMove(ref v, wish, camBasis, onFloor, jumpPressed, sprintPressed || dodgePressed, dt);
                 break;
         }
 
@@ -437,7 +425,7 @@ public partial class Player : CharacterBody3D
         if (Flying) accel = 6f;
         horiz = horiz.Lerp(target, Mathf.Clamp(accel * dt, 0, 1));
         if (_dodgeTime > 0) horiz = _dodgeDir * 12f;
-        if (_dashTime > 0) horiz = _dashDir * (Def.Id == SoldierClass.Heavy ? 19f : 22f * _dashMul);
+        if (_dashTime > 0) horiz = _dashDir * (Def.Id == SoldierClass.Heavy ? _heavyDashSpeed : 22f * _dashMul);
         _dodgeTime -= dt;
         _dashTime -= dt;
 
@@ -474,7 +462,7 @@ public partial class Player : CharacterBody3D
             _netTimer = 0.05f;
             var flags = (horiz.Length() > 0.5f ? 1 : 0) | (speed > Def.WalkSpeed + 0.1f ? 2 : 0) | (!IsOnFloor() ? 4 : 0) | (Aiming ? 8 : 0)
                         | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0) | (Downed ? 32 : 0) | (Flying ? 64 : 0)
-                        | StyleBits << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
+                        | StyleBits << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0) | (Reflecting ? 1 << 12 : 0);
             Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, flags, Health, Current, Velocity);
         }
     }
@@ -558,14 +546,26 @@ public partial class Player : CharacterBody3D
         }
         if (Weapon != null)
         {
-            Model.SetWeapon(Weapon.W.T);
-            // Arme d'EDF 5 : son identifiant est envoyé aux autres pairs (au changement, puis toutes les 3 s).
-            _gunSyncT -= dt;
-            if (Model.GunId != _sentGunId || _gunSyncT <= 0)
+            // Fencer : bouclier du jeu actif au bras gauche ; bouclier en main : l'autre arme du jeu reste à droite.
+            var shield = ActiveShield;
+            Model.SetShield(shield?.W.T.Spec);
+            Model.ShieldUp = Reflecting;
+            var shown = Weapon;
+            if (shown.W.T.Spec?.Kind == Edf5Kind.Shield && HasSets)
             {
-                _sentGunId = Model.GunId;
+                var start = ActiveSet * Classes.SetSize;
+                for (var i = start; i < Mathf.Min(start + Classes.SetSize, Weapons.Count); i++)
+                    if (Weapons[i].W.T.Spec?.Kind != Edf5Kind.Shield) shown = Weapons[i];
+            }
+            Model.SetWeapon(shown.W.T);
+            // Arme d'EDF 5 : son identifiant (et celui du bouclier) est envoyé aux autres pairs (au changement, puis toutes les 3 s).
+            _gunSyncT -= dt;
+            var gunKey = (Model.GunId ?? "") + "|" + (Model.ShieldId ?? "");
+            if (gunKey != _sentGunId || _gunSyncT <= 0)
+            {
+                _sentGunId = gunKey;
                 _gunSyncT = 3f;
-                Net.I.SendWeaponModel(Model.GunId ?? "");
+                Net.I.SendWeaponModel(gunKey);
             }
             Model.Reloading = Weapon.Reloading || SetSwapLeft > 0;
         }
@@ -1070,6 +1070,8 @@ public partial class Player : CharacterBody3D
             return;
         }
         if (_dodgeTime > 0) return; // invulnérable pendant la roulade
+        dmg = FencerGuard(dmg, from);
+        if (dmg <= 0) return;
         if (AnchorTime > 0) dmg *= 0.5f;
         Health -= dmg;
         DamageFlash = Mathf.Min(1f, DamageFlash + 0.35f + dmg / MaxHealth);
