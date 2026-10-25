@@ -1,5 +1,13 @@
 # Journal des versions
 
+## v0.11.2 — Nouvel hélicoptère
+
+- **Hélicoptère d'attaque entièrement remodelé** (dans Blender) : fuselage effilé, verrière en tandem à facettes et montants, flancs à caissons, nacelles moteur avec diffuseurs d'échappement infrarouge, ailerons à pylônes (rails de missiles et paniers de roquettes), train à roues avec bras tirés et roulette de queue, dérive en flèche, stabilisateur, radôme de mât, boule de capteurs sous le nez, tubes de Pitot, marchepieds, lance-leurres, feux de position.
+- **Pièces animées** : rotor principal à quatre pales, rotor de queue en ciseaux, tourelle de menton qui suit la visée (lacet et site séparés) avec un canon rotatif à trois tubes ; les roquettes partent des paniers sous les ailerons.
+- Formes de collision ajustées au nouveau fuselage (corps, poutre de queue, ailerons, disque du rotor).
+- Correctif : plus d'erreur quand le véhicule est détruit par un choc pendant la conduite (le joueur est éjecté proprement).
+- Script de présentation des modèles dans Blender (`tools/blender/studio.py`).
+
 ## v0.11.1 — Nouveau char, suspension et jauges de classe
 
 - **Char de combat entièrement remodelé** (dans Blender) : char moderne détaillé, avec caisse à long glacis et plaques additionnelles, jupes blindées à panneaux boulonnés, tourelle à blindage en coin, caissons latéraux, panier arrière, viseurs du chef et du tireur, tourelleau téléopéré, lance-pots fumigènes, antennes, phares, grilles moteur. Le canon a un manchon thermique, un évacuateur de fumées et un frein de bouche, et son fût recule au tir.

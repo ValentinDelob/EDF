@@ -271,6 +271,8 @@ public partial class Player : CharacterBody3D
         if (Vehicle != null)
         {
             Vehicle.DriveTick(this, dt, _yaw, _pitch);
+            // La conduite peut éjecter le joueur (véhicule détruit par un choc) : il reprend alors la main au pas suivant.
+            if (Vehicle == null) return;
             GlobalPosition = Vehicle.SeatPosition;
             Velocity = Vector3.Zero;
             _netTimer -= dt;

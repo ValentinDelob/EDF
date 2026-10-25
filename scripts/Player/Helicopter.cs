@@ -74,74 +74,12 @@ public partial class Helicopter : Vehicle
 
     private void Build()
     {
-        var paint = Mats.Painted(new Color(0.25f, 0.29f, 0.23f), 0.55f, 0.25f);
-        var paint2 = Mats.Painted(new Color(0.2f, 0.23f, 0.19f), 0.6f, 0.25f);
-        var dark = Mats.Metal(new Color(0.1f, 0.1f, 0.1f), 0.55f);
-        var glass = new StandardMaterial3D { AlbedoColor = new Color(0.08f, 0.12f, 0.14f), Metallic = 0.6f, Roughness = 0.08f };
-
-        // Corps pivotant (inclinaison) autour du centre de gravité.
+        // Corps pivotant (inclinaison) autour du centre de gravité ; modèle : Helicopter.Model.cs.
         _body = new Node3D { Position = new Vector3(0, 1.6f, 0) };
         AddChild(_body);
-        void Add(Node3D parent, Mesh m, Vector3 pos, Vector3 rotDeg = default, Vector3? scale = null) =>
-            parent.AddChild(new MeshInstance3D { Mesh = m, Position = pos, RotationDegrees = rotDeg, Scale = scale ?? Vector3.One });
+        BuildModel();
 
-        // Fuselage étroit (biplace en tandem), arrondi.
-        Add(_body, new CapsuleMesh { Radius = 0.85f, Height = 6.6f, RadialSegments = 14, Rings = 6, Material = paint }, new Vector3(0, 0, 0.7f), new Vector3(90, 0, 0), new Vector3(0.85f, 1f, 1f));
-        Add(_body, new BoxMesh { Size = new Vector3(1.3f, 0.7f, 2.6f), Material = paint2 }, new Vector3(0, 0.9f, -0.5f)); // carter moteur
-        foreach (var s in new[] { -1f, 1f })
-        {
-            Add(_body, new CylinderMesh { TopRadius = 0.28f, BottomRadius = 0.32f, Height = 1.4f, RadialSegments = 10, Material = paint2 }, new Vector3(0.75f * s, 0.8f, -0.4f), new Vector3(90, 0, 0)); // turbines
-            Add(_body, new CylinderMesh { TopRadius = 0.22f, BottomRadius = 0.22f, Height = 0.1f, RadialSegments = 10, Material = dark }, new Vector3(0.75f * s, 0.8f, -1.12f), new Vector3(90, 0, 0)); // tuyères
-        }
-        // Verrières (pilote devant, tireur derrière et plus haut).
-        Add(_body, new SphereMesh { Radius = 0.62f, Height = 1.24f, RadialSegments = 14, Rings = 8, Material = glass }, new Vector3(0, 0.55f, 2.35f), default, new Vector3(0.95f, 0.85f, 1.6f));
-        Add(_body, new SphereMesh { Radius = 0.62f, Height = 1.24f, RadialSegments = 14, Rings = 8, Material = glass }, new Vector3(0, 0.78f, 1.05f), default, new Vector3(0.95f, 0.85f, 1.4f));
-        // Poutre de queue, dérive, stabilisateur.
-        Add(_body, new CylinderMesh { TopRadius = 0.2f, BottomRadius = 0.5f, Height = 5.6f, RadialSegments = 10, Material = paint }, new Vector3(0, 0.35f, -4.6f), new Vector3(-90, 0, 0));
-        Add(_body, new BoxMesh { Size = new Vector3(0.12f, 1.8f, 1.0f), Material = paint }, new Vector3(0, 1.0f, -7.25f), new Vector3(-15, 0, 0));
-        Add(_body, new BoxMesh { Size = new Vector3(2.4f, 0.08f, 0.6f), Material = paint2 }, new Vector3(0, 0.35f, -6.6f));
-        // Ailettes : support des paniers de roquettes.
-        Add(_body, new BoxMesh { Size = new Vector3(3.6f, 0.12f, 1.0f), Material = paint2 }, new Vector3(0, -0.15f, 0.4f), new Vector3(0, 0, 0));
-        for (var i = 0; i < 2; i++)
-        {
-            var s = i == 0 ? 1f : -1f; // 0 = gauche (+X, l'appareil regarde vers +Z), 1 = droite
-            Add(_body, new BoxMesh { Size = new Vector3(0.1f, 0.3f, 0.5f), Material = paint2 }, new Vector3(1.65f * s, -0.22f, 0.5f)); // pylône
-            // Panier orientable (site et léger lacet) autour de son point d'emport.
-            _pods[i] = new Node3D { Position = new Vector3(1.65f * s, -0.45f, 0.5f) };
-            _body.AddChild(_pods[i]);
-            Add(_pods[i], new CylinderMesh { TopRadius = 0.3f, BottomRadius = 0.3f, Height = 1.8f, RadialSegments = 12, Material = paint2 }, Vector3.Zero, new Vector3(90, 0, 0));
-            Add(_pods[i], new CylinderMesh { TopRadius = 0.24f, BottomRadius = 0.24f, Height = 0.04f, RadialSegments = 12, Material = dark }, new Vector3(0, 0, 0.91f), new Vector3(90, 0, 0));
-            _podMuzzles[i] = new Node3D { Position = new Vector3(0, 0, 1.3f) };
-            _pods[i].AddChild(_podMuzzles[i]);
-            // Patins
-            Add(_body, new BoxMesh { Size = new Vector3(0.1f, 0.1f, 4.4f), Material = dark }, new Vector3(0.95f * s, -1.5f, 0.5f));
-            Add(_body, new BoxMesh { Size = new Vector3(0.1f, 0.12f, 0.5f), Material = dark }, new Vector3(0.95f * s, -1.42f, 2.85f), new Vector3(-30, 0, 0));
-            foreach (var z in new[] { 1.6f, -0.6f })
-                Add(_body, new BoxMesh { Size = new Vector3(0.08f, 0.85f, 0.08f), Material = dark }, new Vector3(0.78f * s, -1.1f, z), new Vector3(0, 0, -25 * s));
-        }
-        // Tourelle de menton (minigun) : carénage fixe + tourelle orientable.
-        Add(_body, new CylinderMesh { TopRadius = 0.36f, BottomRadius = 0.3f, Height = 0.22f, RadialSegments = 12, Material = paint2 }, new Vector3(0, -0.55f, 3.3f));
-        _gun = new Node3D { Position = new Vector3(0, -0.75f, 3.3f) };
-        _body.AddChild(_gun);
-        Add(_gun, new SphereMesh { Radius = 0.3f, Height = 0.6f, RadialSegments = 10, Rings = 6, Material = dark }, Vector3.Zero);
-        Add(_gun, new BoxMesh { Size = new Vector3(0.34f, 0.22f, 0.5f), Material = dark }, new Vector3(0, -0.05f, 0.25f)); // berceau
-        _gunBarrels = new Node3D { Position = new Vector3(0, -0.05f, 0.2f) };
-        _gun.AddChild(_gunBarrels);
-        for (var i = 0; i < 3; i++)
-        {
-            var a = i * Mathf.Tau / 3f;
-            Add(_gunBarrels, new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.035f, Height = 1.1f, RadialSegments = 6, Material = dark }, new Vector3(Mathf.Cos(a) * 0.07f, Mathf.Sin(a) * 0.07f, 0.55f), new Vector3(90, 0, 0));
-        }
-        _gunMuzzle = new Node3D { Position = new Vector3(0, 0, 1.15f) };
-        _gunBarrels.AddChild(_gunMuzzle);
-
-        // Rotor principal : 4 pales + disque flou à haut régime.
-        _rotor = new Node3D { Position = new Vector3(0, 1.45f, 0.1f) };
-        _body.AddChild(_rotor);
-        Add(_rotor, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.16f, Height = 0.5f, Material = dark }, new Vector3(0, -0.2f, 0));
-        Add(_rotor, new CylinderMesh { TopRadius = 0.3f, BottomRadius = 0.3f, Height = 0.18f, Material = dark }, new Vector3(0, 0.05f, 0));
-        Add(_rotor, new BoxMesh { Size = new Vector3(0.34f, 0.05f, 11.5f), Material = dark }, new Vector3(0, 0.08f, 0));
-        Add(_rotor, new BoxMesh { Size = new Vector3(11.5f, 0.05f, 0.34f), Material = dark }, new Vector3(0, 0.08f, 0));
+        // Disque flou du rotor à haut régime (sous le moyeu, dans le plan des pales).
         _discMat = new StandardMaterial3D
         {
             AlbedoColor = new Color(0.12f, 0.12f, 0.12f, 0f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
@@ -149,19 +87,17 @@ public partial class Helicopter : Vehicle
         };
         _disc = new MeshInstance3D
         {
-            Mesh = new CylinderMesh { TopRadius = 5.75f, BottomRadius = 5.75f, Height = 0.02f, RadialSegments = 32, Material = _discMat },
-            Position = new Vector3(0, 0.09f, 0),
+            Mesh = new CylinderMesh { TopRadius = 5.75f, BottomRadius = 5.75f, Height = 0.02f, RadialSegments = 40, Material = _discMat },
+            Position = new Vector3(0, -0.02f, 0),
         };
         _rotor.AddChild(_disc);
-        // Rotor de queue (côté gauche de la dérive).
-        _tailRotor = new Node3D { Position = new Vector3(0.18f, 1.25f, -7.45f) };
-        _body.AddChild(_tailRotor);
-        Add(_tailRotor, new BoxMesh { Size = new Vector3(0.05f, 1.7f, 0.18f), Material = dark }, Vector3.Zero);
-        Add(_tailRotor, new BoxMesh { Size = new Vector3(0.05f, 0.18f, 1.7f), Material = dark }, Vector3.Zero);
 
         // Fuselage + disque du rotor : les pales touchent les murs (choc du rotor = dégâts).
-        AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(2.4f, 2.6f, 8.0f) }, Position = new Vector3(0, 1.35f, 0.4f) });
-        AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 5.2f, Height = 0.4f }, Position = new Vector3(0, 3.15f, 0.1f) });
+        // Cabine (nez à la nacelle), poutre de queue et dérive, ailettes avec leurs emports.
+        AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.9f, 2.5f, 7.4f) }, Position = new Vector3(0, 1.35f, 1.6f) });
+        AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.8f, 1.9f, 6.2f) }, Position = new Vector3(0, 2.45f, -5.1f) });
+        AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(5.0f, 1.0f, 1.8f) }, Position = new Vector3(0, 1.15f, -0.3f) });
+        AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = 5.5f, Height = 0.4f }, Position = new Vector3(0, 3.5f, -0.2f) });
         _prompt.Position = new Vector3(0, 4.4f, 0);
         CastShadows();
         _disc.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
@@ -396,7 +332,8 @@ public partial class Helicopter : Vehicle
         var (gy, gp) = SolveMount(dLocal, GunYawMax, GunUp, GunDown);
         _gunYaw = Mathf.LerpAngle(_gunYaw, gy, Mathf.Clamp(dt * 14f, 0, 1));
         _gunPitch = Mathf.Lerp(_gunPitch, gp, Mathf.Clamp(dt * 14f, 0, 1));
-        _gun.Rotation = new Vector3(_gunPitch, _gunYaw, 0);
+        _gun.Rotation = new Vector3(0, _gunYaw, 0);
+        _cannon.Rotation = new Vector3(_gunPitch, 0, 0);
         _gunAimDir = (_body.GlobalBasis * MountDir(gy, gp)).Normalized();
         if (Test == "down" && Engine.GetPhysicsFrames() % 120 == 0)
             GD.Print($"[heli] tourelle de menton : lacet {Mathf.RadToDeg(gy):0}°, site {Mathf.RadToDeg(gp):0}° (vers le bas)");
@@ -491,7 +428,8 @@ public partial class Helicopter : Vehicle
         ApplyPose(_tiltF, _tiltS);
         _gunYaw = Mathf.LerpAngle(_gunYaw, _netB, k);
         _gunPitch = Mathf.Lerp(_gunPitch, _netC, k);
-        _gun.Rotation = new Vector3(_gunPitch, _gunYaw, 0);
+        _gun.Rotation = new Vector3(0, _gunYaw, 0);
+        _cannon.Rotation = new Vector3(_gunPitch, 0, 0);
         if (Driver != 0) _rotorSpeed = Mathf.Lerp(_rotorSpeed, _netA, k);
         _agl = MeasureAgl();
         var remoteFiring = _clock - _remoteFire < 0.15f;
