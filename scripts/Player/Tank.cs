@@ -3,18 +3,16 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Char de combat pilotable (simulation par le conducteur et réseau : voir <see cref="Vehicle"/>).
+/// Char de combat pilotable (simulation par le conducteur et réseau : voir <see cref="Vehicle"/> ; modèle : Tank.Model.cs).
 /// </summary>
 public partial class Tank : Vehicle
 {
     private Node3D _hull, _turret, _barrel, _muzzle;
     /// <summary>Pivot du visuel (caisse et tourelle) : incliné selon la pente du sol (relief), à plat sur les cartes plates.</summary>
     private Node3D _tilt;
-    private Node3D[] _wheels = new Node3D[6];
     private float _turretYaw, _barrelPitch;
     private float _speed;
     private float _mgCd;
-    private float _treads;
 
     public const float CannonDamage = 380f;
     public const float CannonRadius = 10f;
@@ -27,7 +25,8 @@ public partial class Tank : Vehicle
     public static Tank Create(World w, int id, Vector3 pos, float yaw)
     {
         var t = new Tank { Name = $"Tank{id}" };
-        t.InitCommon(w, id, pos, yaw, 1600);
+        // Les appelants posent les véhicules 0,3 m au-dessus du sol (hélicoptère) : le char, lui, repose sur ses chenilles.
+        t.InitCommon(w, id, pos - Vector3.Up * 0.3f, yaw, 1600);
         t.Arms = new[] { t.Cannon, t.Coax };
         t.Build();
         return t;
@@ -35,47 +34,18 @@ public partial class Tank : Vehicle
 
     private void Build()
     {
-        var paint = Mats.Painted(new Color(0.3f, 0.34f, 0.26f), 0.6f, 0.2f);
-        var dark = Mats.Metal(new Color(0.12f, 0.12f, 0.12f), 0.6f);
-        var track = Mats.Painted(new Color(0.08f, 0.08f, 0.08f), 0.9f);
         _tilt = new Node3D { Name = "Tilt" };
         AddChild(_tilt);
-        _hull = new Node3D();
-        _tilt.AddChild(_hull);
-        _hull.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(3.4f, 1.1f, 6.6f), Material = paint }, Position = new Vector3(0, 1.15f, 0) });
-        _hull.AddChild(new MeshInstance3D { Mesh = new PrismMesh { Size = new Vector3(3.4f, 0.6f, 1.2f), Material = paint }, Position = new Vector3(0, 1.0f, 3.6f), RotationDegrees = new Vector3(90, 180, 0) });
-        foreach (var s in new[] { -1f, 1f })
-        {
-            _hull.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.8f, 0.95f, 7.2f), Material = track }, Position = new Vector3(1.75f * s, 0.55f, 0) });
-            _hull.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 0.12f, 7.0f), Material = paint }, Position = new Vector3(1.75f * s, 1.08f, 0) }); // garde-boue
-            for (var i = 0; i < 3; i++)
-            {
-                var wheel = new MeshInstance3D
-                {
-                    Mesh = new CylinderMesh { TopRadius = 0.42f, BottomRadius = 0.42f, Height = 0.84f, RadialSegments = 14, Material = dark },
-                    Position = new Vector3(1.75f * s, 0.5f, -2.2f + i * 2.2f),
-                    RotationDegrees = new Vector3(0, 0, 90),
-                };
-                _hull.AddChild(wheel);
-                _wheels[(s < 0 ? 0 : 3) + i] = wheel;
-            }
-        }
-        _turret = new Node3D { Position = new Vector3(0, 1.75f, -0.3f) };
-        _tilt.AddChild(_turret);
-        _turret.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 1.15f, BottomRadius = 1.4f, Height = 0.75f, RadialSegments = 10, Material = paint }, Position = new Vector3(0, 0.37f, 0) });
-        _turret.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.6f, 0.5f, 1.2f), Material = paint }, Position = new Vector3(0, 0.45f, -1.1f) });
-        _turret.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.25f, BottomRadius = 0.3f, Height = 0.3f, Material = dark }, Position = new Vector3(0.5f, 0.85f, -0.3f) }); // tourelleau
-        _barrel = new Node3D { Position = new Vector3(0, 0.45f, 0.9f) };
-        _turret.AddChild(_barrel);
-        _barrel.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.11f, BottomRadius = 0.15f, Height = 3.8f, Material = dark }, Position = new Vector3(0, 0, 1.9f), RotationDegrees = new Vector3(90, 0, 0) });
-        _barrel.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.17f, BottomRadius = 0.17f, Height = 0.5f, Material = dark }, Position = new Vector3(0, 0, 3.7f), RotationDegrees = new Vector3(90, 0, 0) });
-        _muzzle = new Node3D { Position = new Vector3(0, 0, 4.1f) };
-        _barrel.AddChild(_muzzle);
-        AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(3.6f, 2.0f, 7.0f) }, Position = new Vector3(0, 1.1f, 0) });
+        BuildModel();
+        // Hauteur pilotée par la suspension (sondes) : pas de notion de sol ni d'accroche du corps physique.
+        MotionMode = MotionModeEnum.Floating;
+        // Boîte relevée de la garde au sol : bordures, gravats et murets bas passent dessous (Tank.Suspension.cs).
+        AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(3.6f, 2.2f - Clearance, 7.4f) }, Position = new Vector3(0, (2.2f + Clearance) * 0.5f, 0) });
         _prompt.Position = new Vector3(0, 3.4f, 0);
         CastShadows();
     }
 
+    public string BlockDebug = "";
     public Vector3 MuzzlePosition => _muzzle.GlobalPosition;
     public override Vector3 SeatPosition => GlobalPosition + Vector3.Up * 2.2f;
     public override string DisplayName => "Char de combat";
@@ -83,7 +53,7 @@ public partial class Tank : Vehicle
     public override string EnterHint =>
         $"Char de combat : clic gauche canon, clic droit mitrailleuse, [{UiKit.KeyName("reload")}] recharger. Munitions limitées : arrêtez-vous au point de départ pour réarmer.";
     public override string WreckedHint => "Char détruit ! Évacuation.";
-    protected override int CrushStrength => 3;
+    protected override int CrushStrength => 5; // écrase voitures, camions, blocs de béton ; pousse les conteneurs
 
     /// <summary>Simulation par le conducteur local : déplacement, tourelle, tir.</summary>
     public override void DriveTick(Player p, float dt, float camYaw, float camPitch)
@@ -97,9 +67,21 @@ public partial class Tank : Vehicle
         _speed = Mathf.MoveToward(_speed, target, (Mathf.Abs(target) > Mathf.Abs(_speed) ? 7f : 12f) * dt);
         var fwd = GlobalBasis.Z;
         var v = fwd * _speed;
-        v.Y = IsOnFloor() ? -1f : Velocity.Y - 24f * dt;
+        v.Y = GroundVelocityY(dt);
+        // Montée sur une marche ou un obstacle bas (dessus vérifié sous 1,1 m) : levée directe — collée à l'obstacle,
+        // ou l'effleurant déjà, la caisse serait retenue par le glissement.
+        if (v.Y > 0f) { GlobalPosition += Vector3.Up * v.Y * dt; v.Y = 0f; }
         Velocity = v;
         MoveAndSlide();
+        StepOver();
+        if (OS.IsDebugBuild() && Player.Bot == false && GetSlideCollisionCount() > 0 && Screenshot.CmdArg("tank-drive") != null)
+        {
+            var c = GetSlideCollision(0);
+            var col = c.GetCollider() as Node;
+            var id = _world.Decor?.FromHit(c.GetCollider(), c.GetColliderShapeIndex()) ?? -1;
+            var kind = id >= 0 ? _world.Decor.Get(id).Kind.ToString() : "non destructible";
+            BlockDebug = $"{col?.Name} ({kind}) à y={c.GetPosition().Y - GlobalPosition.Y:0.00} n={c.GetNormal()}";
+        }
         // Éperonnage : un choc contre un mur à pleine vitesse abîme légèrement le char (seuil 8 m/s) et le freine.
         if (CollisionDamage(p, v, 8f, 12f, 18f, 0.4f, dt) > 0) _speed *= 0.25f;
         CheckWrecked();
@@ -135,21 +117,7 @@ public partial class Tank : Vehicle
     {
         _turret.Rotation = new Vector3(0, _turretYaw, 0);
         _barrel.Rotation = new Vector3(-_barrelPitch, 0, 0);
-        _treads += _speed * dt;
-        foreach (var w in _wheels) if (w != null) w.Rotation = new Vector3(_treads / 0.42f, 0, Mathf.Pi / 2);
-        _hull.Rotation = new Vector3(Mathf.Clamp(-_speed * 0.004f, -0.05f, 0.05f), 0, 0);
-        // Relief : le visuel épouse la pente sous le char (la forme de collision reste droite).
-        if (_world?.Terrain != null && !Wrecked)
-        {
-            // Hauteurs sous les chenilles (avant / arrière à ±2,6 m, côtés à ±1,4 m) → normale dans le repère du char.
-            var p = GlobalPosition;
-            var fwd = GlobalBasis.Z * 2.6f;
-            var side = GlobalBasis.X * 1.4f;
-            var dz = _world.GroundHeight(p + fwd) - _world.GroundHeight(p - fwd);
-            var dx = _world.GroundHeight(p + side) - _world.GroundHeight(p - side);
-            var n = new Vector3(-dx / 2.8f, 1f, -dz / 5.2f).Normalized();
-            _tilt.Quaternion = _tilt.Quaternion.Slerp(new Quaternion(Vector3.Up, n), Mathf.Clamp(dt * 8f, 0, 1));
-        }
+        Suspension(dt, AnimateTracks(dt));
     }
 
     private void FireCannon(Player p)
@@ -163,9 +131,8 @@ public partial class Tank : Vehicle
         Effects.Smoke(_world, from, 2f, 1.5f);
         Sfx.Ui("explosion_small", 0f, 0.7f);
         p.AddShake(0.35f);
-        var tw = CreateTween();
-        tw.TweenProperty(_barrel, "position:z", 0.4f, 0.05f);
-        tw.TweenProperty(_barrel, "position:z", 0.9f, 0.35f);
+        Recoil();
+        RecoilKick();
     }
 
     private void FireMg(Player p)

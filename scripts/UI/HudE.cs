@@ -309,6 +309,46 @@ public partial class HudArmor : HudBlock
             DrawRect(new Rect2(172, 94, 218, 6), HudE.Line, false, 1f);
         }
         else if (p.Def.Id == SoldierClass.Support) DrawCallCredits(p);
+        else if (p.Def.Id == SoldierClass.Airborne) DrawClassGauge("Énergie", p.Energy / 100f, p.Overheated, p.Flying, false);
+        else if (p.Def.Id == SoldierClass.Heavy) DrawClassGauge("Chaleur", p.Heat / 100f, p.Overheated, p.Heat > 1f, true);
+    }
+
+    private int _gaugePct = -1;
+    private string _gaugeText = "";
+
+    /// <summary>
+    /// Ressource de classe dans la petite plaque sous l'armure (même emplacement que le blindage ou l'appui) :
+    /// énergie du Commando aéroporté (vol et rechargements) ou chaleur de l'exosquelette du Grenadier blindé.
+    /// Jauge en dix segments, valeur en %, alerte orange près de la limite ; en surchauffe, plaque et jauge rouges
+    /// qui pulsent, « Surchauffe » et la recharge qui remonte.
+    /// </summary>
+    private void DrawClassGauge(string label, float frac, bool overheated, bool active, bool heat)
+    {
+        frac = Mathf.Clamp(frac, 0, 1);
+        var pct = Mathf.RoundToInt(frac * 100f);
+        if (pct != _gaugePct) { _gaugePct = pct; _gaugeText = $"{pct} %"; }
+        var warn = heat ? frac > 0.7f : frac < 0.25f;
+        var pulse = 0.5f + 0.5f * Mathf.Sin(Time.GetTicksMsec() * 0.012f);
+        var frame = overheated ? HudE.Empty.Lerp(HudE.Warn, pulse * 0.5f) : active ? HudE.Frame : HudE.Line;
+        Plate(VehShape, HudE.Plate, frame, 1.4f);
+        Text(HudE.Cond, 13, label, 172, 75, 0, HorizontalAlignment.Left, HudE.Label);
+        if (overheated) Text(HudE.CondBold, 13, "Surchauffe", 236, 75, 0, HorizontalAlignment.Left, HudE.Empty.Lerp(Colors.White, pulse * 0.3f));
+        Text(HudE.Mono, 16, _gaugeText, 290, 75, 100, HorizontalAlignment.Right, overheated ? HudE.Empty : warn ? HudE.Warn : Colors.White);
+        const float x0 = 172, w = 218, y = 93, h = 8;
+        DrawRect(new Rect2(x0, y, w, h), new Color(0, 0, 0, 0.6f));
+        var fill = overheated ? HudE.Empty.Lerp(HudE.Warn, pulse * 0.4f) : warn ? HudE.Warn : HudE.Gauge;
+        if (frac > 0.002f)
+        {
+            DrawRect(new Rect2(x0, y, w * frac, h), fill);
+            DrawRect(new Rect2(x0, y, w * frac, 2), overheated ? new Color(1, 1, 1, 0.25f) : HudE.GaugeHi);
+        }
+        // Dix segments (repères sombres) et cadre.
+        var sep = new Color(HudE.Ink, 0.75f);
+        for (var i = 1; i < 10; i++) DrawRect(new Rect2(x0 + w * i / 10f - 0.6f, y, 1.2f, h), sep);
+        DrawRect(new Rect2(x0, y, w, h), overheated ? HudE.Empty : HudE.Line, false, 1f);
+        // Chaleur : seuil d'alerte marqué à 70 % ; énergie : réserve basse à 25 %.
+        var mark = heat ? 0.7f : 0.25f;
+        DrawRect(new Rect2(x0 + w * mark - 0.75f, y - 2, 1.5f, h + 4), new Color(HudE.Warn, 0.8f));
     }
 
     private int _credInt = -1, _credChoice = -1, _credState = -1;

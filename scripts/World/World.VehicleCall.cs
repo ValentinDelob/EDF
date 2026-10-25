@@ -102,7 +102,8 @@ public partial class World
         AddVehicle(v);
         var drop = new VehicleDrop();
         AddChild(drop);
-        drop.Begin(this, v, pos, yaw, type);
+        // Le char repose sur ses chenilles (posé 0,3 m plus bas que l'hélicoptère, voir Tank.Create).
+        drop.Begin(this, v, type == CallIns.Heli ? pos : pos - Vector3.Up * 0.3f, yaw, type);
         if (owner == Net.I.MyId) LocalPlayer?.OnVehicleCallConfirmed(id, type);
         if (VehicleCallLog) GD.Print($"[appel] largage n°{id} ({CallIns.Names[type]}) vu par {Net.I.MyId}");
     }

@@ -383,6 +383,7 @@ public static partial class AutoTest
         RoofTest(app);
         GrabTest(app);
         ClassTests(app); // --heavy-sets, --call-vehicle (AutoTest.Classes.cs)
+        TankDriveTest(app); // --tank-drive (AutoTest.Tank.cs)
         ObjectiveArgs(app); // --survive-time, --obj-hp, --convoy-speed, --objlog, --timescale (AutoTest.Objectives.cs)
         if (Screenshot.CmdArg("name") is { } nm) Settings.I.PlayerName = nm;
         if (Screenshot.CmdArg("class") is { } cc && int.TryParse(cc, out var ccls)) Profile.I.Data.SelectedClass = (SoldierClass)ccls;

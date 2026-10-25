@@ -95,6 +95,46 @@ public static class Effects
         return p;
     }
 
+    /// <summary>
+    /// Fumée d'échappement continue (moteur diesel) : particules en coordonnées monde, qui sortent vers l'arrière et montent.
+    /// <paramref name="dark"/> : bouffées noires d'accélération ; sinon voile léger du ralenti.
+    /// La densité se règle par <see cref="GpuParticles3D.AmountRatio"/>.
+    /// </summary>
+    public static GpuParticles3D ExhaustEmitter(bool dark)
+    {
+        var pm = new ParticleProcessMaterial
+        {
+            Direction = new Vector3(0, 0.6f, -1f),
+            Spread = 14,
+            InitialVelocityMin = dark ? 2.2f : 1.0f,
+            InitialVelocityMax = dark ? 3.5f : 1.6f,
+            Gravity = new Vector3(0, dark ? 0.9f : 0.6f, 0),
+            DampingMin = 1.2f,
+            DampingMax = 1.8f,
+            ScaleMin = 0.6f,
+            ScaleMax = 1.1f,
+            ScaleCurve = new CurveTexture { Curve = MakeCurve(0.5f, dark ? 3.2f : 2.6f) },
+            ColorRamp = new GradientTexture1D
+            {
+                Gradient = dark
+                    ? Grad(new Color(0.06f, 0.055f, 0.05f, 0.9f), new Color(0.16f, 0.15f, 0.14f, 0.55f), new Color(0.3f, 0.29f, 0.28f, 0))
+                    : Grad(new Color(0.36f, 0.35f, 0.34f, 0.35f), new Color(0.45f, 0.45f, 0.45f, 0.16f), new Color(0.5f, 0.5f, 0.5f, 0)),
+            },
+            AngleMin = 0, AngleMax = 360,
+        };
+        return new GpuParticles3D
+        {
+            Amount = dark ? 60 : 30,
+            Lifetime = dark ? 2.4f : 1.8f,
+            ProcessMaterial = pm,
+            DrawPass1 = new QuadMesh { Size = dark ? new Vector2(0.9f, 0.9f) : new Vector2(0.7f, 0.7f), Material = SmokeMat },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            LocalCoords = false,
+            VisibilityAabb = new Aabb(new Vector3(-20, -5, -20), new Vector3(40, 30, 40)),
+            Emitting = true,
+        };
+    }
+
     private static Curve MakeCurve(float a, float b)
     {
         var c = new Curve();

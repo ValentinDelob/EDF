@@ -1,5 +1,17 @@
 # Journal des versions
 
+## v0.11.1 — Nouveau char
+
+- **Char de combat entièrement remodelé** (dans Blender) : char moderne détaillé, avec caisse à long glacis et plaques additionnelles, jupes blindées à panneaux boulonnés, tourelle à blindage en coin, caissons latéraux, panier arrière, viseurs du chef et du tireur, tourelleau téléopéré, lance-pots fumigènes, antennes, phares, grilles moteur. Le canon a un manchon thermique, un évacuateur de fumées et un frein de bouche, et son fût recule au tir.
+- **Vraies chenilles** : 7 galets par côté, barbotin denté, roue tendeuse et rouleaux porteurs qui tournent selon la vitesse ; bandes dont les maillons, crampons et connecteurs défilent. En virage, la chenille extérieure va plus vite ; en rotation sur place, les deux tournent en sens contraire. Synchronisé en LAN.
+- Le char repose désormais sur ses chenilles (il flottait de 30 cm à l'arrêt).
+- **Suspension** : la caisse et la tourelle reposent sur des ressorts amortis : le char cabre en accélérant, plonge au freinage, roule en virage, encaisse les bosses et bascule au départ du coup de canon ; il épouse le sol (trottoirs, gravats, pentes) sur toutes les cartes.
+- **Franchissement** : trottoirs, bordures, murets de jardin, sacs de sable, épaves et blocs de moins de 1,1 m ne l'arrêtent plus — il les gravit (garde au sol de 55 cm). Il écrase voitures, camions et blocs de béton et pousse les conteneurs. Seuls les immeubles, les murs hauts et les poutres basses l'arrêtent.
+- **Échappement** : voile léger au ralenti, bouffées noires qui s'épaississent à l'accélération (moteur en marche seulement avec un conducteur).
+- **Son des chocs** : le choc métallique « en cloche » (véhicules contre les murs, mobilier qui tombe) est remplacé par un impact sourd et mat, nettement plus discret.
+- **Jauge de classe** (HUD, sous l'armure) : énergie du Commando aéroporté et chaleur de l'exosquelette du Grenadier blindé (elles n'étaient plus affichées) : dix segments, pourcentage, seuil d'alerte, état « Surchauffe » qui pulse.
+- Test : `--tank-drive` (conduite scriptée, journal des blocages et de la caisse ; `=cam` pour une caméra de suivi).
+
 ## v0.11.0 — Vallée forestière, réseau souterrain, capitale et Vaisseau-mère
 
 - **Nouvelle carte « Vallée forestière »** (spécification §9.1 : relief, rivière, visibilité réduite) : une vallée encaissée sous un ciel bas, noyée de pluie et de brume. La rivière descend d'un petit barrage-poids (déversoir qui gronde dans son bassin, retenue au-delà, maison des vannes et conduites forcées) jusqu'à la centrale hydroélectrique en brique, puis serpente en rapides écumeux entre les blocs, passe sous un vieux pont routier en béton et se franchit à deux gués. Route de la vallée et pistes : maison forestière (aire de départ, bivouac de l'armée), camp de bûcherons sur un replat du versant est (baraque, hangars ouverts, piles de grumes, grumiers, coupe rase hérissée de souches), mirador de l'affût sur la rive ouest, ligne à haute tension qui monte vers la crête. Futaie dense d'épicéas et de hêtres, sous-bois de fougères et de buissons, semis, chablis couchés en travers des pentes, falaises et chaos rocheux, toiles d'araignée entre les fûts. Au loin, crêtes boisées à perte de vue.

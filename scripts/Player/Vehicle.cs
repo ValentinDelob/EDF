@@ -337,7 +337,7 @@ public abstract partial class Vehicle : CharacterBody3D
         Health -= dmg;
         var k = Mathf.Clamp(bestExcess / 20f, 0, 1);
         p?.AddShake(Mathf.Lerp(0.25f, 1.1f, k));
-        Sfx.Ui("vehicle_crash", Mathf.Lerp(-7f, 1f, k), (float)GD.RandRange(0.9, 1.1));
+        Sfx.Ui("vehicle_crash", Mathf.Lerp(-16f, -7f, k), (float)GD.RandRange(0.9, 1.1)); // discret : un frottement contre un mur ne doit pas tonner
         Effects.Sparks(_world, bestPos, bestN);
         if (bestExcess > 5f) Effects.Sparks(_world, bestPos + bestN * 0.4f, bestN);
         if (bestExcess > 10f) Effects.Smoke(_world, bestPos, 1.4f, 1.6f);

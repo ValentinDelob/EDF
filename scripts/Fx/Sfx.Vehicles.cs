@@ -210,25 +210,32 @@ public partial class Sfx
         return (Tone(1046f, 0f, 0.17f) + Tone(784f, 0.21f, 0.38f)) * 0.42f;
     }
 
-    /// <summary>Choc de véhicule : coup sourd, froissement de tôle (bruit filtré), partiels métalliques inharmoniques, débris.</summary>
+    /// <summary>
+    /// Choc de véhicule et chute de mobilier : impact sourd et mat (masse lourde contre béton ou acier), froissement bref
+    /// étouffé, quelques gravats ; aucune résonance tonale (l'ancien timbre « cloche » venait de partiels inharmoniques).
+    /// </summary>
     private static Func<float, float> Crash(Random rng)
     {
-        var lp = new Svf();
-        float[] hz = { 430f, 1033f, 1587f, 2210f, 3120f };
-        float[] amp = { 0.32f, 0.28f, 0.22f, 0.16f, 0.1f };
-        float[] dec = { 0.5f, 0.36f, 0.27f, 0.2f, 0.12f };
-        var rattle = 0f;
+        var body = new Svf();
+        var grit = new Svf();
+        var debris = 0f;
         return t =>
         {
             var x = Noise(rng);
-            lp.Set(300f + 3500f * Mathf.Exp(-t / 0.06f), 0.8f);
-            var crunch = lp.Run(x) * 1.4f * Env(t, 0.002f, 0.35f);
-            var ring = 0f;
-            for (var i = 0; i < hz.Length; i++) ring += Mathf.Sin(Mathf.Tau * hz[i] * t) * amp[i] * Mathf.Exp(-t / dec[i]);
-            if (rng.NextDouble() < 0.0018 * Mathf.Exp(-t / 0.5f)) rattle = 1f;
-            rattle *= 0.92f;
-            return Thump(t, 58f, 0.14f) * 1.0f + crunch + ring * (t < 0.002f ? t / 0.002f : 1f) + x * rattle * 0.45f
-                   + x * Mathf.Exp(-t / 0.004f) * 0.8f;
+            // Coup sourd : fondamentale qui glisse de 75 à 45 Hz, très amortie.
+            var f0 = 45f + 30f * Mathf.Exp(-t / 0.05f);
+            var thud = Mathf.Sin(Mathf.Tau * f0 * t) * Mathf.Exp(-t / 0.09f) * 1.1f;
+            // Corps : bruit passe-bas qui se referme vite (choc mat, pas de sifflement).
+            body.Set(180f + 1400f * Mathf.Exp(-t / 0.025f), 0.7f);
+            var mass = body.Run(x) * 1.5f * Env(t, 0.001f, 0.22f);
+            // Froissement étouffé (médium, très court).
+            grit.Set(900f, 0.9f);
+            var crunch = grit.Band * 0.6f * Mathf.Exp(-t / 0.05f);
+            grit.Run(x);
+            // Gravats : quelques petits cliquetis graves qui s'espacent.
+            if (rng.NextDouble() < 0.0012 * Mathf.Exp(-t / 0.25f)) debris = 1f;
+            debris *= 0.9f;
+            return (thud + mass + crunch + body.Band * debris * 0.5f) * 0.8f;
         };
     }
 }
