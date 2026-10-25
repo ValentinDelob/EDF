@@ -94,6 +94,8 @@ public partial class Player
         }
         var release = _chargeHeld && !held;
         _chargeHeld = held;
+        // Bot : chargeur déjà plein (au départ, après un changement d'arme) : il tire aussitôt.
+        if (!release && Bot && _botFire && ws.Ammo >= ws.W.Magazine) release = true;
         if (release && ws.Ammo > 0) { _discharging = true; ws.Charge = 0; }
     }
 
