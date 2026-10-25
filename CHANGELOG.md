@@ -1,6 +1,6 @@
 # Journal des versions
 
-## v0.11.1 — Nouveau char
+## v0.11.1 — Nouveau char, suspension et jauges de classe
 
 - **Char de combat entièrement remodelé** (dans Blender) : char moderne détaillé, avec caisse à long glacis et plaques additionnelles, jupes blindées à panneaux boulonnés, tourelle à blindage en coin, caissons latéraux, panier arrière, viseurs du chef et du tireur, tourelleau téléopéré, lance-pots fumigènes, antennes, phares, grilles moteur. Le canon a un manchon thermique, un évacuateur de fumées et un frein de bouche, et son fût recule au tir.
 - **Vraies chenilles** : 7 galets par côté, barbotin denté, roue tendeuse et rouleaux porteurs qui tournent selon la vitesse ; bandes dont les maillons, crampons et connecteurs défilent. En virage, la chenille extérieure va plus vite ; en rotation sur place, les deux tournent en sens contraire. Synchronisé en LAN.
