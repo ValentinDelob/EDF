@@ -30,6 +30,30 @@ public static class HudWeaponArt
         return HudWeaponIcon.Rifle;
     }
 
+    /// <summary>Icône d'une arme d'EDF 5 selon sa nature de tir.</summary>
+    public static HudWeaponIcon IconFor(Edf5Spec s) => s.Kind switch
+    {
+        Edf5Kind.Rocket or Edf5Kind.GuidedRocket => HudWeaponIcon.Rocket,
+        Edf5Kind.Missile => HudWeaponIcon.Missile,
+        Edf5Kind.HandGrenade or Edf5Kind.GrenadeLauncher or Edf5Kind.Napalm or Edf5Kind.Firecracker => HudWeaponIcon.Grenade,
+        Edf5Kind.Bomb or Edf5Kind.Impulse => HudWeaponIcon.Beacon,
+        Edf5Kind.Reverser or Edf5Kind.ReverseShooter => HudWeaponIcon.Heal,
+        Edf5Kind.Flame => HudWeaponIcon.Gatling,
+        _ => IconFor(s.Category),
+    };
+
+    /// <summary>Nom des munitions d'une arme d'EDF 5 quand celui de l'icône ne convient pas.</summary>
+    public static string AmmoName(Edf5Spec s, HudWeaponIcon i) => s.Kind switch
+    {
+        Edf5Kind.Flame => "Carburant",
+        Edf5Kind.Acid => "Acide",
+        Edf5Kind.Bomb => "Charges",
+        Edf5Kind.Impulse => "Mines",
+        Edf5Kind.Reverser or Edf5Kind.ReverseShooter => "Soin",
+        Edf5Kind.Firecracker => "Pétards",
+        _ => AmmoName(i),
+    };
+
     public static string AmmoName(HudWeaponIcon i) => i switch
     {
         HudWeaponIcon.Shotgun => "Cartouches",
@@ -226,12 +250,12 @@ public partial class HudWeapons : HudBlock
         if (!ReferenceEquals(e.Source, w))
         {
             e.Source = w;
-            e.Icon = HudWeaponArt.IconFor(w.T.Category);
-            e.Ammo = HudWeaponArt.AmmoName(e.Icon);
+            e.Icon = w.T.Spec is { } s ? HudWeaponArt.IconFor(s) : HudWeaponArt.IconFor(w.T.Category);
+            e.Ammo = w.T.Spec is { } s2 ? HudWeaponArt.AmmoName(s2, e.Icon) : HudWeaponArt.AmmoName(e.Icon);
             e.Name = small ? $"{w.T.Name} ({w.T.Category})" : w.T.Name;
             e.Key = int.MinValue;
         }
-        var beam = w.T.Kind == WeaponKind.Beam;
+        var beam = w.T.Kind == WeaponKind.Beam && w.T.Spec == null; // EDF 5 : lance-flammes et Reverser ont des munitions
         var mag = w.Magazine;
         e.Reloading = ws.Reloading;
         if (beam)

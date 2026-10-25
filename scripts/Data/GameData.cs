@@ -73,7 +73,8 @@ public static class CallIns
 public enum WeaponKind { Hitscan, Projectile, Beam, Melee, Airstrike, Turret, HealField }
 
 /// <summary>Caractéristiques d'une arme qui portent des étoiles (0 = minimum, <see cref="WeaponInstance.MaxStars"/> = maximum).</summary>
-public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5 }
+/// <remarks>Blast, LockTime, LockRange : armes d'EDF 5 seulement (explosion, temps et portée de verrouillage).</remarks>
+public enum WeaponStat { Damage = 0, FireRate = 1, Magazine = 2, Reload = 3, Accuracy = 4, Range = 5, Blast = 6, LockTime = 7, LockRange = 8 }
 
 /// <summary>Modèle d'arme : valeurs de base au niveau 0, sans étoile.</summary>
 public record WeaponTemplate(
@@ -94,19 +95,13 @@ public record WeaponTemplate(
     float EnergyCost = 0,
     float Zoom = 1f,
     bool Automatic = true,
-    float MinLevel = 0);
+    float MinLevel = 0,
+    Edf5Spec Spec = null); // arme d'EDF 5 : valeurs, étoiles et tir viennent de Spec (voir Edf5Weapons)
 
 public static class Weapons
 {
-    public static readonly WeaponTemplate[] All =
+    private static readonly WeaponTemplate[] Legacy =
     {
-        // Fusilier
-        new("fa21", "FA-21 Vigie", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil d'assaut", 9, 10, 40, 1.6f, 260, 1.4f),
-        new("fa30", "FA-30 Sentinelle", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil d'assaut", 14, 7.5f, 30, 1.8f, 300, 0.9f, MinLevel: 10),
-        new("ca12", "CA-12 Brèche", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil à pompe", 11, 1.4f, 8, 2.2f, 70, 7f, Pellets: 10, Automatic: false),
-        new("fp88", "FP-88 Faucheur", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil de précision", 120, 0.9f, 5, 2.4f, 900, 0.05f, Zoom: 4f, Automatic: false, MinLevel: 5),
-        new("lr4", "LR-4 Tonnerre", SoldierClass.Rifleman, WeaponKind.Projectile, "Lance-roquettes", 140, 0.7f, 1, 2.2f, 400, 0.3f, BlastRadius: 7, ProjectileSpeed: 90, Automatic: false),
-        new("gl6", "GL-6 Averse", SoldierClass.Rifleman, WeaponKind.Projectile, "Lance-grenades", 70, 2.5f, 6, 2.8f, 160, 1.5f, BlastRadius: 5, ProjectileSpeed: 45, MinLevel: 15),
         // Commando aéroporté
         new("lz1", "LZ-1 Lumen", SoldierClass.Airborne, WeaponKind.Beam, "Laser à rayon", 70, 1, 100, 1.4f, 220, 0, EnergyCost: 30),
         new("ae3", "AE-3 Foudre", SoldierClass.Airborne, WeaponKind.Hitscan, "Lance électrique", 26, 2.5f, 1, 0.8f, 45, 6f, Pellets: 8, EnergyCost: 18, Automatic: false),
@@ -124,10 +119,6 @@ public static class Weapons
         new("mh2", "MH-2 Enclume", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 220, 1.1f, 1, 0.6f, 6, 0, BlastRadius: 4, Automatic: false),
         new("ms6", "MS-6 Essaim", SoldierClass.Heavy, WeaponKind.Projectile, "Lance-missiles", 60, 6, 6, 3f, 350, 4f, BlastRadius: 4, ProjectileSpeed: 60, MinLevel: 12),
         // Armes de haut niveau (difficultés élevées)
-        new("fa40", "FA-40 Garde", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil d'assaut", 20, 9, 45, 1.7f, 320, 0.8f, MinLevel: 30),
-        new("ca20", "CA-20 Tempête", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil à pompe", 9, 4.5f, 20, 2.6f, 60, 8f, Pellets: 9, MinLevel: 25),
-        new("fp120", "FP-120 Titan", SoldierClass.Rifleman, WeaponKind.Hitscan, "Fusil de précision", 420, 0.5f, 3, 3f, 1000, 0.02f, Zoom: 6f, Automatic: false, MinLevel: 40),
-        new("lr9", "LR-9 Hydre", SoldierClass.Rifleman, WeaponKind.Projectile, "Lance-roquettes", 95, 0.6f, 1, 2.6f, 380, 3f, Pellets: 3, BlastRadius: 6, ProjectileSpeed: 80, Automatic: false, MinLevel: 35),
         new("lz5", "LZ-5 Faisceau", SoldierClass.Airborne, WeaponKind.Beam, "Laser à rayon", 150, 1, 100, 1.6f, 260, 0, EnergyCost: 38, MinLevel: 30),
         new("ae9", "AE-9 Arc", SoldierClass.Airborne, WeaponKind.Hitscan, "Lance électrique", 48, 2.2f, 1, 0.9f, 55, 7f, Pellets: 10, EnergyCost: 22, Automatic: false, MinLevel: 25),
         new("pl12", "PL-12 Supernova", SoldierClass.Airborne, WeaponKind.Projectile, "Canon à plasma", 420, 1, 1, 2.6f, 320, 0.2f, BlastRadius: 13, ProjectileSpeed: 65, EnergyCost: 55, Automatic: false, MinLevel: 45),
@@ -139,7 +130,14 @@ public static class Weapons
         new("mh6", "MH-6 Marteau-pilon", SoldierClass.Heavy, WeaponKind.Melee, "Marteau à énergie", 520, 0.9f, 1, 0.7f, 7, 0, BlastRadius: 5.5f, Automatic: false, MinLevel: 35),
     };
 
-    public static WeaponTemplate Get(string id) => All.FirstOrDefault(w => w.Id == id) ?? All[0];
+    /// <summary>Toutes les armes : Fusilier = armes du Ranger d'EDF 5 ; autres classes : armes propres au jeu (en attendant EDF 5).</summary>
+    public static readonly WeaponTemplate[] All = Edf5Weapons.Ranger.Select(Edf5Weapons.Template).Concat(Legacy).ToArray();
+
+    private static readonly Dictionary<string, WeaponTemplate> ById = All.ToDictionary(w => w.Id);
+
+    public static WeaponTemplate Get(string id) => id != null && ById.TryGetValue(id, out var t) ? t : All[0];
+
+    public static bool Exists(string id) => id != null && ById.ContainsKey(id);
 
     /// <summary>Types d'arme (catégories) d'une classe, dans l'ordre des données : une colonne par type dans l'arsenal.</summary>
     public static List<string> CategoriesFor(SoldierClass c) => ForClass(c).Select(t => t.Category).Distinct().ToList();
@@ -165,6 +163,8 @@ public static class Weapons
         "Canon de siège" => "Canons de siège",
         "Marteau à énergie" => "Marteaux",
         "Lance-missiles" => "Lance-missiles",
+        "Grenades" => "Grenades",
+        "Armes spéciales" => "Spéciales",
         _ => category,
     };
 
@@ -188,7 +188,7 @@ public static class Weapons
 
     public static readonly Dictionary<SoldierClass, string[]> StarterLoadout = new()
     {
-        [SoldierClass.Rifleman] = new[] { "fa21", "lr4" },
+        [SoldierClass.Rifleman] = new[] { "pa11", "grantm31" }, // départ du Ranger d'EDF 5
         [SoldierClass.Airborne] = new[] { "lz1", "pl7" },
         [SoldierClass.Support] = new[] { "pdw5", "art1", "med3" },
         [SoldierClass.Heavy] = new[] { "gt40", "cs90", "mh2", "ms6" }, // jeu 1 : mitrailleuse + canon ; jeu 2 : marteau + missiles
@@ -218,7 +218,7 @@ public class WeaponInstance
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LegacyRarity { get; set; }
 
-    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée" };
+    public static readonly string[] StatNames = { "Dégâts", "Cadence", "Chargeur", "Rechargement", "Précision", "Portée", "Explosion", "Verrouillage", "Portée de verrouillage" };
 
     // Bonus par étoile (relatifs à la valeur sans étoile au niveau de l'arme).
     public const float DamagePerStar = 0.06f;
@@ -260,11 +260,44 @@ public class WeaponInstance
     public int StarsOf(WeaponStat s)
     {
         var i = (int)s;
-        return Stars != null && i < Stars.Length ? Math.Clamp(Stars[i], 0, MaxStars) : 0;
+        return Stars != null && i < Stars.Length ? Math.Clamp(Stars[i], 0, MaxStarsOf(s)) : 0;
     }
 
+    /// <summary>Étoiles maximales d'une caractéristique : propres à chaque arme d'EDF 5 (0 = valeur fixe), sinon <see cref="MaxStars"/>.</summary>
+    public static int MaxStarsOf(WeaponTemplate t, WeaponStat s)
+    {
+        if (t.Spec is not { } e) return HasStat(t, s) ? MaxStars : 0;
+        return s switch
+        {
+            WeaponStat.Damage => e.Damage.Stars,
+            WeaponStat.FireRate => e.Rof.Stars,
+            WeaponStat.Magazine => e.Ammo.Stars,
+            WeaponStat.Reload => e.Reload.Stars,
+            WeaponStat.Accuracy => e.Accuracy.Stars,
+            WeaponStat.Range => Math.Max(e.Range.Stars, e.Search.Stars),
+            WeaponStat.Blast => e.Blast.Stars,
+            WeaponStat.LockTime => e.LockTime.Stars,
+            WeaponStat.LockRange => e.LockRange.Stars,
+            _ => 0,
+        };
+    }
+
+    public int MaxStarsOf(WeaponStat s) => MaxStarsOf(T, s);
+
     /// <summary>La caractéristique a-t-elle un sens pour ce modèle (sinon ni étoile ni ligne affichée) ?</summary>
-    public static bool HasStat(WeaponTemplate t, WeaponStat s) => s switch
+    public static bool HasStat(WeaponTemplate t, WeaponStat s) => t.Spec is { } e ? s switch
+    {
+        WeaponStat.Damage => e.Damage.Present,
+        WeaponStat.FireRate => e.Rof.Present,
+        WeaponStat.Magazine => e.Ammo.Present,
+        WeaponStat.Reload => e.Reload.Present,
+        WeaponStat.Accuracy => e.Accuracy.Grade >= 0,
+        WeaponStat.Range => e.Range.Present || e.Search.Present,
+        WeaponStat.Blast => e.Blast.Present,
+        WeaponStat.LockTime => e.LockTime.Present,
+        WeaponStat.LockRange => e.LockRange.Present,
+        _ => false,
+    } : s switch
     {
         WeaponStat.Damage => true,
         WeaponStat.FireRate => t.Kind is WeaponKind.Hitscan or WeaponKind.Projectile,
@@ -278,15 +311,38 @@ public class WeaponInstance
     public bool HasStat(WeaponStat s) => HasStat(T, s);
 
     private float LevelMul => 1f + 0.05f * Level;
+    private Edf5Spec E5 => T.Spec;
 
-    // Valeurs avec un nombre d'étoiles donné (stars = null : étoiles de l'arme).
-    private float DamageAt(int s) => T.Damage * LevelMul * (1f + DamagePerStar * s);
-    private float FireRateAt(int s) => T.FireRate * (1f + 0.004f * Level) * (1f + FireRatePerStar * s);
-    private int MagazineAt(int s) => T.Magazine <= 1 ? Math.Max(1, T.Magazine)
-        : T.Magazine + Math.Max(s, (int)MathF.Round(T.Magazine * MagazinePerStar * s));
-    private float ReloadAt(int s) => T.Reload / (1f + 0.003f * Level) / (1f + ReloadPerStar * s);
-    private float SpreadAt(int s) => T.Spread / (1f + AccuracyPerStar * s);
-    private float RangeAt(int s) => T.Range * (1f + 0.002f * Level) * (1f + RangePerStar * s);
+    // Valeurs avec un nombre d'étoiles donné. Armes d'EDF 5 : formule des étoiles du jeu (Edf5Stat.At) ;
+    // autres armes : valeur du modèle au niveau de l'arme + bonus par étoile.
+    private float DamageAt(int s) => E5 is { } e ? e.Damage.At(s, Edf5Weapons.RaDamage, false) : T.Damage * LevelMul * (1f + DamagePerStar * s);
+    private float FireRateAt(int s) => E5 is { } e ? (e.Rof.Present ? e.Rof.At(s, Edf5Weapons.RaRof, false) : 1f)
+        : T.FireRate * (1f + 0.004f * Level) * (1f + FireRatePerStar * s);
+    private int MagazineAt(int s) => E5 is { } e ? (e.Ammo.Present ? Math.Max(1, (int)MathF.Round(e.Ammo.At(s, Edf5Weapons.RaAmmo, false))) : 1)
+        : T.Magazine <= 1 ? Math.Max(1, T.Magazine) : T.Magazine + Math.Max(s, (int)MathF.Round(T.Magazine * MagazinePerStar * s));
+    private float ReloadAt(int s) => E5 is { } e ? (e.Reload.Present ? e.Reload.At(s, Edf5Weapons.RaReload, true) : 0.5f)
+        : T.Reload / (1f + 0.003f * Level) / (1f + ReloadPerStar * s);
+    private float SpreadAt(int s) => E5 is { } e ? (e.Accuracy.Grade < 0 ? 0f
+            : Edf5Spec.GradeSpread(e.Accuracy.Grade + Edf5Weapons.GradePerStar * Math.Max(0, e.Accuracy.Stars - s)))
+        : T.Spread / (1f + AccuracyPerStar * s);
+    private float RangeAt(int s) => E5 is { } e ? (e.Search.Present ? e.Search.At(s, Edf5Weapons.RaRange, false) : e.Range.Present ? e.Range.At(s, Edf5Weapons.RaRange, false) : 300f)
+        : T.Range * (1f + 0.002f * Level) * (1f + RangePerStar * s);
+    private float BlastAt(int s) => E5 is { } e ? (e.Blast.Present ? e.Blast.At(s, Edf5Weapons.RaBlast, false) : 0f) : T.BlastRadius * (1f + 0.003f * Level);
+    private float LockTimeAt(int s) => E5 is { LockTime.Present: true } e ? e.LockTime.At(s, Edf5Weapons.RaLockTime, true) : 0f;
+    private float LockRangeAt(int s) => E5 is { LockRange.Present: true } e ? e.LockRange.At(s, Edf5Weapons.RaLockRange, false) : 0f;
+
+    /// <summary>Rang de précision d'EDF 5 avec les étoiles actuelles (« A- »…), null pour les autres armes.</summary>
+    [JsonIgnore] public string Grade => E5 is { } e && e.Accuracy.Grade >= 0
+        ? Edf5Spec.Grades[Math.Clamp((int)MathF.Round(e.Accuracy.Grade + Edf5Weapons.GradePerStar * Math.Max(0, e.Accuracy.Stars - StarsOf(WeaponStat.Accuracy))), 0, Edf5Spec.Grades.Length - 1)]
+        : null;
+    /// <summary>Vitesse des projectiles (m/s), liée aux étoiles de portée comme dans EDF 5.</summary>
+    [JsonIgnore] public float ShotSpeed => E5 is { Speed.Present: true } e
+        ? e.Speed.At(StarsOf(WeaponStat.Range), Edf5Weapons.RaRange, false) : T.ProjectileSpeed;
+    [JsonIgnore] public float LockTime => LockTimeAt(StarsOf(WeaponStat.LockTime));
+    [JsonIgnore] public float LockRange => LockRangeAt(StarsOf(WeaponStat.LockRange));
+    /// <summary>Cibles verrouillables : liées au chargeur (missiles d'EDF 5).</summary>
+    [JsonIgnore] public int LockTargets => E5 is { } e && e.LockTargets > 0
+        ? Math.Max(1, e.Ammo.Stars > 0 && e.Ammo.Max > 1 ? (int)MathF.Round(e.LockTargets * Magazine / e.Ammo.Max) : e.LockTargets) : 0;
 
     [JsonIgnore] public float Damage => DamageAt(StarsOf(WeaponStat.Damage));
     [JsonIgnore] public float FireRate => FireRateAt(StarsOf(WeaponStat.FireRate));
@@ -294,7 +350,7 @@ public class WeaponInstance
     [JsonIgnore] public float Reload => ReloadAt(StarsOf(WeaponStat.Reload));
     [JsonIgnore] public float Spread => SpreadAt(StarsOf(WeaponStat.Accuracy));
     [JsonIgnore] public float Range => RangeAt(StarsOf(WeaponStat.Range));
-    [JsonIgnore] public float BlastRadius => T.BlastRadius * (1f + 0.003f * Level);
+    [JsonIgnore] public float BlastRadius => BlastAt(StarsOf(WeaponStat.Blast));
 
     /// <summary>Indice de précision affiché (100 = tir parfaitement droit).</summary>
     public static float AccuracyScore(float spread) => 100f / (1f + spread * 0.5f);
@@ -313,10 +369,18 @@ public class WeaponInstance
     [JsonIgnore] public string DisplayName => $"{T.Name}  Nv.{Level}";
 
     /// <summary>Somme des étoiles des caractéristiques utiles (colonne ☆ de l'arsenal).</summary>
-    [JsonIgnore] public int TotalStars => Enum.GetValues<WeaponStat>().Where(HasStat).Sum(StarsOf);
+    /// <remarks>Armes d'EDF 5 : comme dans le jeu, la plus haute étoile parmi les caractéristiques (« PA-11 ☆7 »).</remarks>
+    [JsonIgnore] public int TotalStars => E5 != null
+        ? Enum.GetValues<WeaponStat>().Where(HasStat).Select(StarsOf).DefaultIfEmpty(0).Max()
+        : Enum.GetValues<WeaponStat>().Where(HasStat).Sum(StarsOf);
 
-    /// <summary>Somme maximale possible pour ce modèle.</summary>
-    [JsonIgnore] public int MaxTotalStars => Enum.GetValues<WeaponStat>().Count(HasStat) * MaxStars;
+    /// <summary>Somme maximale possible pour ce modèle (EDF 5 : étoile maximale la plus haute).</summary>
+    [JsonIgnore] public int MaxTotalStars => E5 != null
+        ? Enum.GetValues<WeaponStat>().Select(MaxStarsOf).DefaultIfEmpty(0).Max()
+        : Enum.GetValues<WeaponStat>().Count(HasStat) * MaxStars;
+
+    /// <summary>Toutes les caractéristiques au maximum (« ★PA-11 » dans EDF 5).</summary>
+    [JsonIgnore] public bool Maxed => Enum.GetValues<WeaponStat>().Where(HasStat).All(st => StarsOf(st) >= MaxStarsOf(st));
 
     private static string Fr(float v, string fmt) => v.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
 
@@ -343,8 +407,16 @@ public class WeaponInstance
                 var fmt = Reload >= 10 ? "0" : "0.0";
                 return ($"{Fr(Reload, fmt)} s", $"−{Fr(ReloadAt(0) - Reload, fmt)} s");
             }
+            case WeaponStat.Accuracy when Grade != null:
+                return (Grade, "");
             case WeaponStat.Accuracy:
                 return ($"{Fr(AccuracyScore(Spread), "0")}", $"+{Small(AccuracyScore(Spread) - AccuracyScore(SpreadAt(0)))}");
+            case WeaponStat.Blast:
+                return ($"{Fr(BlastRadius, "0.0")} m", $"+{Fr(BlastRadius - BlastAt(0), "0.0")} m");
+            case WeaponStat.LockTime:
+                return ($"{Fr(LockTime, LockTime < 1 ? "0.00" : "0.0")} s", $"−{Fr(LockTimeAt(0) - LockTime, "0.00")} s");
+            case WeaponStat.LockRange:
+                return ($"{Fr(LockRange, "0")} m / {LockTargets}", $"+{Fr(LockRange - LockRangeAt(0), "0")} m");
             case WeaponStat.Range:
                 return ($"{Fr(Range, "0")} m", $"+{Fr(Range - RangeAt(0), "0")} m");
         }

@@ -6,6 +6,14 @@ namespace Rempart;
 public partial class RemotePlayer : Node3D
 {
     public long PeerId;
+    /// <summary>Arme d'EDF 5 tenue (vide : arme procédurale du style transmis dans l'état).</summary>
+    public string GunId;
+
+    public void SetGun(string id)
+    {
+        GunId = Weapons.Exists(id) ? id : null;
+        if (GunId != null) Model.SetWeapon(Weapons.Get(GunId));
+    }
     public string PlayerName;
     public SoldierClass Class;
     public SoldierModel Model;
@@ -55,7 +63,7 @@ public partial class RemotePlayer : Node3D
         Health = hp;
         Downed = (flags & 32) != 0;
         Model.Visible = (flags & 128) == 0;
-        Model.SetWeaponStyle((WeaponStyle)((flags >> 8) & 7));
+        if (string.IsNullOrEmpty(GunId)) Model.SetWeaponStyle((WeaponStyle)((flags >> 8) & 7));
         Model.Reloading = (flags & (1 << 11)) != 0;
         if ((flags & 16) != 0) _recoil = 0.6f;
     }

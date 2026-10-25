@@ -621,6 +621,29 @@ public partial class World : Node3D
         }
     }
 
+    /// <summary>Coup d'une arme d'EDF 5 d'un autre joueur : mêmes trajectoires (graine), sans dégâts.</summary>
+    public void OnEdf5Shot(long from, string weaponId, Vector3 a, Vector3 dir, int seed)
+    {
+        if (!Edf5Weapons.ById.TryGetValue(weaponId, out var s)) return;
+        if (s.Kind == Edf5Kind.Flame) FlameJet.For(this).Emit(s, 0, a, dir, 0.1f, false);
+        else if (s.Kind == Edf5Kind.Reverser && !s.Blast.Present) Effects.Beam(this, a, a + dir * 12f, new Color(0.35f, 1f, 0.55f), 0.05f);
+        else
+        {
+            Edf5Fire.Shoot(this, s, null, a, dir, seed, false);
+            if (s.Kind is Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.GrenadeLauncher)
+                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.5f);
+        }
+        Edf5Sounds.Fire(s, a, false);
+    }
+
+    /// <summary>Soin de zone (Reverse Shooter) : le soldat local et les autres joueurs dans le rayon.</summary>
+    public void LocalHealArea(Vector3 at, float radius, float amount)
+    {
+        if (LocalPlayer != null && LocalPlayer.GlobalPosition.DistanceTo(at) <= radius + 1f) LocalPlayer.Heal(amount);
+        foreach (var r in Remotes.Values)
+            if (r.GlobalPosition.DistanceTo(at) <= radius + 1f) Net.I.SendHealPlayer(r.PeerId, amount);
+    }
+
     public void OnShotFx(long from, int kind, Vector3 a, Vector3 b)
     {
         if (!Remotes.TryGetValue(from, out var r)) return;

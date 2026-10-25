@@ -372,6 +372,31 @@ public partial class Net : Node
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 2)]
     private void ShotFx(int kind, Vector3 from, Vector3 to) => W?.OnShotFx(Sender, kind, from, to);
 
+    /// <summary>Coup d'une arme d'EDF 5 : les autres pairs le rejouent (effet seul) avec la même graine de dispersion.</summary>
+    public void SendEdf5Shot(string weaponId, Vector3 from, Vector3 dir, int seed) => ToOthers(MethodName.Edf5Shot, weaponId, from, dir, seed);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered, TransferChannel = 2)]
+    private void Edf5Shot(string weaponId, Vector3 from, Vector3 dir, int seed) => W?.OnEdf5Shot(Sender, weaponId, from, dir, seed);
+
+    /// <summary>Arme d'EDF 5 tenue par le joueur local (modèle affiché chez les autres pairs).</summary>
+    public void SendWeaponModel(string weaponId) => ToOthers(MethodName.WeaponModel, weaponId);
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void WeaponModel(string weaponId)
+    {
+        if (W != null && W.Remotes.TryGetValue(Sender, out var r)) r.SetGun(weaponId);
+    }
+
+    /// <summary>Soin d'un joueur par un autre (Reverser, Reverse Shooter).</summary>
+    public void SendHealPlayer(long target, float amount)
+    {
+        if (target == MyId) { W?.LocalPlayer?.Heal(amount); return; }
+        if (!IsSolo) RpcId(target, MethodName.HealPlayer, amount);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void HealPlayer(float amount) => W?.LocalPlayer?.Heal(amount);
+
     public void SendRevive(long target) => ToAll(MethodName.Revive, target);
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

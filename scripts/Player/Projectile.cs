@@ -27,6 +27,19 @@ public partial class Projectile : Node3D
     /// <summary>Appelé à l'impact (position, objet touché ou null) — tests automatisés.</summary>
     public event System.Action<Vector3, GodotObject> Impacted;
 
+    // Armes d'EDF 5 (voir Player.Edf5.cs).
+    /// <summary>Grenade à retardement : rebondit (amortie) jusqu'à la fin de <see cref="Life"/>, puis explose.</summary>
+    public bool Bounce;
+    /// <summary>Grenade collante : se fixe à ce qu'elle touche (ennemi compris) et explose à la fin de <see cref="Life"/>.</summary>
+    public bool Sticky;
+    /// <summary>Roquette guidée : vise à chaque instant le point renvoyé (réticule du tireur), virage limité (rad/s).</summary>
+    public System.Func<Vector3> Guide;
+    public float TurnRate = 3f;
+    /// <summary>Impact remplaçant l'explosion standard (napalm, sous-munitions, soin…) : position, normale.</summary>
+    public System.Action<Vector3, Vector3> CustomImpact;
+    private Node3D _stuckTo;
+    private Vector3 _stuckOffset;
+
     /// <summary>Le projectile traverse ce corps (le véhicule qui l'a tiré).</summary>
     public void IgnoreBody(CollisionObject3D body)
     {
@@ -112,6 +125,13 @@ public partial class Projectile : Node3D
 
     public void SetHoming(Node3D target) => _homingTarget = target;
 
+    /// <summary>Guidage vers une cible avec une capacité de virage donnée (rad/s, rang « Homing » des missiles d'EDF 5).</summary>
+    public void SetHoming(Node3D target, float turnRate)
+    {
+        _homingTarget = target;
+        TurnRate = turnRate;
+    }
+
     private static GpuParticles3D MakeTrail(Color c, bool additive)
     {
         var g = new Gradient();
@@ -162,10 +182,22 @@ public partial class Projectile : Node3D
         var dt = (float)delta;
         Life -= dt;
         if (Life <= 0) { Impact(GlobalPosition, Vector3.Up, null); return; }
-        if (_homingTarget != null && IsInstanceValid(_homingTarget))
+        if (_stuckTo != null)
         {
-            var to = (_homingTarget.GlobalPosition + Vector3.Up - GlobalPosition).Normalized();
-            Velocity = Velocity.Lerp(to * Velocity.Length(), Mathf.Clamp(dt * 3f, 0, 1));
+            // Grenade collante : suit ce qu'elle a touché jusqu'à l'explosion.
+            if (IsInstanceValid(_stuckTo)) GlobalPosition = _stuckTo.GlobalTransform * _stuckOffset;
+            return;
+        }
+        var steer = _homingTarget != null && IsInstanceValid(_homingTarget) ? _homingTarget.GlobalPosition + Vector3.Up
+            : Guide?.Invoke();
+        if (steer is { } goal)
+        {
+            var sp = Velocity.Length();
+            var want = (goal - GlobalPosition).Normalized();
+            var cur = Velocity / Mathf.Max(sp, 0.001f);
+            var ang = cur.AngleTo(want);
+            var step = Mathf.Min(1f, TurnRate * dt / Mathf.Max(ang, 0.0001f));
+            Velocity = cur.Slerp(want, step).Normalized() * sp;
         }
         Velocity += Vector3.Down * Gravity * dt;
         var from = GlobalPosition;
@@ -178,12 +210,34 @@ public partial class Projectile : Node3D
         var hit = GetWorld3D().DirectSpaceState.IntersectRay(q);
         if (hit.Count > 0)
         {
-            Impact((Vector3)hit["position"], (Vector3)hit["normal"], hit["collider"].AsGodotObject());
+            var hp = (Vector3)hit["position"];
+            var hn = (Vector3)hit["normal"];
+            var hc = hit["collider"].AsGodotObject();
+            if (Sticky && hc is Node3D n3)
+            {
+                _stuckTo = n3;
+                _stuckOffset = n3.GlobalTransform.AffineInverse() * hp;
+                GlobalPosition = hp;
+                return;
+            }
+            if (Bounce)
+            {
+                Velocity = Velocity.Bounce(hn) * 0.45f;
+                if (Velocity.Length() < 1.5f) Velocity = Vector3.Zero;
+                GlobalPosition = hp + hn * 0.12f;
+                return;
+            }
+            Impact(hp, hn, hc);
             return;
         }
         if (enemyShot && Authoritative && _world.HostProjectileHitsPlayer(this, from, to2)) { Impact(to2, Vector3.Up, null); return; }
         var floorY = World.GroundAt(to2.X, to2.Z);
-        if (to2.Y < floorY - 1f) { Impact(new Vector3(to2.X, floorY, to2.Z), Vector3.Up, null); return; }
+        if (to2.Y < floorY - 1f)
+        {
+            if (Bounce || Sticky) { GlobalPosition = new Vector3(to2.X, floorY + 0.12f, to2.Z); Velocity = Bounce ? Velocity.Bounce(Vector3.Up) * 0.45f : Vector3.Zero; return; }
+            Impact(new Vector3(to2.X, floorY, to2.Z), Vector3.Up, null);
+            return;
+        }
         GlobalPosition = to2;
         if (Velocity.LengthSquared() > 0.01f && Kind != ProjectileKind.Grenade) LookAt(to2 + Velocity, Vector3.Up);
     }
@@ -206,6 +260,7 @@ public partial class Projectile : Node3D
             if (Kind == ProjectileKind.AcidBig) Effects.Explosion(_world, pos + normal * 0.2f, 3.5f, ExplosionFx.Acid);
             if (Authoritative) _world.HostEnemyProjectileImpact(this, pos);
         }
+        else if (CustomImpact != null) CustomImpact(pos, normal);
         else if (Authoritative)
         {
             Net.I.SendExplosion(pos + normal * 0.3f, Radius, Damage, Kind == ProjectileKind.Plasma ? 2 : 0);

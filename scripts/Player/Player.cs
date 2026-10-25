@@ -56,6 +56,8 @@ public partial class Player : CharacterBody3D
     public static bool BotHoldFire, BotStill;
     /// <summary>Test : point que le bot regarde (captures d'une livraison), null = comportement normal.</summary>
     public static Vector3? BotLookAt;
+    /// <summary>Test (--edf5-fire) : avec <see cref="BotLookAt"/>, le bot tire aussi sur le point regardé.</summary>
+    public static bool BotForceFire;
     private bool _botFire;
 
     private Node3D _camYaw, _camPitch;
@@ -245,6 +247,8 @@ public partial class Player : CharacterBody3D
     {
         var w = Weapon;
         if (w == null || w.Reloading) return;
+        // Bombes C : le rechargement déclenche d'abord celles qui sont posées.
+        if (w.W.T.Spec?.Kind == Edf5Kind.Bomb) DetonateBombs();
         if (Def.Id == SoldierClass.Airborne && w.W.T.EnergyCost > 0)
         {
             if (Overheated || Energy < w.W.T.EnergyCost * 0.5f) return;
@@ -305,7 +309,7 @@ public partial class Player : CharacterBody3D
                 {
                     _netTimer = 0.05f;
                     var gflags = 4 | (Aiming ? 8 : 0) | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0)
-                                 | ((int)Model.Style & 7) << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
+                                 | StyleBits << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
                     Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, gflags, Health, Current, Vector3.Zero);
                 }
                 return;
@@ -429,7 +433,7 @@ public partial class Player : CharacterBody3D
             _netTimer = 0.05f;
             var flags = (horiz.Length() > 0.5f ? 1 : 0) | (speed > Def.WalkSpeed + 0.1f ? 2 : 0) | (!IsOnFloor() ? 4 : 0) | (Aiming ? 8 : 0)
                         | (Time.GetTicksMsec() / 1000f - _lastFireTime < 0.3f ? 16 : 0) | (Downed ? 32 : 0) | (Flying ? 64 : 0)
-                        | ((int)Model.Style & 7) << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
+                        | StyleBits << 8 | (Weapon != null && (Weapon.Reloading || SetSwapLeft > 0) ? 1 << 11 : 0);
             Net.I.SendPlayerState(GlobalPosition, _modelYaw, _pitch, flags, Health, Current, Velocity);
         }
     }
@@ -513,7 +517,15 @@ public partial class Player : CharacterBody3D
         }
         if (Weapon != null)
         {
-            Model.SetWeaponStyle(SoldierModel.StyleFor(Weapon.W.T));
+            Model.SetWeapon(Weapon.W.T);
+            // Arme d'EDF 5 : son identifiant est envoyé aux autres pairs (au changement, puis toutes les 3 s).
+            _gunSyncT -= dt;
+            if (Model.GunId != _sentGunId || _gunSyncT <= 0)
+            {
+                _sentGunId = Model.GunId;
+                _gunSyncT = 3f;
+                Net.I.SendWeaponModel(Model.GunId ?? "");
+            }
             Model.Reloading = Weapon.Reloading || SetSwapLeft > 0;
         }
         if (Def.Id == SoldierClass.Support) HandleCallKey(dt, canAct && Vehicle == null && GrabbedBy == null);
@@ -569,6 +581,11 @@ public partial class Player : CharacterBody3D
     // ------------------------------------------------------------------ Tir
 
     private bool _beamActive;
+    private string _sentGunId;
+    private float _gunSyncT;
+
+    /// <summary>Style d'arme procédural transmis dans l'état réseau (repli si l'arme d'EDF 5 n'est pas encore connue).</summary>
+    private int StyleBits => (int)(Weapon != null ? SoldierModel.StyleFor(Weapon.W.T) : WeaponStyle.Rifle) & 7;
 
     public float DamageMul => (RallyTime > 0 ? 1.3f : 1f);
 
@@ -579,6 +596,7 @@ public partial class Player : CharacterBody3D
         var held = Input.IsActionPressed("fire") || _botFire;
         var pressed = Input.IsActionJustPressed("fire") || (_botFire && ws.Cooldown <= 0);
         _beamActive = false;
+        if (IsEdf5(ws)) { HandleFireEdf5(ws, dt, held, pressed); return; }
         if (ws.Reloading) return;
 
         if (t.Kind == WeaponKind.Beam)
@@ -1137,7 +1155,8 @@ public partial class Player : CharacterBody3D
             var tl = look - _camYaw.GlobalPosition;
             _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(-tl.X, -tl.Z), Mathf.Clamp(dt * 4f, 0, 1));
             _pitch = Mathf.Lerp(_pitch, Mathf.Clamp(Mathf.Atan2(tl.Y, new Vector2(tl.X, tl.Z).Length()), -1.2f, 1.1f), Mathf.Clamp(dt * 4f, 0, 1));
-            _botFire = false;
+            _botFire = BotForceFire && Mathf.Abs(Mathf.AngleDifference(_yaw, Mathf.Atan2(-tl.X, -tl.Z))) < 0.05f;
+            if (BotForceFire && Weapon.Ammo == 0 && !Weapon.Reloading) Reload();
             return;
         }
         // Saisi : le bot tire sur la tête de la fourmi qui le tient (le seul moyen de se libérer).
