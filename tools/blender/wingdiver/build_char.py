@@ -10,6 +10,8 @@ argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 def arg(name, default=None):
     return argv[argv.index(name) + 1] if name in argv else default
 STAGE = int(arg("--stage", "1"))
+# Personnage : wingdiver (défaut), ranger, fencer, airraider (tenue : fichier <personnage>.py du même dossier).
+CHAR = arg("--char", "wingdiver")
 PREVIEW = arg("--preview")
 SAVE = arg("--save")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -21,24 +23,46 @@ def clear_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
+# Morphologie et apparence de chaque personnage (MPFB : macros, peau, sourcils, cils, coiffure, iris).
+CHARS = {
+    # Wing Diver : femme athlétique et harmonieuse (jeune adulte, ~1,65 m), queue de cheval châtain.
+    "wingdiver": dict(phenotype={"gender": 0.0, "age": 0.42, "muscle": 0.62, "weight": 0.42, "proportions": 0.9, "height": 0.62,
+                                 "cupsize": 0.62, "firmness": 0.8, "race": {"caucasian": 0.7, "asian": 0.2, "african": 0.1}},
+                      skin="young_caucasian_female/young_caucasian_female.mhmat", brows="eyebrow010", lashes="eyelashes02",
+                      hair="ponytail01", eye="brownlight_eye.png", hair_tint=(0.36, 0.22, 0.13)),
+    # Ranger : soldier d'infanterie, homme athlétique (~1,80 m), cheveux courts sous le casque.
+    "ranger": dict(phenotype={"gender": 1.0, "age": 0.48, "muscle": 0.72, "weight": 0.5, "proportions": 0.8, "height": 0.62,
+                              "cupsize": 0.5, "firmness": 0.5, "race": {"caucasian": 0.6, "asian": 0.25, "african": 0.15}},
+                   skin="young_caucasian_male/young_caucasian_male.mhmat", brows="eyebrow001", lashes="eyelashes01",
+                   hair="short02", eye="brownlight_eye.png", hair_tint=(0.16, 0.11, 0.08)),
+    # Fencer : carrure massive (exosquelette lourd par-dessus), visage mûr.
+    "fencer": dict(phenotype={"gender": 1.0, "age": 0.55, "muscle": 0.9, "weight": 0.62, "proportions": 0.75, "height": 0.7,
+                              "cupsize": 0.5, "firmness": 0.5, "race": {"caucasian": 0.5, "asian": 0.2, "african": 0.3}},
+                   skin="young_caucasian_male2/young_caucasian_male2.mhmat", brows="eyebrow004", lashes="eyelashes01",
+                   hair="short04", eye="grey_eye.png", hair_tint=(0.08, 0.07, 0.06)),
+    # Air Raider : opérateur d'appui, homme solide (~1,78 m).
+    "airraider": dict(phenotype={"gender": 1.0, "age": 0.55, "muscle": 0.6, "weight": 0.56, "proportions": 0.7, "height": 0.58,
+                                 "cupsize": 0.5, "firmness": 0.5, "race": {"caucasian": 0.45, "asian": 0.35, "african": 0.2}},
+                      skin="young_caucasian_male/young_caucasian_male.mhmat", brows="eyebrow006", lashes="eyelashes01",
+                      hair="short01", eye="green_eye.png", hair_tint=(0.12, 0.09, 0.07)),
+}
+CFG = CHARS[CHAR]
+
+
 def make_human():
-    """Corps féminin athlétique et harmonieux (jeune adulte, ~1,70 m), peau réaliste, yeux, sourcils, cils, dents, queue de cheval."""
+    """Corps du personnage (CHARS) : peau réaliste, yeux, sourcils, cils, dents, coiffure."""
     info = HumanService._create_default_human_info_dict()
-    info["phenotype"].update({
-        "gender": 0.0, "age": 0.42, "muscle": 0.62, "weight": 0.42, "proportions": 0.9, "height": 0.62,
-        "cupsize": 0.62, "firmness": 0.8,
-        "race": {"caucasian": 0.7, "asian": 0.2, "african": 0.1},
-    })
+    info["phenotype"].update(CFG["phenotype"])
     info["rig"] = "game_engine"
-    info["skin_mhmat"] = "young_caucasian_female/young_caucasian_female.mhmat"
+    info["skin_mhmat"] = CFG["skin"]
     info["skin_material_type"] = "ENHANCED_SSS"
     info["eyes"] = "high-poly/high-poly.mhclo"
     info["eyes_material_type"] = "MAKESKIN"
-    info["eyebrows"] = "eyebrow010/eyebrow010.mhclo"
-    info["eyelashes"] = "eyelashes02/eyelashes02.mhclo"
+    info["eyebrows"] = f"{CFG['brows']}/{CFG['brows']}.mhclo"
+    info["eyelashes"] = f"{CFG['lashes']}/{CFG['lashes']}.mhclo"
     info["teeth"] = "teeth_base/teeth_base.mhclo"
     info["tongue"] = "tongue01/tongue01.mhclo"
-    info["hair"] = "ponytail01/ponytail01.mhclo"
+    info["hair"] = f"{CFG['hair']}/{CFG['hair']}.mhclo"
     info["alternative_materials"] = {}
     settings = HumanService.get_default_deserialization_settings()
     settings["subdiv_levels"] = 1
@@ -72,11 +96,11 @@ def fix_materials(base):
     for ob in bpy.data.objects:
         if ob.type != "MESH" or ob == base:
             continue
-        if "ponytail" in ob.name.lower() or "hair" in ob.name.lower():
+        if CFG["hair"] in ob.name.lower():
             hair_material(ob)
             continue
         if "high-poly" in ob.name.lower():
-            eye_texture(ob, "brownlight_eye.png")
+            eye_texture(ob, CFG["eye"])
         for m in ob.data.materials:
             if not m:
                 continue
@@ -131,7 +155,7 @@ def hair_material(ob):
         mix.data_type = "RGBA"
         mix.blend_type = "MULTIPLY"
         mix.inputs["Factor"].default_value = 1.0
-        mix.inputs["B"].default_value = (0.36, 0.22, 0.13, 1)
+        mix.inputs["B"].default_value = (*CFG["hair_tint"], 1)
         nt.links.new(hsv.outputs["Color"], mix.inputs["A"])
         nt.links.new(mix.outputs["Result"], p.inputs["Base Color"])
         nt.links.new(t.outputs["Alpha"], p.inputs["Alpha"])
@@ -283,7 +307,8 @@ def stencil(text, name, material, loc, rot, size, target=None):
     return ob
 
 
-def layer(base, name, keep, offset, smooth_iter=6, smooth=0.8, classify=None, mats=(), subdiv=1, solidify=0.0, attrs=None):
+def layer(base, name, keep, offset, smooth_iter=6, smooth=0.8, classify=None, mats=(), subdiv=1, solidify=0.0, attrs=None,
+          border_iter=12, pin_border=False):
     """
     Couche tirée du corps : sommets i tels que keep(i, co, normale) ; décalée de offset le long des normales, lissée, subdivisée.
     classify(centre de face, normale, indices d'origine) → indice de matériau dans mats.
@@ -310,7 +335,7 @@ def layer(base, name, keep, offset, smooth_iter=6, smooth=0.8, classify=None, ma
     if solidify:
         # Plaques : bord adouci (lissage le long du contour : courbe nette au lieu d'un escalier de faces).
         border = [v for v in bm.verts if v.is_boundary]
-        for _ in range(12):
+        for _ in range(border_iter):
             new = {}
             for v in border:
                 nb = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
@@ -340,8 +365,9 @@ def layer(base, name, keep, offset, smooth_iter=6, smooth=0.8, classify=None, ma
         sm = ob.modifiers.new("Lissage", "SMOOTH")
         sm.factor = smooth
         sm.iterations = smooth_iter
-        if solidify:
-            # Plaques : le lissage épargne le contour (déjà adouci le long du bord), qui reste net.
+        if solidify or pin_border:
+            # Plaques : le lissage épargne le contour (déjà adouci le long du bord), qui reste net. Vêtements (pin_border) : le bord
+            # des manches et des jambes ne remonte pas sous l'effet du lissage.
             inner = ob.vertex_groups.new(name="interieur")
             border = {i for e in ob.data.edges for i in e.vertices if e.use_seam} if False else set()
             counts = {}
@@ -469,9 +495,9 @@ def previews(folder, height):
         "dos": (-dist * 0.35, dist * 0.94, height * 0.6),
     }
     for name, loc in views.items():
-        render(os.path.join(folder, f"etape{STAGE}_{name}.png"), loc, mid, 50, (900, 1350))
+        render(os.path.join(folder, (f"etape{STAGE}_" if CHAR == "wingdiver" else f"{CHAR}_") + f"{name}.png"), loc, mid, 50, (900, 1350))
     head = (0, 0, height * 0.93)
-    render(os.path.join(folder, f"etape{STAGE}_portrait.png"), (0.32, -0.62, height * 0.95), head, 85, (900, 1100))
+    render(os.path.join(folder, (f"etape{STAGE}_" if CHAR == "wingdiver" else f"{CHAR}_") + f"portrait.png"), (0.32, -0.62, height * 0.95), head, 85, (900, 1100))
 
 
 def panel_material(name, base_col, panels, seam=(0.01, 0.012, 0.016)):
@@ -716,22 +742,22 @@ def glow_mat(name, color, strength):
     return m
 
 
-def boots(base, W):
-    """Bottes : tige moulée sur le mollet, pied en coque (enveloppe convexe : pas d'orteils), semelle noire crantée."""
+def boots(base, W, name="BootWhite", color=(0.8, 0.81, 0.83), rough=0.28, coat=0.5, scale=1.035, shaft_offset=0.012, top=9.0):
+    """Bottes : tige moulée sur le mollet (jusqu'à la hauteur top), pied en coque (enveloppe convexe : pas d'orteils), semelle noire crantée."""
     def part(i, names):
         tot = sum(W[i].values()) or 1.0
         return sum(x for b, x in W[i].items() if b in names) / tot
-    boot = mat("BootWhite", (0.8, 0.81, 0.83), 0.28, coat=0.5)
+    boot = mat(name, color, rough, coat=coat)
     sole = mat("BootSole", (0.02, 0.02, 0.02), 0.7, bump=0.4, bump_scale=300)
-    layer(base, "BootShaft", lambda i, co, n: part(i, {"calf_l", "calf_r"}) > 0.3 and part(i, {"foot_l", "foot_r", "ball_l", "ball_r"}) < 0.8,
-          0.012, smooth_iter=12, smooth=0.8, mats=(boot,))
+    layer(base, "BootShaft", lambda i, co, n: part(i, {"calf_l", "calf_r"}) > 0.3 and part(i, {"foot_l", "foot_r", "ball_l", "ball_r"}) < 0.8
+          and co.z < top, shaft_offset, smooth_iter=12, smooth=0.8, mats=(boot,), pin_border=top < 9.0)
     for side in ("l", "r"):
         feet = {f"foot_{side}", f"ball_{side}"}
         pts = [base.matrix_world @ v.co for v in body_vertices(base) if part(v.index, feet) > 0.15]
         c = sum(pts, Vector()) / len(pts)
         bm = bmesh.new()
         for p in pts:
-            q = c + (p - c) * 1.035
+            q = c + (p - c) * scale
             q.x = c.x + (q.x - c.x) * 0.97
             q.z = max(q.z, 0.0)
             bm.verts.new(q)
@@ -822,7 +848,7 @@ def armor(base):
     layer(base, "Collar", neckring, 0.006, smooth_iter=6, mats=(collar,), subdiv=2, solidify=0.012)
     boots(base, W)
     # Cuir chevelu : sous-couche châtain sous la calotte de cheveux (aucune peau visible entre les mèches ni à la nuque).
-    hair = next((o for o in bpy.data.objects if o.type == "MESH" and "ponytail" in o.name.lower()), None)
+    hair = next((o for o in bpy.data.objects if o.type == "MESH" and CFG["hair"] in o.name.lower()), None)
     if hair:
         from mathutils.kdtree import KDTree
         hw = hair.matrix_world
@@ -985,13 +1011,17 @@ def finishing(base):
 clear_scene()
 base = make_human()
 height = base.dimensions.z
-if STAGE == 1:
+if CHAR != "wingdiver":
+    # Tenue du personnage (ranger.py, fencer.py, airraider.py) : fonction outfit(base).
+    exec(open(os.path.join(HERE, f"{CHAR}.py"), encoding="utf-8").read(), globals())
+    outfit(base)
+elif STAGE == 1:
     neutral_suit(base)
 elif STAGE >= 2:
     wd_suit(base)
-if STAGE >= 3:
+if CHAR == "wingdiver" and STAGE >= 3:
     armor(base)
-if STAGE >= 4:
+if CHAR == "wingdiver" and STAGE >= 4:
     finishing(base)
 if PREVIEW:
     studio()
