@@ -1,5 +1,17 @@
 # Journal des versions
 
+## v0.17.0 — Wing Diver réaliste
+
+- **Nouvelle Wing Diver** (Commando aéroporté), modélisée dans Blender : femme au corps réaliste (base MakeHuman), visage,
+  yeux noisette, queue de cheval châtain ; combinaison blanche à panneaux bleu marine, gants, bottes, armure blanche laquée à
+  liserés (plastron, épaulières, avant-bras, hanches, cuisses, genouillères, col) ; unité de vol futuriste (carénage galbé,
+  cœur plasma lumineux, ailes-propulseurs en flèche, buses lumineuses). Tête nue, sans inscription « EDF ».
+- **Animée** comme les autres soldats (course, visée, vol, réception, à terre) : son squelette suit l'animation du soldat,
+  ses mains tiennent l'arme, doigts refermés sur la poignée ; flammes du réacteur sous ses buses.
+- **Queue de cheval animée** (ressort : elle suit la course, le vol et les poussées).
+- **Expressions du visage** : clignement des yeux, effort au tir et en vol, douleur quand elle est touchée, cri à terre,
+  concentration en visée.
+
 ## v0.16.2 — Bombes Splendor fidèles à EDF 5
 
 - **Splendor** (Limpet Splendor, Splendor Shot, Buster Bomb, détecteurs) : retour au comportement d'EDF 5, vérifié sur le wiki du jeu — les éclats partent en demi-sphère dans la direction du dessus de la bombe (normale de la surface où elle s'est collée) ; collée sur un ennemi, elle l'épargne presque, posée sous des ennemis elle fait le plus de dégâts. Splendor Shot : 15 bombes de 8 éclats (13,6 × 15 × 8). Annule l'essai de la v0.16.0 (éclats donnés à l'ennemi porteur, une seule bombe).

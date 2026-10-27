@@ -541,6 +541,7 @@ public partial class Player : CharacterBody3D
         _modelYaw = Mathf.LerpAngle(_modelYaw, targetYaw, Mathf.Clamp(dt * 12f, 0, 1));
         Model.Rotation = new Vector3(0, _modelYaw, 0);
         Model.Grabbed = grabbed;
+        Model.Pain = DamageFlash;
         Model.Animate(dt, grabbed ? 0f : horiz.Length(), _pitch, !grabbed && !IsOnFloor(), Flying, Downed, Aiming, _recoil);
 
         Model.Visible = Vehicle == null;

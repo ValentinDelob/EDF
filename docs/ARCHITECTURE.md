@@ -315,6 +315,29 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
 - Les coups partent toujours de la bouche du canon : le soldat épaule et fait face à la visée au moment du tir (`Player.ReadyToFire`, `SoldierModel.SnapAim`) ; la traînée des balles ne dépasse pas leur point de départ (`Bullets.Shot.Origin`).
 - Guidage terminal (`Projectile`) : près d'une cible verrouillée, le virage est relevé pour que le rayon de virage reste sous la distance restante (un missile ne tourne pas autour d'une cible immobile).
 
+## Wing Diver modélisée (Commando aéroporté)
+
+- **Construction** (`tools/blender/wingdiver/build_char.py`, lancé par `tools/blender/wingdiver/run.sh JOURNAL --stage 4
+  [--preview DOSSIER] [--export DOSSIER]`, Blender en arrière-plan sur le bureau invisible) : corps féminin réaliste généré
+  par MPFB 2 (actifs MakeHuman CC0 ; extension et actifs installés dans `.mpfb/`, hors Git, via `BLENDER_USER_RESOURCES`),
+  morphologie appliquée au maillage (`bake_shape`). Couches tirées de la surface du corps (`layer` : sélection par poids des
+  os, décalage, lissage) : combinaison à panneaux (champs par sommet `navy` / `black`, limite tracée dans le matériau),
+  gants, bottes (pied en enveloppe convexe), plaques d'armure (bord lissé, tranche en liseré), col ; unité de vol en volumes
+  tendus (`loft` : carénage, cœur plasma, ailes-propulseurs, buses). Le corps est masqué sous les vêtements. Tête nue, sans
+  inscription « EDF ».
+- **Export** (`export_game.py`) : `assets/models/characters/wingdiver.glb` (~42 000 triangles) : squelette « game_engine » de
+  MPFB plus la chaîne `hair_01` → `hair_04` de la queue de cheval ; poids recopiés du sommet du corps le plus proche ; unité
+  de vol rigide sur `spine_03` ; repères `JetNozzle_l` / `_r` ; clés de forme d'expressions (`blink`, `smile`, `effort`,
+  `pain`, `shout`, `focus`, mélanges des unités d'expression de MakeHuman) sur le corps, les sourcils et les cils (déformation
+  de surface cuite) ; couleur de la combinaison cuite dans `wd_suit` (même dépliage que la peau). Crédits :
+  `assets/models/characters/CREDITS.md`.
+- **Jeu** (`SoldierModel.Skinned.cs`) : pour le Commando aéroporté, le modèle (×1,1 : bras de la longueur de ceux du soldat
+  procédural) remplace les maillages procéduraux, cachés ; les nœuds procéduraux restent la référence d'animation. Chaque
+  os recopie la rotation de son nœud (direction de repos alignée : pose en A ↔ bras le long du corps) ; épaules, coudes et
+  poignets prennent la position des articulations procédurales (les mains tiennent l'arme) ; doigts refermés sur la
+  poignée. Queue de cheval : `SpringBoneSimulator3D`. Expressions pilotées par l'état (clignement, effort au tir et en vol,
+  douleur selon `Pain` = `Player.DamageFlash`, cri à terre, concentration en visée). Flammes du réacteur sous les buses.
+
 ## Modèles détaillés des armes et banc d'essai
 
 - **Construction en arrière-plan** : `tools/blender/build.sh <journal> <module> [familles…] [--export] [--preview DOSSIER]` lance `blender -b --factory-startup --python tools/blender/build_weapons.py` par `tools/hidden_run.ps1` (bureau Windows invisible, priorité basse : aucune fenêtre). Modules : `rifles`, `longguns`, `launchers`, `special`, `wingdiver`, `fencer`, `airraider` (« obj:nom » : objets du monde). `--palette` n'écrit que les couleurs ; `--preview` fait les rendus de contrôle (`weapons/preview.py` : profil orthographique et trois-quarts).

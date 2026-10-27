@@ -39,6 +39,7 @@ public partial class SoldierModel : Node3D
     {
         var m = new SoldierModel { Class = cls };
         m.Build();
+        m.AttachSkinned();
         return m;
     }
 
@@ -917,6 +918,7 @@ public partial class SoldierModel : Node3D
         if (!PoseShield(dt, frame, torsoModel, pitch, poleL))
             SolveArm(_armL, _foreL, _handL, supP - supB * GripC, supB, poleL, Mathf.SmoothStep(0, 1, _freeL), freeArm, freeFore);
 
+        if (_skinReady) UpdateSkin(dt);
         if (_jetFlames != null)
         {
             _jetFlames.Visible = flying;

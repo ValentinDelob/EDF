@@ -19,3 +19,4 @@ docs/ui-refs/*.png
 docs/ui-refs/*.webp
 docs/ui-refs/
 .claude/
+.mpfb/
