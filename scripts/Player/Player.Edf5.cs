@@ -106,12 +106,22 @@ public partial class Player
 
     /// <summary>Tir automatique tenu à l'image précédente (le retard de cadence est alors rattrapé).</summary>
     private bool _autoHeld;
+    private WeaponState _fireWs;
 
     private void HandleFireEdf5(WeaponState ws, float dt, bool held, bool pressed)
     {
         var s = ws.W.T.Spec;
         var sustained = _autoHeld && held && ws.W.T.Automatic;
         _autoHeld = held;
+        // Changement d'arme : rafale, salve et décharge en cours s'arrêtent (elles ne passent pas à l'arme suivante).
+        if (_fireWs != ws)
+        {
+            _fireWs = ws;
+            _burstLeft = 0;
+            _salvoLeft = 0;
+            _discharging = false;
+            _chargeHeld = false;
+        }
         UpdateLocks(ws, dt);
         // Fencer : frappes, lances, boucliers, mise en rotation des canons automatiques.
         if (Def.Id == SoldierClass.Heavy && HandleFencer(ws, s, dt, held, pressed)) return;
@@ -348,9 +358,20 @@ public partial class Player
     /// peut être verrouillée plusieurs fois s'il n'y en a pas d'autre). Elles restent verrouillées tant qu'elles sont à portée et
     /// à l'écran ; trois secondes sans viser les libèrent.
     /// </summary>
+    private WeaponState _lockWs;
+
     private void UpdateLocks(WeaponState ws, float dt)
     {
         var s = ws.W.T.Spec;
+        // Changement d'arme : les verrouillages de l'arme précédente sont perdus (EDF 5).
+        if (_lockWs != ws)
+        {
+            _lockWs = ws;
+            Locks.Clear();
+            LockPending = null;
+            LockProgress = 0;
+            _lockT = 0;
+        }
         if (s.Kind is not (Edf5Kind.Missile or Edf5Kind.Homing) || s.GuideOnly || Downed)
         {
             if (Locks.Count > 0) Locks.Clear();
@@ -363,6 +384,7 @@ public partial class Player
         var screen = new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size);
         Locks.RemoveAll(e => !IsInstanceValid(e) || e.State == EnemyState.Dead || Camera.IsPositionBehind(e.Center)
                              || Camera.GlobalPosition.DistanceTo(e.Center) > range * 1.1f || !screen.HasPoint(Camera.UnprojectPosition(e.Center)));
+        if (Locks.Count > ws.W.LockTargets) Locks.RemoveRange(ws.W.LockTargets, Locks.Count - ws.W.LockTargets);
         var locking = (Aiming || Bot) && !ws.Reloading && _salvoLeft == 0 && Locks.Count < ws.W.LockTargets;
         if (!locking)
         {

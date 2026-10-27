@@ -79,6 +79,10 @@ for w in weapons.values():
         exp = dmg * pel * (far + (1 - far) * frac ** fexp)
     else:
         exp = dmg * pel
+    # Mag Blaster, Reflectron : la puissance baisse quand le chargeur se vide (min + (max − min) × reste², min = 20 %).
+    if fam in ("magblaster", "reflectron") and mag > 0 and w["shots"]:
+        n = len(w["shots"])
+        exp *= sum(0.2 + 0.8 * ((mag - i) / mag) ** 2 for i in range(n)) / n
     r["dmg_attendu"] = round(exp, 1)
     if kind in NOMEASURE or fam == "speedstar":
         checks["dégâts"] = "n.m."
@@ -107,7 +111,9 @@ for w in weapons.values():
         checks["dégâts"] = "PASS (dégâts infligés)"
     # 2. Cadence (coups, ou rafales, par seconde) dans la phase de tir.
     if rof > 0 and len(fire_shots) >= 3 and w["meta"].get("supply") in ("Ammo", "Reload") and kind not in ("Missile", "Strike"):
-        ts = fire_shots
+        # Coups d'un même chargeur : ceux d'avant le premier rechargement.
+        rl0 = next((t for t, start in w["reload"] if start), None)
+        ts = [t for t in fire_shots if rl0 is None or t < rl0 - 1e-4] or fire_shots
         if burst > 1:
             # Rafales : un départ de rafale tous les « burst » coups.
             ts = ts[::burst]
@@ -126,7 +132,8 @@ for w in weapons.values():
     # 4. Vitesse des projectiles (temps entre le premier tir et le premier dégât).
     # (Mortiers : tir en cloche, le temps de vol ne donne pas la vitesse.)
     # (Grenades à retardement et gerbes à vitesse dispersée : non mesurée.)
-    grenade_free = kind == "GrenadeLauncher" and (pel > 1 or float(m.get("fuse", 0) or 0) > 0)
+    # (Plasmafall : pluie en cloche, le temps de vol ne donne pas la vitesse.)
+    grenade_free = kind == "GrenadeLauncher" and (pel > 1 or float(m.get("fuse", 0) or 0) > 0) or fam == "plasmafall"
     if speed > 0 and kind in DIRECT | {"Rocket", "GrenadeLauncher", "PlasmaShot"} and not grenade_free and fire_shots and w["hits"]:
         # Premier coup de l'arme, quelle que soit la phase (armes à rafale chargée : il part parfois pendant la visée).
         first = w["shots"][0][0]
@@ -145,7 +152,7 @@ for w in weapons.values():
         relm = r.get("recharge", reload)
         meas = r["dmg_mesure"] * mag / ((mag / rofm if burst == 1 else mag / burst / rofm) + relm)
         r["dps_theo"], r["dps_mesure"] = round(theo, 1), round(meas, 1)
-        lo = 0.45 if pel > 1 else 0.75
+        lo = 0.45 if pel > 1 or kind in ("Spark", "Arc") else 0.75
         checks["DPS"] = f"{verdict(lo * theo <= meas <= 1.15 * theo)} ({meas:.0f} / {theo:.0f})"
     if not w.get("done"):
         checks["fin"] = "ÉCHEC (scénario interrompu)"

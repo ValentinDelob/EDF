@@ -492,7 +492,12 @@ public partial class SoldierModel : Node3D
 
     // ───────────────────────── Armes ─────────────────────────
 
-    private enum Hold { Shoulder, Launcher, Hip, OneHand }
+    /// <remarks>
+    /// Tube : lance-roquettes et lance-missiles portés sur l'épaule comme dans les jeux de guerre modernes (AT4, RPG, Javelin) :
+    /// le tube repose sur le dessus de l'épaule droite par son appui (repère Butt), la tête à sa gauche ; épaulé, il s'aligne
+    /// sur la visée, sinon il reste sur l'épaule, bouche relevée.
+    /// </remarks>
+    private enum Hold { Shoulder, Launcher, Hip, OneHand, Tube }
 
     /// <summary>Points de prise de l'arme (repère local de l'arme) et orientation des mains.</summary>
     private struct Rig
@@ -593,7 +598,7 @@ public partial class SoldierModel : Node3D
                 g.Tube(gp, poly, new[] { V(0, -0.05f, -0.06f), V(0, -0.14f, -0.08f) }, new[] { Q(0.014f, 0.022f), Q(0.014f, 0.02f) }, 8, 3f);
                 g.Tube(gp, poly, new[] { V(0, -0.05f, 0.24f), V(0, -0.14f, 0.26f) }, new[] { Q(0.014f, 0.022f), Q(0.014f, 0.02f) }, 8, 3f);
                 g.Box(gp, olive.Darkened(0.2f), V(0, -0.06f, -0.2f), V(0.05f, 0.03f, 0.12f), null, 0.01f); // épaulière
-                rig.Hold = Hold.Launcher; rig.SupB = VerticalGripL;
+                rig.Hold = Hold.Tube; rig.SupB = VerticalGripL;
                 rig.Grip = V(0, -0.105f, -0.075f); rig.Support = V(0, -0.105f, 0.25f); rig.Butt = V(0, -0.06f, -0.2f); rig.Mag = V(0, 0, -0.44f);
                 muzzleZ = 0.78f;
                 break;
@@ -824,6 +829,22 @@ public partial class SoldierModel : Node3D
         Transform3D aimX, lowX;
         switch (_rig.Hold)
         {
+            case Hold.Tube:
+            {
+                // Dessus de l'épaule droite (entre le cou et l'articulation), suivi dans le repère du bassin sans lacet : le
+                // tube y repose par son appui, quelle que soit la torsion du buste.
+                var frame0 = new Transform3D(Basis.FromEuler(new Vector3(_hips.Rotation.X, 0, 0)), _hips.Position);
+                var torso0 = _hips.Transform * _torso.Transform;
+                var rest = frame0.AffineInverse() * (torso0 * (_armR.Position + V(0.05f, 0.085f, -0.01f)));
+                // Gros tubes (Air Tortoise, Goliath) : écartés de la tête d'autant que leur rayon dépasse celui d'un AT4.
+                var radius = Mathf.Max(0f, Muzzle.Position.Y - _rig.Butt.Y);
+                rest.X -= Mathf.Max(0f, radius - 0.065f);
+                aimX = new Transform3D(aimR, rest - aimR * _rig.Butt);
+                // Au repos : sur l'épaule, bouche un peu relevée et écartée (port du lance-roquettes).
+                var lowB = new Basis(Vector3.Up, -0.1f) * new Basis(Vector3.Right, -0.22f);
+                lowX = new Transform3D(lowB, rest - lowB * _rig.Butt);
+                break;
+            }
             case Hold.Launcher:
                 aimX = new Transform3D(aimR, p0 + aimR * V(-0.17f, 0.115f, 0.0f) - aimR * _rig.Butt);
                 lowX = new Transform3D(new Basis(Vector3.Up, 0.25f) * new Basis(Vector3.Right, 0.35f), p0 + V(-0.08f, -0.15f, 0.22f));

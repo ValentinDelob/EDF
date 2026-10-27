@@ -217,7 +217,9 @@ public partial class Player
         if (held) ws.Charge = Mathf.Min(top + 0.5f, ws.Charge + dt * ws.W.Swing);
         var release = _chargeHeld && !held;
         // Bot : relâche au niveau maximal.
-        if (Bot && held && ws.Charge >= top) release = true;
+        // (Pas la dispersion arrière du Quake Haken : le bot frappe devant lui.)
+        var botTop = s.Strikes.Length > 1 && s.Strikes[^1].Attack.StartsWith("Back") ? s.Strikes[^2].Charge : top;
+        if (Bot && held && ws.Charge >= botTop) release = true;
         _chargeHeld = held && !release;
         if (!release) return;
         if (ws.Ammo <= 0) { ws.Charge = 0; Sfx.Ui("empty"); Reload(); return; }

@@ -144,9 +144,15 @@ public static class Edf5Fire
                 // Lancer à la main : les « DNG » et la MG13 en lancer appuyé (lent, court).
                 var heavy = s.Family == "dng" || s.Name is "MG13" or "MG13J";
                 var v = (dir + Vector3.Up * 0.32f).Normalized() * (heavy ? 18f : 26f);
-                var p = Projectile.Spawn(world, ProjectileKind.Grenade, from, v, local, dmg * (shooter?.DamageMul ?? 1f), blast);
-                if (s.Fuse > 0) { p.Life = s.Fuse; p.Bounce = true; }
-                else p.Life = 12f;
+                // Split Ball (Wing Diver) : la boule se divise en « Pellets » boules lancées en éventail.
+                var balls = Math.Max(1, s.Pellets);
+                for (var i = 0; i < balls; i++)
+                {
+                    var vi = balls == 1 ? v : v.Rotated(Vector3.Up, Mathf.Lerp(-1f, 1f, i / (float)(balls - 1)) * Mathf.DegToRad(10f)) * (0.9f + 0.2f * rng.Randf());
+                    var p = Projectile.Spawn(world, ProjectileKind.Grenade, from, vi, local, dmg * (shooter?.DamageMul ?? 1f), blast);
+                    if (s.Fuse > 0) { p.Life = s.Fuse; p.Bounce = true; }
+                    else p.Life = 12f;
+                }
                 break;
             }
             case Edf5Kind.GrenadeLauncher:
@@ -345,6 +351,26 @@ public static class Edf5Fire
             {
                 // Vitesse d'EDF 5 (« Shot Speed »).
                 var sp = speed > 0 ? speed : 120f;
+                // Plasmafall : les boules montent puis retombent en pluie autour du point visé (tireur local ; les copies des
+                // autres pairs gardent l'éventail montant, sans dégâts).
+                if (s.Family == "plasmafall" && shooter != null)
+                {
+                    var aimAt = shooter.AimPoint(Mathf.Min(range, 400f), out _);
+                    const float g = 28f;
+                    for (var i = 0; i < pellets; i++)
+                    {
+                        var a = rng.Randf() * Mathf.Tau;
+                        var tgt = aimAt + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * Mathf.Sqrt(rng.Randf()) * Mathf.Max(blast * 0.4f, 2f);
+                        var apex = Mathf.Max(from.Y, tgt.Y) + 18f + rng.Randf() * 6f;
+                        var vy = Mathf.Sqrt(2f * g * (apex - from.Y));
+                        var tt = vy / g + Mathf.Sqrt(2f * (apex - tgt.Y) / g);
+                        var flat = new Vector3(tgt.X - from.X, 0, tgt.Z - from.Z) / tt;
+                        var pf = Projectile.Spawn(world, ProjectileKind.Plasma, from, flat + Vector3.Up * vy, local, dmg * mul, Mathf.Max(blast, 2f));
+                        pf.Gravity = g;
+                        pf.Life = tt + 1f;
+                    }
+                    return true;
+                }
                 for (var i = 0; i < pellets; i++)
                 {
                     Vector3 d;

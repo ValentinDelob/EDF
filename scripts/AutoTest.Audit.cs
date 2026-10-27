@@ -24,7 +24,9 @@ public static partial class AutoTest
         Edf5Kind.Strike => s.Family is "blade" or "forceax" or "roller" ? 12f : 6f,
         Edf5Kind.Pierce => s.Family == "spinedriver" ? 30f : 7f,
         Edf5Kind.Arc => Mathf.Min(10f, w.Range * 0.5f),
-        Edf5Kind.HandGrenade or Edf5Kind.Firecracker => 16f,
+        Edf5Kind.HandGrenade => 16f,
+        // Pétards : gerbe à courte portée.
+        Edf5Kind.Firecracker => 8f,
         Edf5Kind.Bomb => 9f,
         Edf5Kind.Impulse => 14f,
         Edf5Kind.Mortar => s.Family == "crusher" ? 90f : 60f,
@@ -73,7 +75,8 @@ public static partial class AutoTest
         private WeaponState _ws;
         private Enemy _target;
         private float _t, _lastHp, _phaseT;
-        private int _lastAmmo, _shots, _lastFired, _moves;
+        private int _lastAmmo, _shots, _lastFired, _moves, _retries;
+        private bool _dealt;
         private bool _reloading;
         private string _phase = "";
         private float _fireTime;
@@ -126,14 +129,27 @@ public static partial class AutoTest
                 _target.MaxHealth = _target.Health = 5e6f;
             }
             else _target.GlobalPosition = at;
+            // Les autres ennemis : loin derrière le soldat, hors de l'écran (les lance-missiles ne répartissent pas leurs
+            // verrouillages sur eux).
+            var side = fwd.Cross(Vector3.Up);
+            var idx = 0;
             foreach (var e in w.EnemiesById.Values)
-                if (e != _target && e.GlobalPosition.DistanceTo(P.GlobalPosition) < 80f) e.GlobalPosition += (e.GlobalPosition - P.GlobalPosition).Normalized() * 150f;
+                if (e != _target && (e.GlobalPosition - P.GlobalPosition).Dot(fwd) > -200f)
+                    e.GlobalPosition = P.GlobalPosition - fwd * 260f + side * (idx++ % 20 - 10) * 6f;
+            // Wing Diver : cœur plasma assez grand pour la charge de l'arme (Raijin Alpha : Big Bang Core).
+            if (P.Def.Id == SoldierClass.Airborne)
+            {
+                var core = inst.EnergyCost > 1500f ? "bigbangcore" : "vzplasmacore";
+                if (P.Core?.TemplateId != core) P.Core = Grant(core);
+                P.Energy = P.MaxEnergy;
+            }
             _ws = P.Arm(inst);
             P.Weapons[0] = _ws;
             P.Current = 0;
             Player.BotLookAt = _target.Center;
             // Valeurs attendues (tables d'EDF 5, maximum d'étoiles).
-            var shotgun = _s.Category == "Fusil à pompe" || _s.Family is "dexter" or "cannonshot" or "suppress";
+            // Même règle que le jeu (Edf5Fire) : atténuation forte des fusils à pompe et des canons à mitraille.
+            var shotgun = _s.Category == "Fusil à pompe" || _s.Family is "dexter" or "cannonshot";
             Log($"BEGIN id={_s.Id} kind={_s.Kind} family={_s.Family} supply={_s.Supply} d={F(d)} dmg={F(inst.Damage)} pellets={_s.Pellets} " +
                 $"far={F(_s.FarDamage)} fexp={(shotgun ? 2.5f : 1f).ToString(Inv)} rof={F(_s.Rof.Present ? inst.FireRate : 0)} burst={_s.Burst} " +
                 $"mag={inst.Magazine} reload={F(_s.Reload.Present ? inst.Reload : 0)} pt={(_s.PointReload ? 1 : 0)} speed={F(_s.Speed.Present ? inst.ShotSpeed : 0)} " +
@@ -148,6 +164,8 @@ public static partial class AutoTest
             _reloading = false;
             _phase = "aim";
             _moves = 0;
+            _retries = 0;
+            _dealt = false;
             // Temps de tir : un chargeur ou 6 s au plus (frappes, charges et verrouillages un peu plus).
             _fireTime = _s.Kind switch
             {
@@ -165,7 +183,7 @@ public static partial class AutoTest
             _phaseT += dt;
             // Dégâts reçus par la cible à cette image.
             var hp = _target.Health;
-            if (hp < _lastHp - 0.001f) Log($"HIT t={F(_t)} dmg={F(_lastHp - hp)}");
+            if (hp < _lastHp - 0.001f) { Log($"HIT t={F(_t)} dmg={F(_lastHp - hp)}"); _dealt = true; }
             _lastHp = hp;
             if (_target.Health < 1e6f) { _target.Health = 5e6f; _lastHp = _target.Health; }
             // Coups partis : munitions consommées, ou coups comptés par le soldat (armes à charge : la munition est remise puis tirée).
@@ -204,7 +222,8 @@ public static partial class AutoTest
                     if (seen is not Enemy && _moves < 8)
                     {
                         _moves++;
-                        var off = _target.GlobalPosition - P.GlobalPosition;
+                        // Autre direction, un peu plus près (relief, décor).
+                        var off = (_target.GlobalPosition - P.GlobalPosition) * 0.88f;
                         off.Y = 0;
                         var np = P.GlobalPosition + off.Rotated(Vector3.Up, Mathf.DegToRad(40f * _moves));
                         np.Y = App.CurrentWorld.GroundHeight(np);
@@ -218,6 +237,8 @@ public static partial class AutoTest
                     break;
                 case "fire":
                     if (_phaseT < _fireTime && !(_ws.Ammo <= 0 && _shots > 0 && !_ws.Reloading && _ws.NoReload)) break;
+                    // Arme à charge : la charge en cours est abandonnée (relâcher tirerait un coup à charge partielle).
+                    if (_s.Supply == Edf5Supply.Charge) _ws.Charge = 0;
                     Player.BotForceFire = false;
                     _phase = "reload";
                     _phaseT = 0;
@@ -246,6 +267,20 @@ public static partial class AutoTest
                     if (_s.Fuse > 0) wait = Mathf.Max(wait, _s.Fuse + 1f);
                     if (_s.Kind is Edf5Kind.Bomb or Edf5Kind.Limpet && _phaseT < dt * 1.5f) P.Edf5DetonateForTest();
                     if (_phaseT < wait) break;
+                    // Frappes aériennes : coups dispersés dans la zone d'attaque (« Attack Range ») ; si aucun n'a atteint la
+                    // cible, la frappe est redemandée (deux fois au plus), comme le referait un joueur.
+                    if (!_dealt && _retries < 2 && _s.Kind is Edf5Kind.Artillery or Edf5Kind.Bomber or Edf5Kind.Gunship or Edf5Kind.AirMissile or Edf5Kind.Satellite)
+                    {
+                        _retries++;
+                        _ws.Ammo = _ws.W.Magazine;
+                        _ws.ReloadLeft = 0;
+                        _lastAmmo = _ws.Ammo;
+                        Log($"RETRY t={F(_t)}");
+                        _phase = "fire";
+                        _phaseT = 0;
+                        Player.BotForceFire = true;
+                        break;
+                    }
                     Log($"END id={_s.Id} shots={_shots} t={F(_t)}");
                     Next();
                     break;

@@ -194,9 +194,17 @@ public partial class Projectile : Node3D
         };
     }
 
+    private static readonly bool Trace = Screenshot.CmdArg("missile-trace") != null;
+    private float _traceT;
+
     public override void _PhysicsProcess(double delta)
     {
         var dt = (float)delta;
+        if (Trace && Kind == ProjectileKind.Missile && (_traceT -= dt) <= 0)
+        {
+            _traceT = 0.2f;
+            GD.Print($"[missile] {GetInstanceId()} pos={GlobalPosition} v={Velocity.Length():0} dir={Velocity.Normalized()} climb={ClimbTo:0.0} hd={HomingDelay:0.00} tgt={(_homingTarget is Node3D h && IsInstanceValid(h) ? h.GlobalPosition.ToString() : "-")} turn={TurnRate:0.00} life={Life:0.0}");
+        }
         Life -= dt;
         if (Life <= 0) { Impact(GlobalPosition, Vector3.Up, null); return; }
         if (ProximityRadius > 0 && (_proxT -= dt) <= 0)
@@ -227,7 +235,8 @@ public partial class Projectile : Node3D
         else if (ClimbTo > 0)
         {
             // Montée : le missile se redresse vers le ciel jusqu'à l'altitude de bascule, puis pique sur la cible.
-            if (GlobalPosition.Y < ClimbTo)
+            // La bascule commence un demi-rayon de virage avant l'altitude visée (le missile ne monte pas bien au-dessus).
+            if (GlobalPosition.Y < ClimbTo - Velocity.Length() / Mathf.Max(TurnRate, 0.5f) * 0.5f)
             {
                 var flat = new Vector3(Velocity.X, 0, Velocity.Z);
                 steer = GlobalPosition + Vector3.Up * 60f + (flat.LengthSquared() > 0.01f ? flat.Normalized() * 12f : Vector3.Zero);
@@ -243,7 +252,7 @@ public partial class Projectile : Node3D
             // Guidage terminal vers une cible verrouillée : près du but, le virage suffit toujours à l'atteindre (rayon de virage
             // inférieur à la distance restante) ; un missile d'EDF 5 ne tourne pas en rond autour d'une cible immobile.
             var turn = TurnRate;
-            if (_homingTarget != null && ClimbTo <= 0) turn = Mathf.Max(turn, sp / Mathf.Max(goal.DistanceTo(GlobalPosition), 1f) * 1.6f);
+            if (_homingTarget != null && ClimbTo <= 0) turn = Mathf.Max(turn, sp / Mathf.Max(goal.DistanceTo(GlobalPosition), 1f) * 3f);
             var step = Mathf.Min(1f, turn * dt / Mathf.Max(ang, 0.0001f));
             Velocity = cur.Slerp(want, step).Normalized() * sp;
         }

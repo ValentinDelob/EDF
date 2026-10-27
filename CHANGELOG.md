@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.16.1 — Lance-roquettes sur l'épaule et corrections du banc d'essai
+
+- **Lance-roquettes et lance-missiles portés sur l'épaule**, comme dans les jeux de guerre modernes : le tube repose sur le dessus de l'épaule droite, la tête à sa gauche, main droite sur la poignée de tir, main gauche sur la poignée avant ; au repos, il reste sur l'épaule, bouche relevée. Ils ne rentrent plus dans l'épaule.
+- **Dégâts des projectiles rapides** (lances de la Wing Diver, fusils de précision, canons) : l'atténuation avec la distance est calculée au point d'impact réel (elle comptait une image de vol en trop : une Power Lance perdait 38 % à 10 m).
+- **Split Ball** : la boule se divise en 8 ; **Plasmafall** : les boules retombent en pluie autour du point visé.
+- **Changer d'arme** efface les verrouillages de missiles et arrête la rafale, la salve ou la décharge en cours (elles passaient à l'arme suivante).
+- **Missiles en piqué** (MLRA, MLRA-TW) : la bascule commence avant le sommet de la montée et le guidage final est plus serré ; ils ne bouclent plus au-dessus de la cible pour s'écraser devant.
+- **Quake Haken** : le soldat automatique frappe devant lui (pas la dispersion arrière).
+- Banc d'essai : **les 907 armes conformes à EDF 5** (rapport `docs/AUDIT_ARMES.md`).
+
 ## v0.16.0 — Modèles d'armes détaillés et banc d'essai des armes
 
 - **Toutes les armes remodelées dans Blender** (151 modèles d'armes et 25 objets de l'Air Raider) : silhouettes et dimensions propres à chaque famille, arêtes biseautées, découpes (fentes d'aération, évidements, rainures), vis, stries de prise, inscriptions au pochoir. Fini les blocs.

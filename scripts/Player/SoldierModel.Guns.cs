@@ -54,7 +54,7 @@ public partial class SoldierModel
             Butt = Pt("Butt", new Vector3(0, -0.02f, -0.36f)),
             Mag = Pt("Mag", new Vector3(0, -0.12f, 0.08f)),
             GripB = PistolGripR,
-            SupB = hold == Hold.Launcher || vertical ? VerticalGripL : HandguardL,
+            SupB = hold is Hold.Launcher or Hold.Tube || vertical ? VerticalGripL : HandguardL,
         };
         Muzzle = new Node3D { Position = Pt("Muzzle", new Vector3(0, 0, 0.6f)) };
         _gun.AddChild(Muzzle);
@@ -184,6 +184,8 @@ public partial class SoldierModel
         // Fencer : armes de mêlée à une main, canons à la hanche, lance-missiles à l'épaule.
         Edf5Kind.Strike or Edf5Kind.Pierce => Hold.OneHand,
         Edf5Kind.Bullet or Edf5Kind.Flame or Edf5Kind.Mortar when s.Class == SoldierClass.Heavy => Hold.Hip,
+        // Fusilier : lanceurs portés sur l'épaule (tube) ; Fencer : lanceurs montés sur l'exosquelette.
+        Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.Missile when s.Class != SoldierClass.Heavy => Hold.Tube,
         Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.Missile => Hold.Launcher,
         Edf5Kind.HandGrenade or Edf5Kind.Bomb or Edf5Kind.Impulse => Hold.OneHand,
         _ => Hold.Shoulder,

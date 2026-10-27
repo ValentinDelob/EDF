@@ -67,12 +67,22 @@ public static partial class AutoTest
         fwd = fwd.LengthSquared() > 0.01f ? fwd.Normalized() : Vector3.Forward;
         var right = fwd.Cross(Vector3.Up).Normalized();
         Player.BotLookAt = p.GlobalPosition + fwd * 30f + Vector3.Up * 1.4f;
-        var cam = new Camera3D { Fov = 34, Current = true };
-        w.AddChild(cam);
-        var focus = p.GlobalPosition + Vector3.Up * 1.35f + fwd * 0.25f;
-        cam.GlobalPosition = focus + right * 2.4f + fwd * 0.6f + Vector3.Up * 0.15f;
-        cam.LookAt(focus, Vector3.Up);
-        cam.MakeCurrent();
+        // --weapon-view=side (profil, défaut), front (trois-quarts avant), back (trois-quarts arrière), play (caméra du joueur).
+        var view = Screenshot.CmdArg("weapon-view") ?? "side";
+        if (view != "play")
+        {
+            var cam = new Camera3D { Fov = 34, Current = true };
+            w.AddChild(cam);
+            var focus = p.GlobalPosition + Vector3.Up * 1.35f + fwd * 0.25f;
+            cam.GlobalPosition = focus + view switch
+            {
+                "front" => right * 1.6f + fwd * 2.0f + Vector3.Up * 0.25f,
+                "back" => right * 1.4f - fwd * 2.0f + Vector3.Up * 0.35f,
+                _ => right * 2.4f + fwd * 0.6f + Vector3.Up * 0.15f,
+            };
+            cam.LookAt(focus, Vector3.Up);
+            cam.MakeCurrent();
+        }
         var i = 0;
         void Next()
         {
@@ -80,7 +90,8 @@ public static partial class AutoTest
             var id = list[i++];
             p.Weapons[0] = p.Arm(Grant(id));
             p.Current = 0;
-            p.Aiming = true;
+            Player.BotAiming = Screenshot.CmdArg("weapon-aim") != "0";
+            p.Aiming = Player.BotAiming;
             GD.Print($"[arme] {id} « {Weapons.Get(id).Name} »");
             app.GetTree().CreateTimer(1.6f).Timeout += () => Shot(app, "arme_" + id);
             app.GetTree().CreateTimer(2.5f).Timeout += Next;

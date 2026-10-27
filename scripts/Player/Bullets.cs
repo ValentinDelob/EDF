@@ -81,6 +81,8 @@ public partial class Bullets : Node3D
             var from = s.Pos;
             s.Vel += Vector3.Down * s.Gravity * dt;
             var to = from + s.Vel * dt;
+            var lifeStart = s.Life;
+            var speed = Mathf.Max(s.Vel.Length(), 0.01f);
             s.Life -= dt;
             var dead = s.Life <= 0;
             // Plusieurs rayons pour une balle perforante (elle continue après chaque ennemi traversé).
@@ -105,7 +107,10 @@ public partial class Bullets : Node3D
                 var at = (Vector3)hit["position"];
                 var normal = (Vector3)hit["normal"];
                 var col = hit["collider"].AsGodotObject();
-                var frac = s.MaxLife > 0 ? Mathf.Clamp(s.Life / s.MaxLife, 0, 1) : 1;
+                // Atténuation au point d'impact (temps de vol réel jusqu'à lui, pas la fin de l'image : une balle rapide
+                // ne perd pas une image entière de portée).
+                var lifeAt = lifeStart - s.Pos.DistanceTo(at) / speed;
+                var frac = s.MaxLife > 0 ? Mathf.Clamp(lifeAt / s.MaxLife, 0, 1) : 1;
                 var dmg = s.Damage * (s.Far + (1f - s.Far) * Mathf.Pow(frac, s.FalloffExp));
                 if (col is Enemy e && e.State != EnemyState.Dead)
                 {
