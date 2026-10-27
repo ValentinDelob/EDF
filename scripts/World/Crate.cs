@@ -1,8 +1,13 @@
+using System.Collections.Generic;
 using Godot;
 
 namespace Rempart;
 
-/// <summary>Caisse de butin au sol.</summary>
+/// <summary>
+/// Caisse de butin au sol, comme dans EDF : modèle Blender propre à chaque type (assets/models/crates : conteneur d'arme vert,
+/// caisse d'armure rouge, mallette de soin blanche à croix rouge), éjectée du cadavre, elle retombe, rebondit, bascule et se
+/// pose à plat. Voyants et halo au sol pulsés à la teinte du type ; fin faisceau qui ne se voit que de loin (repérage).
+/// </summary>
 public partial class Crate : Node3D
 {
     public int Id;
@@ -10,10 +15,48 @@ public partial class Crate : Node3D
     public bool Taken;
     private float _t;
     private Node3D _body;
+    private MeshInstance3D _beam, _halo;
+    private ShaderMaterial _haloMat;
     private Vector3 _vel;
     private bool _landed;
-    /// <summary>Hauteur de pose (0,45 m au-dessus du sol ; sous terre, au-dessus du quai ou de l'éboulis où elle tombe).</summary>
-    public float Floor = 0.45f;
+    private int _bounces;
+    // Bascule pendant la chute (roulis, tangage), amortie au sol ; cap fixe tiré à l'apparition.
+    private Vector3 _tilt, _tiltVel;
+    private float _yaw;
+    /// <summary>Hauteur minimale du sol sous la caisse (sous terre : quai ou éboulis où elle tombe).</summary>
+    public float Floor = 0f;
+
+    private static readonly Dictionary<CrateType, PackedScene> Scenes = new();
+
+    private static string ModelName(CrateType t) => t switch
+    {
+        CrateType.Weapon => "crate_weapon",
+        CrateType.Armor => "crate_armor",
+        _ => "crate_health",
+    };
+
+    /// <summary>Modèle Blender du type, aux matières du jeu (voyants à la teinte de la caisse) ; null si absent.</summary>
+    public static Node3D Model(CrateType type)
+    {
+        if (!Scenes.TryGetValue(type, out var scene))
+        {
+            var path = $"res://assets/models/crates/{ModelName(type)}.glb";
+            scene = ResourceLoader.Exists(path) ? GD.Load<PackedScene>(path) : null;
+            Scenes[type] = scene;
+        }
+        if (scene == null) return null;
+        var model = scene.Instantiate<Node3D>();
+        SoldierModel.ApplyMats(model, Crates.Paint[(int)type], Crates.Accent[(int)type], null,
+            Mats.GunMask($"res://assets/models/crates/{ModelName(type)}.glb"));
+        var glow = Mats.Glow(Crates.Tint(type), 4f);
+        foreach (var n in model.FindChildren("*", "MeshInstance3D", true, false))
+        {
+            var mi = (MeshInstance3D)n;
+            for (var i = 0; i < mi.Mesh.GetSurfaceCount(); i++)
+                if (mi.Mesh.SurfaceGetMaterial(i)?.ResourceName == "Glow") mi.SetSurfaceOverrideMaterial(i, glow);
+        }
+        return model;
+    }
 
     public static Crate Create(int id, CrateType type, Vector3 pos)
     {
@@ -21,52 +64,85 @@ public partial class Crate : Node3D
         c._body = new Node3D();
         c.AddChild(c._body);
         var color = Crates.Tint(type);
-        var shellMat = Mats.Painted(color.Darkened(0.25f), 0.45f, 0.3f);
-        var size = type == CrateType.Weapon ? new Vector3(1.1f, 0.6f, 0.6f) : new Vector3(0.65f, 0.65f, 0.65f);
-        // Forme propre à chaque type (lisible sans les couleurs) : arme allongée, armure cubique, soin cylindrique.
-        Mesh shell = type == CrateType.Health
-            ? new CylinderMesh { TopRadius = 0.36f, BottomRadius = 0.36f, Height = 0.6f, RadialSegments = 16, Material = shellMat }
-            : new BoxMesh { Size = size, Material = shellMat };
-        c._body.AddChild(new MeshInstance3D { Mesh = shell });
-        // Bandeau lumineux pour repérer la caisse de loin.
-        c._body.AddChild(new MeshInstance3D
+        var model = Model(type);
+        if (model != null) c._body.AddChild(model);
+        else c._body.AddChild(new MeshInstance3D
         {
-            Mesh = new BoxMesh { Size = new Vector3(size.X + 0.04f, 0.08f, size.Z + 0.04f), Material = Mats.Glow(color, 2.5f) },
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Mesh = new BoxMesh { Size = new Vector3(0.8f, 0.5f, 0.8f), Material = Mats.Painted(Crates.Paint[(int)type], 0.5f, 0.2f) },
+            Position = new Vector3(0, 0.25f, 0),
         });
-        // Halo vertical
-        c._body.AddChild(new MeshInstance3D
+        // Halo pulsé au sol (disque additif) et fin faisceau de repérage, qui s'efface de près.
+        c._haloMat = HaloMat(color);
+        c._halo = new MeshInstance3D
         {
-            Mesh = new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.25f, Height = 3f, Material = BeamMat(color) },
-            Position = new Vector3(0, 1.6f, 0),
+            Mesh = new PlaneMesh { Size = new Vector2(2.6f, 2.6f), Material = c._haloMat },
+            Position = new Vector3(0, 0.03f, 0),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        });
-        c.Position = pos + Vector3.Up * 1.0f;
+        };
+        c.AddChild(c._halo);
+        c._beam = new MeshInstance3D
+        {
+            Mesh = new CylinderMesh { TopRadius = 0.02f, BottomRadius = 0.09f, Height = 6f, RadialSegments = 8, CapTop = false, CapBottom = false, Material = BeamMat(color) },
+            Position = new Vector3(0, 3.2f, 0),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        c.AddChild(c._beam);
+        c.Position = pos + Vector3.Up * 1.2f;
         var rng = new RandomNumberGenerator();
-        c._vel = new Vector3(rng.RandfRange(-3, 3), rng.RandfRange(5, 8), rng.RandfRange(-3, 3));
+        rng.Seed = (ulong)(id * 7919 + 13);
+        c._vel = new Vector3(rng.RandfRange(-2.5f, 2.5f), rng.RandfRange(5.5f, 7.5f), rng.RandfRange(-2.5f, 2.5f));
+        c._yaw = rng.RandfRange(-Mathf.Pi, Mathf.Pi);
+        c._tiltVel = new Vector3(rng.RandfRange(-5f, 5f), 0, rng.RandfRange(-5f, 5f));
         return c;
     }
 
     private static StandardMaterial3D BeamMat(Color c) => new()
     {
-        AlbedoColor = new Color(c, 0.25f),
+        AlbedoColor = new Color(c, 0.22f),
         Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
         BlendMode = BaseMaterial3D.BlendModeEnum.Add,
         ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
         CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+        DistanceFadeMode = BaseMaterial3D.DistanceFadeModeEnum.PixelAlpha,
+        DistanceFadeMinDistance = 9f,
+        DistanceFadeMaxDistance = 26f,
     };
+
+    private static Shader _haloShader;
+
+    private static ShaderMaterial HaloMat(Color c)
+    {
+        _haloShader ??= new Shader
+        {
+            Code = @"
+shader_type spatial;
+render_mode blend_add, unshaded, depth_draw_never, cull_disabled, shadows_disabled;
+uniform vec3 tint : source_color;
+uniform float pulse = 1.0;
+void fragment() {
+    float r = length(UV - 0.5) * 2.0;
+    // Anneau net qui s'élargit avec la pulsation, sur un voile doux.
+    float ring = smoothstep(0.08, 0.0, abs(r - mix(0.55, 0.9, fract(TIME * 0.6))));
+    float glow = (1.0 - smoothstep(0.0, 1.0, r)) * 0.35;
+    ALBEDO = tint * (glow * pulse + ring * (1.0 - fract(TIME * 0.6)) * 0.9);
+}",
+        };
+        var m = new ShaderMaterial { Shader = _haloShader };
+        m.SetShaderParameter("tint", new Vector3(c.R, c.G, c.B));
+        return m;
+    }
 
     /// <summary>Glisse vers le joueur (effet d'aimant local).</summary>
     public void Attract(Vector3 target, float dt)
     {
         if (!_landed) return;
-        var to = target + Vector3.Up * 0.45f - Position;
+        var to = target - Position;
         to.Y = 0;
         var d = to.Length();
         if (d < 0.1f) return;
         var np = Position + to / d * Mathf.Min(d, (14f - d) * dt);
         // Glisse en suivant le relief (la caisse est toujours posée sur le terrain) ; sur une carte plate, hauteur inchangée.
-        if (World.Current?.Terrain != null) np.Y = World.GroundAt(np.X, np.Z) + 0.45f;
+        np.Y = Mathf.Max(World.GroundAt(np.X, np.Z), Floor);
         Position = np;
     }
 
@@ -79,11 +155,31 @@ public partial class Crate : Node3D
             _vel += Vector3.Down * 20f * dt;
             var p = Position + _vel * dt;
             // Sol de la carte (relief de la vallée) ; 0 sur les cartes plates.
-            var floor = Mathf.Max(World.GroundAt(p.X, p.Z) + 0.45f, Floor);
-            if (p.Y <= floor) { p.Y = floor; _landed = true; }
+            var floor = Mathf.Max(World.GroundAt(p.X, p.Z), Floor);
+            if (p.Y <= floor)
+            {
+                p.Y = floor;
+                // Rebonds amortis, puis la caisse se pose.
+                if (_bounces < 2 && _vel.Y < -3f)
+                {
+                    _vel = new Vector3(_vel.X * 0.45f, -_vel.Y * 0.32f, _vel.Z * 0.45f);
+                    _tiltVel = -_tiltVel * 0.5f + new Vector3(_vel.Z, 0, -_vel.X) * 0.8f;
+                    _bounces++;
+                }
+                else _landed = true;
+            }
             Position = p;
         }
-        _body.Rotation = new Vector3(0, _t * 1.4f, 0);
-        _body.Position = new Vector3(0, _landed ? Mathf.Sin(_t * 3f) * 0.08f : 0, 0);
+        // Bascule : libre en l'air, ressort amorti vers la position à plat une fois au sol.
+        if (!_landed) _tilt = (_tilt + _tiltVel * dt).Clamp(new Vector3(-0.7f, 0, -0.7f), new Vector3(0.7f, 0, 0.7f));
+        else
+        {
+            _tiltVel += (-_tilt * 90f - _tiltVel * 12f) * dt;
+            _tilt += _tiltVel * dt;
+        }
+        _body.Rotation = new Vector3(_tilt.X, _yaw, _tilt.Z);
+        _halo.Visible = _landed;
+        _haloMat.SetShaderParameter("pulse", 0.75f + 0.25f * Mathf.Sin(_t * 3f));
+        _beam.Visible = _landed;
     }
 }

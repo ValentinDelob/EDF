@@ -648,7 +648,7 @@ public partial class World : Node3D
         {
             Edf5Fire.Shoot(this, s, null, a, dir, seed, false);
             if (s.Kind is Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.GrenadeLauncher)
-                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.5f);
+                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.5f, dir);
         }
         Edf5Sounds.Fire(s, a, false);
     }
@@ -668,7 +668,7 @@ public partial class World : Node3D
         {
             case 0:
                 Effects.Tracer(FxRoot, a, b, new Color(1f, 0.75f, 0.35f));
-                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.4f);
+                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.4f, b - a);
                 Sfx.At("rifle_far", a, -2f);
                 break;
             case 1:
@@ -685,7 +685,7 @@ public partial class World : Node3D
             case 8:
                 // Arme de bord d'un véhicule (minigun, mitrailleuse coaxiale) : le son en boucle est porté par le véhicule.
                 Effects.Tracer(FxRoot, a, b, new Color(1f, 0.75f, 0.35f), 0.05f);
-                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.35f);
+                Effects.MuzzleFlash(FxRoot, a, new Color(1f, 0.7f, 0.3f), 0.35f, b - a);
                 if (VehicleOf(from) is { } fv) fv.OnRemoteFire();
                 else Sfx.At("minigun", a, -2f);
                 break;
@@ -781,7 +781,9 @@ public partial class World : Node3D
             var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(new Vector3(pos.X, ProbeTop(pos, 200f), pos.Z), new Vector3(pos.X, -5f, pos.Z), 1));
             if (hit.Count > 0) pos.Y = Mathf.Max(pos.Y, ((Vector3)hit["position"]).Y);
         }
-        if (!def.Static && !def.Boss && !Enemy.Frozen && Rng.Randf() < 0.06f) hpMul = -hpMul; // élite
+        // Élites (PV ×3) : aucune dans les deux premières missions, puis de plus en plus fréquentes au fil de la campagne.
+        var eliteChance = Mission.Index < 2 ? 0f : Mathf.Min(0.06f, 0.02f + 0.002f * Mission.Index);
+        if (!def.Static && !def.Boss && !Enemy.Frozen && Rng.Randf() < eliteChance) hpMul = -hpMul; // élite
         var e = Enemy.Create(this, id, type, pos, yaw, hpMul);
         AddChild(e);
         EnemiesById[id] = e;
@@ -929,7 +931,7 @@ public partial class World : Node3D
         var drops = 0;
         if (e.Def.Boss) drops = e.IsTitan ? Rng.RandiRange(8, 10) : e.IsMothership ? 14 : 10; // spécification §7.2 : 8 à 10 caisses, 5 armes garanties (boss final : 14 dont 7)
         else if (e.Def.Type == EnemyType.Nest || e.IsPortal) drops = 4;
-        else if (e.Elite) drops = 2;
+        else if (e.Elite) drops = 1;
         else if (Rng.Randf() < e.Def.DropChance) drops = 1;
         drops += e.EatenCrates + (e.EatenCrates > 0 ? 1 : 0);
         for (var i = 0; i < drops; i++)
@@ -1172,7 +1174,7 @@ public partial class World : Node3D
         if (Underground)
         {
             var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(pos + Vector3.Up * 1.5f, pos + Vector3.Down * 3f, 1));
-            if (hit.Count > 0) c.Floor = Mathf.Max(0.45f, ((Vector3)hit["position"]).Y + 0.45f);
+            if (hit.Count > 0) c.Floor = Mathf.Max(0f, ((Vector3)hit["position"]).Y);
         }
         AddChild(c);
         CratesById[id] = c;

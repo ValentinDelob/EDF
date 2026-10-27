@@ -51,7 +51,8 @@ public partial class Settings : Node
     public int Quality = 2; // 0 bas, 1 moyen, 2 haut, 3 ultra
     public bool Fullscreen;
     public bool VSync = true;
-    public float Fov = 75f;
+    /// <summary>Champ de vision vertical (degrés) : 60 par défaut, cadrage d'EDF.</summary>
+    public float Fov = 60f;
     public float RenderScale = 1f;
     public int MaxFps = 0;
 
@@ -301,7 +302,7 @@ public partial class Settings : Node
         cfg.SetValue("video", "quality", Quality);
         cfg.SetValue("video", "fullscreen", Fullscreen);
         cfg.SetValue("video", "vsync", VSync);
-        cfg.SetValue("video", "fov", Fov);
+        cfg.SetValue("video", "fov_v", Fov);
         cfg.SetValue("video", "render_scale", RenderScale);
         cfg.SetValue("video", "max_fps", MaxFps);
         cfg.SetValue("audio", "master", MasterVolume);
@@ -335,7 +336,8 @@ public partial class Settings : Node
         Quality = (int)cfg.GetValue("video", "quality", Quality);
         Fullscreen = (bool)cfg.GetValue("video", "fullscreen", Fullscreen);
         VSync = (bool)cfg.GetValue("video", "vsync", VSync);
-        Fov = (float)cfg.GetValue("video", "fov", Fov);
+        // Ancienne clé « fov » (75° par défaut, trop large) ignorée : nouveau cadrage d'EDF.
+        Fov = (float)cfg.GetValue("video", "fov_v", Fov);
         RenderScale = (float)cfg.GetValue("video", "render_scale", RenderScale);
         MaxFps = (int)cfg.GetValue("video", "max_fps", MaxFps);
         MasterVolume = (float)cfg.GetValue("audio", "master", MasterVolume);

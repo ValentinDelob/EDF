@@ -3,16 +3,35 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Direction artistique « invasion » : ciel couvert de nuages gris, lumière voilée, couleurs éteintes,
-/// étalonnage gris froid, vignettage et grain.
+/// Direction artistique inspirée de Monster Attack (EDF, PS2) au rendu actuel : par beau temps, grand ciel bleu à cumulus,
+/// plein soleil franc et ombres bleutées, couleurs vives, brume claire de lointain ; crépuscule orangé, nuit bleue lisible.
+/// Sous la pluie et l'orage : plafond gris bas et couleurs éteintes. Vignettage léger et grain fin.
 /// Partagé par les missions et le décor des menus.
 /// </summary>
 public static class Grade
 {
-    private static GradientTexture1D _lut;
+    private static GradientTexture1D _lut, _clearLut;
     private static Shader _skyShader;
 
-    /// <summary>Étalonnage par luminance : ombres gris-bleu, tons moyens gris neutre, hautes lumières blanc cassé.</summary>
+    /// <summary>Courbes par beau temps : noirs à peine bleutés, tons moyens neutres, hautes lumières légèrement chaudes.</summary>
+    public static GradientTexture1D ClearLut => _clearLut ??= new GradientTexture1D
+    {
+        Width = 256,
+        Gradient = new Gradient
+        {
+            Offsets = new[] { 0f, 0.2f, 0.5f, 0.8f, 1f },
+            Colors = new[]
+            {
+                new Color(0.0f, 0.006f, 0.02f),
+                new Color(0.17f, 0.185f, 0.215f),
+                new Color(0.5f, 0.5f, 0.49f),
+                new Color(0.83f, 0.82f, 0.78f),
+                new Color(1f, 0.99f, 0.95f),
+            },
+        },
+    };
+
+    /// <summary>Courbes par temps couvert : ombres gris-bleu, tons moyens gris neutre, hautes lumières blanc cassé.</summary>
     public static GradientTexture1D Lut => _lut ??= new GradientTexture1D
     {
         Width = 256,
@@ -89,26 +108,28 @@ void sky() {
 
     private static ShaderMaterial NewSky() => new() { Shader = _skyShader ??= new Shader { Code = SkyCode } };
 
-    /// <summary>Ciel nuageux, soleil et brouillard d'une ville envahie, selon l'heure et la météo.</summary>
+    /// <summary>Ciel, soleil et brouillard d'une mission, selon l'heure et la météo.</summary>
     public static void Apply(Godot.Environment env, DirectionalLight3D sun, TimeOfDay time, Weather weather, float fog)
     {
         var sky = NewSky();
         env.BackgroundMode = Godot.Environment.BGMode.Sky;
         env.Sky = new Sky { SkyMaterial = sky, ProcessMode = Sky.ProcessModeEnum.Incremental, RadianceSize = Sky.RadianceSizeEnum.Size128 };
         env.ReflectedLightSource = Godot.Environment.ReflectionSource.Sky;
-        // Lumière ambiante en couleur fixe (mêlée au ciel) : sous un ciel couvert, les ombres ne doivent pas tomber au noir.
+        // Lumière ambiante en couleur fixe (mêlée au ciel) : ombres bleutées par beau temps, jamais noires sous un ciel couvert.
         env.AmbientLightSource = Godot.Environment.AmbientSource.Color;
         env.AmbientLightSkyContribution = 0.35f;
         env.FogEnabled = true;
-        env.FogAerialPerspective = 0.8f;
-        env.FogSkyAffect = 0.35f;
+        env.FogAerialPerspective = 0.7f;
+        env.FogSkyAffect = 0.25f;
+        env.TonemapMode = Godot.Environment.ToneMapper.Aces;
+        env.TonemapWhite = 6f;
         env.AdjustmentEnabled = true;
-        env.AdjustmentContrast = 1.12f;
-        env.AdjustmentSaturation = 0.5f;
-        env.AdjustmentColorCorrection = Lut;
+        env.AdjustmentContrast = 1.05f;
+        env.AdjustmentSaturation = 1.12f;
+        env.AdjustmentColorCorrection = ClearLut;
         env.GlowEnabled = true;
-        env.GlowIntensity = 0.5f;
-        env.GlowBloom = 0.03f;
+        env.GlowIntensity = 0.55f;
+        env.GlowBloom = 0.04f;
         env.GlowHdrThreshold = 1.0f;
         void Clouds(Color zenith, Color horizon, Color ground, Color lit, Color dark, float coverage)
         {
@@ -122,61 +143,90 @@ void sky() {
         var stormy = weather != Weather.Clear;
         switch (time)
         {
+            case TimeOfDay.Day when !stormy:
+                // Grand beau temps de Monster Attack : ciel bleu profond, cumulus blancs épars, soleil haut et franc,
+                // ombres bleutées, brume claire qui bleuit le lointain.
+                Clouds(new Color(0.22f, 0.45f, 0.84f), new Color(0.7f, 0.8f, 0.9f), new Color(0.34f, 0.35f, 0.36f),
+                    new Color(1f, 1f, 0.98f), new Color(0.58f, 0.63f, 0.72f), 0.34f);
+                sun.RotationDegrees = new Vector3(-50, -35, 0);
+                sun.LightEnergy = 2.3f;
+                sun.LightColor = new Color(1f, 0.95f, 0.87f);
+                env.AmbientLightColor = new Color(0.56f, 0.64f, 0.8f);
+                env.AmbientLightEnergy = 0.6f;
+                env.FogLightColor = new Color(0.72f, 0.8f, 0.9f);
+                env.FogDensity = fog * 0.9f + 0.001f;
+                env.TonemapExposure = 1.0f;
+                break;
             case TimeOfDay.Day:
-                // Jour gris, plafond bas : le soleil perce à peine.
+                // Jour de pluie : plafond gris bas, le soleil perce à peine.
                 Clouds(new Color(0.34f, 0.36f, 0.38f), new Color(0.55f, 0.56f, 0.56f), new Color(0.2f, 0.2f, 0.2f),
-                    new Color(0.66f, 0.66f, 0.65f), new Color(0.24f, 0.25f, 0.27f), stormy ? 0.85f : 0.68f);
+                    new Color(0.66f, 0.66f, 0.65f), new Color(0.24f, 0.25f, 0.27f), 0.85f);
                 sun.RotationDegrees = new Vector3(-38, -35, 0);
-                sun.LightEnergy = 1.2f;
+                sun.LightEnergy = 1.7f;
                 sun.LightColor = new Color(0.96f, 0.93f, 0.86f);
-                env.AmbientLightColor = new Color(0.44f, 0.45f, 0.46f);
+                env.AmbientLightColor = new Color(0.46f, 0.48f, 0.5f);
                 env.AmbientLightEnergy = 0.8f;
                 env.FogLightColor = new Color(0.5f, 0.51f, 0.52f);
-                env.FogDensity = fog * 1.9f + 0.002f;
+                env.FogDensity = fog * 1.6f + 0.002f;
+                env.TonemapExposure = 1.1f;
+                break;
+            case TimeOfDay.Dusk when !stormy:
+                // Coucher de soleil : bande orangée à l'horizon, zénith bleu-violet, nuages rosés par en dessous.
+                Clouds(new Color(0.16f, 0.22f, 0.44f), new Color(0.98f, 0.6f, 0.34f), new Color(0.1f, 0.08f, 0.08f),
+                    new Color(1f, 0.72f, 0.5f), new Color(0.3f, 0.25f, 0.36f), 0.42f);
+                sun.RotationDegrees = new Vector3(-15, 70, 0);
+                sun.LightEnergy = 2.0f;
+                sun.LightColor = new Color(1f, 0.68f, 0.42f);
+                env.AmbientLightColor = new Color(0.5f, 0.46f, 0.58f);
+                env.AmbientLightEnergy = 0.65f;
+                env.FogLightColor = new Color(0.82f, 0.6f, 0.48f);
+                env.FogDensity = fog * 1.0f + 0.0015f;
                 env.TonemapExposure = 1.05f;
                 break;
             case TimeOfDay.Dusk:
-                // Crépuscule cendré : une seule bande rouille sous des nuages gris-violet.
+                // Crépuscule d'orage : une bande rouille sous des nuages gris-violet.
                 Clouds(new Color(0.12f, 0.12f, 0.14f), new Color(0.5f, 0.3f, 0.2f), new Color(0.08f, 0.07f, 0.07f),
-                    new Color(0.52f, 0.36f, 0.28f), new Color(0.12f, 0.11f, 0.12f), stormy ? 0.85f : 0.62f);
+                    new Color(0.52f, 0.36f, 0.28f), new Color(0.12f, 0.11f, 0.12f), 0.85f);
                 sun.RotationDegrees = new Vector3(-16, 70, 0);
-                sun.LightEnergy = 1.3f;
+                sun.LightEnergy = 1.8f;
                 sun.LightColor = new Color(1f, 0.66f, 0.46f);
-                env.AmbientLightColor = new Color(0.38f, 0.34f, 0.33f);
+                env.AmbientLightColor = new Color(0.4f, 0.36f, 0.36f);
                 env.AmbientLightEnergy = 0.9f;
                 env.FogLightColor = new Color(0.42f, 0.32f, 0.27f);
-                env.FogDensity = fog * 1.2f + 0.002f;
-                env.TonemapExposure = 1.2f;
+                env.FogDensity = fog * 1.1f + 0.002f;
+                env.TonemapExposure = 1.15f;
                 break;
             default:
-                // Nuit sans lune : nuages à peine visibles, éclairés par en dessous par les incendies.
-                Clouds(new Color(0.025f, 0.028f, 0.035f), new Color(0.13f, 0.09f, 0.07f), new Color(0.01f, 0.01f, 0.01f),
-                    new Color(0.16f, 0.1f, 0.07f), new Color(0.03f, 0.03f, 0.035f), stormy ? 0.85f : 0.6f);
-                sun.RotationDegrees = new Vector3(-40, 150, 0);
-                sun.LightEnergy = 0.4f;
-                sun.LightColor = new Color(0.6f, 0.66f, 0.85f);
-                // Ambiance nocturne lisible : lumière d'appoint froide, indépendante du ciel presque noir.
-                env.AmbientLightColor = new Color(0.22f, 0.24f, 0.3f);
-                env.AmbientLightEnergy = 1.2f;
-                env.FogLightColor = new Color(0.12f, 0.11f, 0.11f);
+                // Nuit claire : ciel bleu nuit, nuages argentés par la lune, éclairage lunaire froid et lisible.
+                Clouds(new Color(0.02f, 0.035f, 0.08f), new Color(0.08f, 0.1f, 0.17f), new Color(0.01f, 0.012f, 0.015f),
+                    new Color(0.2f, 0.22f, 0.3f), new Color(0.03f, 0.035f, 0.05f), stormy ? 0.85f : 0.42f);
+                sun.RotationDegrees = new Vector3(-42, 150, 0);
+                sun.LightEnergy = 0.7f;
+                sun.LightColor = new Color(0.62f, 0.72f, 1f);
+                env.AmbientLightColor = new Color(0.22f, 0.27f, 0.4f);
+                env.AmbientLightEnergy = 1.1f;
+                env.FogLightColor = new Color(0.08f, 0.1f, 0.15f);
                 env.FogDensity = fog * 0.7f + 0.002f;
-                env.TonemapExposure = 1.6f;
+                env.TonemapExposure = 1.45f;
                 break;
         }
         if (stormy)
         {
-            // Pluie ou orage : plafond bas et lourd, presque plus de soleil direct.
+            // Pluie ou orage : plafond bas et lourd, presque plus de soleil direct, couleurs éteintes.
             sun.LightEnergy *= 0.55f;
             env.AmbientLightEnergy *= 1.35f;
             env.FogDensity *= 1.25f;
+            env.AdjustmentSaturation = 0.78f;
+            env.AdjustmentContrast = 1.1f;
+            env.AdjustmentColorCorrection = Lut;
             sky.SetShaderParameter("wind", 0.012f);
         }
     }
 
     private const string PostShader = @"
 shader_type canvas_item;
-uniform float vignette = 0.55;
-uniform float grain = 0.045;
+uniform float vignette = 0.3;
+uniform float grain = 0.02;
 void fragment() {
     vec2 uv = SCREEN_UV - 0.5;
     uv.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;

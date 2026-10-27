@@ -253,7 +253,7 @@ public partial class OptionsMenu : MenuScreen
             "Bas : ombres courtes, sans occlusion ambiante. Moyen : SSAO. Haut : éclairage global et brouillard volumétrique. Ultra : réflexions et ombres longues.");
         Row("Échelle de rendu", Slider(0.5f, 1f, 0.05f, Settings.I.RenderScale, f => { Settings.I.RenderScale = f; Settings.I.ApplyVideo(); }, f => $"{f * 100:0} %"),
             "En dessous de 100 %, l'image est calculée en plus petit puis agrandie avec FSR 2 : gain de performances.");
-        Row("Champ de vision", Slider(60, 100, 1, Settings.I.Fov, f => { Settings.I.Fov = f; Settings.I.NotifyChanged(); }, f => $"{f:0}°"),
+        Row("Champ de vision", Slider(50, 90, 1, Settings.I.Fov, f => { Settings.I.Fov = f; Settings.I.NotifyChanged(); }, f => $"{f:0}°"),
             "Angle de vue horizontal de la caméra.");
         Section("Affichage");
         Row("Plein écran", Selector(OnOff, Settings.I.Fullscreen ? 1 : 0, i => { Settings.I.Fullscreen = i == 1; Settings.I.ApplyVideo(); }), "Bascule entre fenêtre et plein écran.");

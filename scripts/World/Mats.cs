@@ -265,19 +265,20 @@ public static partial class Mats
     /// <summary>Style de façade ; <c>Panels</c> : panneaux préfabriqués (joints au lieu de bandeaux).</summary>
     private readonly record struct FStyle(FKind Kind, Color Wall, int Cols, float WinW, float WinTop, float WinBot, Color Frame, bool Mullion, float LitRate, bool Panels);
 
-    // Teintes ternes et grisées : béton, enduit sali, brique noircie.
+    // Ville de Monster Attack : enduits clairs (crème, sable, blanc cassé, gris perle), brique orangée, murs-rideaux bleutés.
+    // La teinte propre à chaque immeuble (Building.Tint) varie ensuite la couleur d'un immeuble à l'autre.
     private static FStyle StyleOf(int v) => v switch
     {
-        0 => new(FKind.Punched, new Color(0.5f, 0.49f, 0.47f), 2, 0.5f, 0.26f, 0.8f, new Color(0.2f, 0.2f, 0.21f), true, 0.32f, true),
-        1 => new(FKind.Punched, new Color(0.5f, 0.46f, 0.42f), 3, 0.5f, 0.24f, 0.8f, new Color(0.52f, 0.51f, 0.49f), false, 0.35f, false),
-        2 => new(FKind.Ribbon, new Color(0.42f, 0.43f, 0.44f), 4, 1f, 0.3f, 0.78f, new Color(0.13f, 0.135f, 0.14f), true, 0.4f, true),
-        3 => new(FKind.Punched, new Color(0.56f, 0.54f, 0.5f), 2, 0.58f, 0.22f, 0.82f, new Color(0.26f, 0.23f, 0.2f), true, 0.3f, false),
-        4 => new(FKind.Brick, new Color(0.37f, 0.31f, 0.28f), 3, 0.5f, 0.24f, 0.82f, new Color(0.56f, 0.55f, 0.53f), false, 0.35f, false),
-        5 => new(FKind.Ribbon, new Color(0.49f, 0.5f, 0.49f), 3, 1f, 0.32f, 0.8f, new Color(0.45f, 0.46f, 0.46f), true, 0.38f, true),
-        6 => new(FKind.Curtain, new Color(0.12f, 0.145f, 0.16f), 5, 1f, 0f, 0.8f, new Color(0.4f, 0.41f, 0.42f), true, 0.45f, false),
-        7 => new(FKind.Curtain, new Color(0.23f, 0.22f, 0.2f), 4, 1f, 0f, 0.8f, new Color(0.26f, 0.255f, 0.245f), true, 0.45f, false),
-        8 => new(FKind.Brick, new Color(0.42f, 0.29f, 0.24f), 3, 0.48f, 0.2f, 0.84f, new Color(0.58f, 0.58f, 0.56f), true, 0.35f, false),
-        _ => new(FKind.Punched, new Color(0.6f, 0.59f, 0.56f), 2, 0.42f, 0.16f, 0.95f, new Color(0.22f, 0.23f, 0.24f), true, 0.35f, true),
+        0 => new(FKind.Punched, new Color(0.62f, 0.6f, 0.56f), 2, 0.5f, 0.26f, 0.8f, new Color(0.22f, 0.23f, 0.25f), true, 0.32f, true),
+        1 => new(FKind.Punched, new Color(0.68f, 0.62f, 0.52f), 3, 0.5f, 0.24f, 0.8f, new Color(0.62f, 0.6f, 0.56f), false, 0.35f, false),
+        2 => new(FKind.Ribbon, new Color(0.6f, 0.62f, 0.64f), 4, 1f, 0.3f, 0.78f, new Color(0.14f, 0.15f, 0.17f), true, 0.4f, true),
+        3 => new(FKind.Punched, new Color(0.72f, 0.68f, 0.6f), 2, 0.58f, 0.22f, 0.82f, new Color(0.3f, 0.26f, 0.22f), true, 0.3f, false),
+        4 => new(FKind.Brick, new Color(0.56f, 0.36f, 0.27f), 3, 0.5f, 0.24f, 0.82f, new Color(0.66f, 0.64f, 0.6f), false, 0.35f, false),
+        5 => new(FKind.Ribbon, new Color(0.7f, 0.7f, 0.68f), 3, 1f, 0.32f, 0.8f, new Color(0.5f, 0.52f, 0.54f), true, 0.38f, true),
+        6 => new(FKind.Curtain, new Color(0.13f, 0.2f, 0.28f), 5, 1f, 0f, 0.8f, new Color(0.5f, 0.52f, 0.55f), true, 0.45f, false),
+        7 => new(FKind.Curtain, new Color(0.17f, 0.24f, 0.24f), 4, 1f, 0f, 0.8f, new Color(0.34f, 0.35f, 0.34f), true, 0.45f, false),
+        8 => new(FKind.Brick, new Color(0.6f, 0.4f, 0.3f), 3, 0.48f, 0.2f, 0.84f, new Color(0.7f, 0.69f, 0.66f), true, 0.35f, false),
+        _ => new(FKind.Punched, new Color(0.76f, 0.74f, 0.7f), 2, 0.42f, 0.16f, 0.95f, new Color(0.24f, 0.26f, 0.29f), true, 0.35f, true),
     };
 
     /// <summary>Indique si la variante est un mur-rideau (tour de bureaux vitrée).</summary>
@@ -379,7 +380,8 @@ public static partial class Mats
         var soot = new Color(0.035f, 0.032f, 0.03f);
         var dirt = new Color(0.17f, 0.16f, 0.145f);
 
-        bool Burnt(int cx, int f) => Hash(cx, ((f % floors) + floors) % floors, variant * 31 + 9) < (curtain ? 0.06f : 0.1f);
+        // Quelques fenêtres incendiées ou brisées seulement : la ville est encore debout quand l'invasion commence.
+        bool Burnt(int cx, int f) => Hash(cx, ((f % floors) + floors) % floors, variant * 31 + 9) < (curtain ? 0.015f : 0.03f);
 
         System.Threading.Tasks.Parallel.For(0, h, y =>
         {
@@ -398,7 +400,7 @@ public static partial class Mats
             var wh2 = Hash(cellX, fl, variant * 31 + 2);
             var wh3 = Hash(cellX, fl, variant * 31 + 3);
             var burnt = Burnt(cellX, fl);
-            var broken = !burnt && Hash(cellX, fl, variant * 31 + 10) < 0.14f;
+            var broken = !burnt && Hash(cellX, fl, variant * 31 + 10) < 0.05f;
             // Suie : panache de la fenêtre de l'étage (au-dessus du linteau) ou de celle de l'étage du dessous.
             var sn = VNoise(x, y, 3, 16, w, variant + 31);
             var sootK = 0f;
@@ -448,15 +450,15 @@ public static partial class Mats
 
             if (inWin)
             {
-                // Stores intérieurs, intérieur sombre, reflet du ciel voilé par la crasse ; vitres brisées ou incendiées.
+                // Stores intérieurs, intérieur sombre, reflet bleuté du ciel ; vitres brisées ou incendiées.
                 var blinds = wh < 0.38f ? 0.15f + wh2 * 0.75f : 0f;
-                var refl = Mathf.Lerp(0.26f, 0.09f, wy) * (0.7f + 0.6f * ValueNoise(x, y, 64, w / 64, variant + 11));
-                var film = grime * 0.05f;
+                var refl = Mathf.Lerp(0.34f, 0.12f, wy) * (0.7f + 0.6f * ValueNoise(x, y, 64, w / 64, variant + 11));
+                var film = grime * 0.03f;
                 Color glass = curtain
-                    ? s.Wall * (0.85f + wh3 * 0.3f) + new Color(refl, refl * 1.03f, refl * 1.08f) * 0.45f
-                    : new Color(0.06f, 0.065f, 0.07f) + new Color(refl * 0.75f, refl * 0.8f, refl * 0.85f);
+                    ? s.Wall * (0.85f + wh3 * 0.3f) + new Color(refl * 0.8f, refl * 0.95f, refl * 1.15f) * 0.5f
+                    : new Color(0.05f, 0.065f, 0.085f) + new Color(refl * 0.6f, refl * 0.78f, refl * 1.0f);
                 glass += new Color(film, film * 0.95f, film * 0.85f);
-                r = 0.08f + grime * 0.12f;
+                r = 0.06f + grime * 0.08f;
                 height = 0.2f;
                 if (burnt)
                 {
@@ -537,11 +539,11 @@ public static partial class Mats
                     var streak = Mathf.Clamp((sc - 0.42f) * 2.4f, 0, 1) * Mathf.Exp(-down * 2.2f) * within * (0.45f + winAbove * 0.8f);
                     // Coulures sous le bandeau d'étage.
                     if (!s.Panels) streak = Mathf.Max(streak, Mathf.Clamp((sc - 0.55f) * 2f, 0, 1) * Mathf.Exp(-ly * 6f) * 0.6f);
-                    c = c.Lerp(dirt, streak * 0.7f);
-                    r -= streak * 0.25f;
+                    c = c.Lerp(dirt, streak * 0.35f);
+                    r -= streak * 0.15f;
                 }
                 // Impacts de balles et d'éclats, groupés en rafales : trou sombre, bord épaufré plus clair.
-                if (ValueNoise(x, y, 64, w / 64, variant + 61) > 0.64f)
+                if (ValueNoise(x, y, 64, w / 64, variant + 61) > 0.76f)
                 {
                     int icx = x / 12, icy = y / 12;
                     if (Hash(icx, icy, variant + 62) < 0.45f)
@@ -567,7 +569,7 @@ public static partial class Mats
 
         var mat = Weathered(ImageTexture.CreateFromImage(alb.ToImage()), BumpToNormal(bump, curtain ? 1.5f : 3f), ImageTexture.CreateFromImage(rough.ToImage()), 0, new Vector3(1f / uSpan, 1f / floors, 1f))
             .With("roughness", 1f).With("metallic", curtain ? 0.35f : 0.03f).With("specular", 0.6f).With("normal_depth", 0.9f)
-            .With("vertex_color", true).With("streaks", curtain ? 0.35f : 1f).With("grime", curtain ? 0.7f : 1f).With("desat", 0.15f);
+            .With("vertex_color", true).With("streaks", curtain ? 0.2f : 0.5f).With("grime", curtain ? 0.4f : 0.55f);
         if (night)
         {
             mat.With("emission_tex", ImageTexture.CreateFromImage(emit.ToImage())).With("emission_energy", 1.4f);

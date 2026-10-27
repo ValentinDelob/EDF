@@ -157,9 +157,8 @@ public static partial class DesertBuilder
     // ───────────────────────── Étalonnage ─────────────────────────
 
     /// <summary>
-    /// Lumière du désert, appliquée après <see cref="Grade.Apply"/> : soleil plus franc et plus chaud, ciel voilé de
-    /// poussière, brume beige ; la tempête de sable noie tout dans un brouillard brun. Le gris de l'invasion reste
-    /// (désaturation et table de couleurs communes).
+    /// Lumière du désert, appliquée après <see cref="Grade.Apply"/> : soleil plus franc et plus chaud, ciel bleu pâli de
+    /// poussière à l'horizon, brume beige ; la tempête de sable noie tout dans un brouillard brun.
     /// </summary>
     public static void ApplyGrade(Godot.Environment env, DirectionalLight3D sun, TimeOfDay time, Weather weather, float fog)
     {
@@ -177,25 +176,24 @@ public static partial class DesertBuilder
         switch (time)
         {
             case TimeOfDay.Day:
-                // Chaleur blanche : ciel délavé, voile de poussière à l'horizon, soleil haut et dur.
-                Clouds(new Color(0.42f, 0.44f, 0.45f), new Color(0.66f, 0.61f, 0.53f), new Color(0.3f, 0.27f, 0.22f),
-                    new Color(0.72f, 0.69f, 0.64f), new Color(0.38f, 0.36f, 0.33f), 0.42f);
-                sun.RotationDegrees = new Vector3(-52, -28, 0);
-                sun.LightEnergy = 1.65f;
-                sun.LightColor = new Color(1f, 0.92f, 0.8f);
-                env.AmbientLightColor = new Color(0.5f, 0.47f, 0.42f);
-                env.AmbientLightEnergy = 0.75f;
-                env.FogLightColor = new Color(0.64f, 0.58f, 0.49f);
-                env.FogDensity = fog * 1.1f + 0.0015f;
+                // Chaleur blanche : ciel bleu pâli, voile de poussière à l'horizon, soleil haut et dur.
+                Clouds(new Color(0.3f, 0.5f, 0.82f), new Color(0.86f, 0.8f, 0.68f), new Color(0.4f, 0.35f, 0.28f),
+                    new Color(1f, 0.98f, 0.94f), new Color(0.62f, 0.6f, 0.6f), 0.2f);
+                sun.RotationDegrees = new Vector3(-56, -28, 0);
+                sun.LightEnergy = 2.6f;
+                sun.LightColor = new Color(1f, 0.93f, 0.8f);
+                env.AmbientLightColor = new Color(0.62f, 0.62f, 0.66f);
+                env.AmbientLightEnergy = 0.6f;
+                env.FogLightColor = new Color(0.86f, 0.8f, 0.68f);
+                env.FogDensity = fog * 1.0f + 0.0012f;
                 env.TonemapExposure = 1.0f;
-                env.AdjustmentSaturation = 0.56f;
                 break;
             case TimeOfDay.Dusk:
                 // Soleil bas cuivré dans la poussière, ombres longues.
-                Clouds(new Color(0.16f, 0.15f, 0.16f), new Color(0.6f, 0.38f, 0.24f), new Color(0.1f, 0.08f, 0.07f),
-                    new Color(0.62f, 0.42f, 0.3f), new Color(0.16f, 0.13f, 0.12f), 0.5f);
+                Clouds(new Color(0.2f, 0.24f, 0.42f), new Color(0.98f, 0.58f, 0.3f), new Color(0.12f, 0.09f, 0.07f),
+                    new Color(1f, 0.7f, 0.46f), new Color(0.32f, 0.24f, 0.28f), 0.4f);
                 sun.RotationDegrees = new Vector3(-13, 75, 0);
-                sun.LightEnergy = 1.45f;
+                sun.LightEnergy = 2.0f;
                 sun.LightColor = new Color(1f, 0.64f, 0.4f);
                 env.AmbientLightColor = new Color(0.42f, 0.35f, 0.31f);
                 env.AmbientLightEnergy = 0.85f;

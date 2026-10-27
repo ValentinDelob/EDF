@@ -408,7 +408,8 @@ public static partial class Mats
         var curtain = s.Kind == FKind.Curtain;
         var cols = s.Cols * uSpan;
         var seed = variant * 17 + (heavy ? 900 : 400);
-        float burnRate = heavy ? 0.3f : 0.14f, breakRate = heavy ? 0.5f : 0.32f;
+        // Dégâts ponctuels (quelques fenêtres soufflées ou incendiées) : la ville reste lisible et colorée.
+        float burnRate = heavy ? 0.1f : 0.035f, breakRate = heavy ? 0.22f : 0.1f;
         // Brèches : un ou deux trous irréguliers dans la tuile (version lourde).
         var breaches = new System.Collections.Generic.List<(float u, float fl, float ru, float rf)>();
         if (heavy)
@@ -437,7 +438,7 @@ public static partial class Mats
                 // Coulures verticales (suie lessivée par la pluie).
                 var streak = ValueNoise(x * 6f, y * 0.25f, 32, w * 6 / 32, seed + 4);
                 var col = new Color(0.025f, 0.022f, 0.02f);
-                var a = Smooth(0.45f, 0.85f, grimeN) * 0.35f + Smooth(0.6f, 0.9f, streak) * 0.22f;
+                var a = Smooth(0.45f, 0.85f, grimeN) * 0.14f + Smooth(0.6f, 0.9f, streak) * 0.1f;
                 var r = 0.95f;
 
                 // Panaches de suie au-dessus des fenêtres incendiées (fenêtre du même étage ou de l'étage inférieur).

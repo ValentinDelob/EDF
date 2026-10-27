@@ -179,7 +179,7 @@ public static partial class CapitalBuilder
 
     /// <summary>
     /// Lumière de la capitale, appliquée après <see cref="Grade.Apply"/> : ciel bas chargé de fumée, horizon rougi par les
-    /// incendies, brume brune ; couleurs encore plus éteintes que dans les autres cartes.
+    /// incendies, brume brune ; couleurs plus sourdes que dans les autres cartes (finale de la campagne).
     /// </summary>
     public static void ApplyGrade(Godot.Environment env, DirectionalLight3D sun, TimeOfDay time, Weather weather, float fog)
     {
@@ -207,8 +207,8 @@ public static partial class CapitalBuilder
                 env.FogLightColor = new Color(0.38f, 0.28f, 0.23f);
                 // Brume modérée : le vaisseau-mère, à 165 m au-dessus des têtes, doit rester lisible (tourelles, canon).
                 env.FogDensity = fog * 1.2f + 0.0012f;
-                env.TonemapExposure = 1.25f;
-                env.AdjustmentSaturation = 0.46f;
+                env.TonemapExposure = 1.15f;
+                env.AdjustmentSaturation = 0.85f;
                 break;
             case TimeOfDay.Day:
                 // Jour cendré : soleil voilé de fumée, lumière plate et sale.
@@ -218,7 +218,7 @@ public static partial class CapitalBuilder
                 sun.LightColor = new Color(0.98f, 0.9f, 0.8f);
                 env.FogLightColor = new Color(0.46f, 0.44f, 0.41f);
                 env.FogDensity = fog * 1.6f + 0.0016f;
-                env.AdjustmentSaturation = 0.42f;
+                env.AdjustmentSaturation = 0.75f;
                 break;
             default:
                 // Nuit : plafond éclairé par en dessous par la ville qui brûle.

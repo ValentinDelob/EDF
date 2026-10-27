@@ -801,26 +801,27 @@ public static class Enemies
     // fourmi noire ≈ 11 m de long et 4,3 m de haut, rouge ≈ 13 m, charognard ≈ 8 m, araignée ≈ 12 m d'envergure, guêpe ≈ 6 m, drone ≈ 5 m,
     // mille-pattes ≈ 25 m, reine ≈ 34 m, nid ≈ 34 m (mesures : --showcase, journal « [taille] »). Portées de mêlée agrandies d'autant
     // (la tête est loin du centre) ; vitesses à peine relevées (grandes foulées) ; points de vie inchangés.
+    // DropChance : butin rare comme dans EDF (une caisse pour sept à dix insectes ordinaires, davantage pour les gros).
     public static readonly EnemyDef[] All =
     {
-        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 5.4f, 1.25f, 1f, 0.28f, Giant: 2f),
-        new(EnemyType.RedAnt, "Fourmi rouge", 150, 8.8f, 9, 6.6f, 1.3f, 1.15f, 0.45f, Giant: 1.95f),
-        new(EnemyType.AcidAnt, "Fourmi acide", 50, 8.2f, 6, 32f, 2.4f, 1f, 0.32f, Ranged: true, Giant: 2f),
-        new(EnemyType.Wasp, "Guêpe", 40, 14f, 4, 28f, 1.8f, 0.8f, 0.3f, Flying: true, Ranged: true, Giant: 1.5f),
-        new(EnemyType.Scavenger, "Charognard", 90, 13f, 5, 5f, 1.2f, 0.85f, 0.5f, Giant: 1.65f),
+        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 5.4f, 1.25f, 1f, 0.12f, Giant: 2f),
+        new(EnemyType.RedAnt, "Fourmi rouge", 150, 8.8f, 9, 6.6f, 1.3f, 1.15f, 0.18f, Giant: 1.95f),
+        new(EnemyType.AcidAnt, "Fourmi acide", 50, 8.2f, 6, 32f, 2.4f, 1f, 0.13f, Ranged: true, Giant: 2f),
+        new(EnemyType.Wasp, "Guêpe", 40, 14f, 4, 28f, 1.8f, 0.8f, 0.1f, Flying: true, Ranged: true, Giant: 1.5f),
+        new(EnemyType.Scavenger, "Charognard", 90, 13f, 5, 5f, 1.2f, 0.85f, 0.2f, Giant: 1.65f),
         new(EnemyType.Nest, "Nid", 3000, 0, 0, 0, 0, 1f, 1f, Static: true, Giant: 1.5f),
         new(EnemyType.Queen, "Reine", 40000, 5.5f, 40, 12f, 1.8f, 3.8f, 1f, Ranged: true, Boss: true, Giant: 1.35f),
-        new(EnemyType.Spider, "Araignée", 70, 12f, 7, 26f, 2.0f, 1f, 0.3f, Ranged: true, Giant: 2f),
-        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.3f, Flying: true, Ranged: true, Giant: 1.25f),
+        new(EnemyType.Spider, "Araignée", 70, 12f, 7, 26f, 2.0f, 1f, 0.12f, Ranged: true, Giant: 2f),
+        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.12f, Flying: true, Ranged: true, Giant: 1.25f),
         // Forteresse marcheuse : Damage = un tir laser (missiles, piétinement et canon en multiples). Déjà colossale : pas de gigantisme.
         new(EnemyType.Fortress, "Forteresse marcheuse", 70000, 2.5f, 5, 170f, 4f, 12f, 1f, Ranged: true, Boss: true),
         // Mille-pattes : morsure au contact et courte giclée d'acide à mi-distance (Damage pour les deux).
-        new(EnemyType.Centipede, "Mille-pattes", 360, 8f, 10, 9f, 1.5f, 1.25f, 0.6f, Giant: 2.3f),
+        new(EnemyType.Centipede, "Mille-pattes", 360, 8f, 10, 9f, 1.5f, 1.25f, 0.35f, Giant: 2.3f),
         // Machines (modèles construits en mètres, sans gigantisme ; BaseSize règle séparation, écrasement et souffle) :
         // Marcheur ≈ 14 m (Damage = un obus de canon), Tripode ≈ 21 m (Damage = un tic de 0,1 s du rayon),
         // vaisseau de largage ≈ 44 m (Damage = un tir laser de tourelle ; vulnérable seulement par la soute ouverte).
-        new(EnemyType.Walker, "Marcheur", 2500, 4.2f, 45, 110f, 5.5f, 3.5f, 0.25f, Ranged: true),
-        new(EnemyType.Tripod, "Tripode", 4000, 3.6f, 5, 125f, 10f, 5f, 0.25f, Ranged: true),
+        new(EnemyType.Walker, "Marcheur", 2500, 4.2f, 45, 110f, 5.5f, 3.5f, 0.4f, Ranged: true),
+        new(EnemyType.Tripod, "Tripode", 4000, 3.6f, 5, 125f, 10f, 5f, 0.5f, Ranged: true),
         new(EnemyType.DropShip, "Vaisseau de largage", 6000, 12f, 5, 90f, 2.6f, 6f, 1f, Flying: true, Ranged: true),
         // Titan reptilien (spécification §10.2) : kaiju d'environ 60 m, modèle construit en mètres (pas de gigantisme).
         // Damage = un tic de 0,1 s du souffle de feu (piétinement, coup de queue et sol en feu en multiples) ; BaseSize règle
@@ -829,9 +830,9 @@ public static class Enemies
         // Aliens (humanoïdes de 4 à 6 m construits en mètres, sans gigantisme ; voir Enemy.Aliens.cs) : fantassin
         // (Damage = un trait d'énergie, rafales de quatre), garde (Damage = coup de bouclier ; son blaster en fait la moitié),
         // volant (Damage = un trait laser) ; portail : structure qui fait passer des groupes d'aliens et de machines.
-        new(EnemyType.AlienTrooper, "Fantassin alien", 400, 5.2f, 6, 75f, 3.4f, 1.3f, 0.25f, Ranged: true),
-        new(EnemyType.AlienGuard, "Garde alien", 1200, 4.4f, 30, 6.5f, 2.4f, 1.5f, 0.25f),
-        new(EnemyType.AlienFlyer, "Volant alien", 300, 13f, 5, 65f, 2.8f, 1.2f, 0.25f, Flying: true, Ranged: true),
+        new(EnemyType.AlienTrooper, "Fantassin alien", 400, 5.2f, 6, 75f, 3.4f, 1.3f, 0.15f, Ranged: true),
+        new(EnemyType.AlienGuard, "Garde alien", 1200, 4.4f, 30, 6.5f, 2.4f, 1.5f, 0.3f),
+        new(EnemyType.AlienFlyer, "Volant alien", 300, 13f, 5, 65f, 2.8f, 1.2f, 0.15f, Flying: true, Ranged: true),
         new(EnemyType.Portal, "Portail", 5000, 0, 0, 0, 0, 4f, 1f, Static: true),
         // Vaisseau-mère (boss final, spécification §10.2) : coque de plusieurs centaines de mètres en vol stationnaire au-dessus
         // de la capitale, construite en mètres (pas de gigantisme). Damage = un tic de 0,1 s du canon principal au centre de
@@ -867,9 +868,19 @@ public static class Crates
     /// <summary>Taille des compteurs de caisses (valeur réservée 3 comprise).</summary>
     public const int Count = 4;
     public static readonly string[] Names = { "Arme", "Armure", "Soin", "" };
+    /// <summary>Teinte des voyants, du halo et du faisceau (comme dans EDF 5 : arme verte, armure rouge, soin blanc).</summary>
     public static readonly Color[] Colors =
     {
-        new(0.85f, 0.15f, 0.12f), new(0.2f, 0.75f, 0.25f), new(1f, 0.45f, 0.75f), new(0.5f, 0.5f, 0.5f),
+        new(0.3f, 0.95f, 0.3f), new(1f, 0.22f, 0.15f), new(1f, 0.93f, 0.85f), new(0.5f, 0.5f, 0.5f),
+    };
+    /// <summary>Peinture et seconde couleur des modèles (assets/models/crates, tools/blender/weapons/crates.py).</summary>
+    public static readonly Color[] Paint =
+    {
+        new(0.34f, 0.46f, 0.22f), new(0.62f, 0.11f, 0.08f), new(0.86f, 0.86f, 0.82f), new(0.5f, 0.5f, 0.5f),
+    };
+    public static readonly Color[] Accent =
+    {
+        new(0.08f, 0.08f, 0.085f), new(0.08f, 0.08f, 0.085f), new(0.7f, 0.09f, 0.07f), new(0.1f, 0.1f, 0.1f),
     };
     // Palette d'Okabe et Ito : distincte pour les principales formes de daltonisme.
     private static readonly Color[] ColorblindColors =
@@ -883,8 +894,8 @@ public static class Crates
     public static CrateType Roll(RandomNumberGenerator rng)
     {
         var r = rng.Randf();
-        if (r < 0.39f) return CrateType.Weapon;
-        if (r < 0.78f) return CrateType.Armor;
+        if (r < 0.34f) return CrateType.Weapon;
+        if (r < 0.7f) return CrateType.Armor;
         return CrateType.Health;
     }
 }

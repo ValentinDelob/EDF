@@ -419,8 +419,8 @@ public static partial class ForestBuilder
     // ───────────────────────── Étalonnage ─────────────────────────
 
     /// <summary>
-    /// Lumière de la vallée, après <see cref="Grade.Apply"/> : ciel bas et laiteux, soleil voilé, brouillard vert-de-gris
-    /// plus dense dans les fonds (brouillard de hauteur : les crêtes émergent de la brume), nuit d'encre sous la pluie.
+    /// Lumière de la vallée, après <see cref="Grade.Apply"/> : ciel de pluie bas et laiteux, soleil voilé, brume bleutée
+    /// plus dense dans les fonds (les crêtes émergent de la brume), nuit d'encre sous la pluie ; ciel bleu à nuages par beau temps.
     /// </summary>
     public static void ApplyGrade(Godot.Environment env, DirectionalLight3D sun, TimeOfDay time, Weather weather, float fog)
     {
@@ -438,9 +438,13 @@ public static partial class ForestBuilder
             }
             switch (time)
             {
+                case TimeOfDay.Day when wet:
+                    Clouds(new Color(0.32f, 0.35f, 0.38f), new Color(0.52f, 0.56f, 0.58f), new Color(0.16f, 0.17f, 0.16f),
+                        new Color(0.66f, 0.68f, 0.68f), new Color(0.36f, 0.38f, 0.4f), 0.9f);
+                    break;
                 case TimeOfDay.Day:
-                    Clouds(new Color(0.3f, 0.32f, 0.33f), new Color(0.46f, 0.48f, 0.47f), new Color(0.16f, 0.17f, 0.16f),
-                        new Color(0.56f, 0.57f, 0.56f), new Color(0.36f, 0.37f, 0.38f), wet ? 0.93f : 0.8f);
+                    Clouds(new Color(0.26f, 0.46f, 0.78f), new Color(0.7f, 0.78f, 0.84f), new Color(0.16f, 0.17f, 0.16f),
+                        new Color(1f, 1f, 0.98f), new Color(0.56f, 0.6f, 0.66f), 0.5f);
                     break;
                 case TimeOfDay.Dusk:
                     Clouds(new Color(0.1f, 0.1f, 0.12f), new Color(0.36f, 0.27f, 0.22f), new Color(0.06f, 0.06f, 0.06f),
@@ -451,14 +455,14 @@ public static partial class ForestBuilder
         switch (time)
         {
             case TimeOfDay.Day:
-                sun.RotationDegrees = new Vector3(-34, -20, 0);
-                sun.LightEnergy = wet ? 0.55f : 0.95f;
-                sun.LightColor = new Color(0.9f, 0.92f, 0.9f);
-                env.AmbientLightColor = new Color(0.4f, 0.43f, 0.42f);
-                env.AmbientLightEnergy = wet ? 1.35f : 1.05f;
-                env.FogLightColor = new Color(0.42f, 0.45f, 0.44f);
-                env.FogDensity = fog * 1.4f + 0.003f;
-                env.TonemapExposure = 1.35f;
+                sun.RotationDegrees = new Vector3(-36, -20, 0);
+                sun.LightEnergy = wet ? 1.0f : 2.0f;
+                sun.LightColor = new Color(0.98f, 0.95f, 0.88f);
+                env.AmbientLightColor = new Color(0.46f, 0.52f, 0.56f);
+                env.AmbientLightEnergy = wet ? 1.2f : 0.75f;
+                env.FogLightColor = new Color(0.56f, 0.62f, 0.66f);
+                env.FogDensity = fog * 1.2f + 0.0025f;
+                env.TonemapExposure = 1.15f;
                 break;
             case TimeOfDay.Dusk:
                 sun.LightEnergy *= wet ? 0.6f : 0.85f;
@@ -480,8 +484,8 @@ public static partial class ForestBuilder
         // la brume des fonds vient des volumes de brouillard (BuildMist).
         env.FogSkyAffect = time == TimeOfDay.Night ? 0.8f : 0.92f; // ciel noyé : jamais plus sombre que la forêt dans la brume
         env.FogAerialPerspective = 0.55f;
-        env.AdjustmentSaturation = 0.46f;
-        env.AdjustmentContrast = 1.1f;
+        env.AdjustmentSaturation = wet ? 0.85f : 1.05f;
+        env.AdjustmentContrast = 1.08f;
         // Outil de développement : « --nofog » (vues aériennes de contrôle du relief).
         if (Screenshot.CmdArg("nofog") != null) env.FogDensity = 0.0004f;
     }

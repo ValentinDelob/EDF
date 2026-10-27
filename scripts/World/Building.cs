@@ -140,17 +140,23 @@ public partial class Building : StaticBody3D
     private const float Bevel = 0.22f;
 
     /// <summary>
-    /// Teinte propre à l'immeuble (multipliée à la façade) : légère variation de valeur et de température,
-    /// sans tirage aléatoire (identifiants et ordre de génération inchangés).
+    /// Teinte propre à l'immeuble (multipliée à la façade), comme la ville bigarrée de Monster Attack : crème, sable,
+    /// saumon, gris bleuté, blanc, vert d'eau… et variation de valeur ; sans tirage aléatoire (identifiants inchangés).
     /// </summary>
     private static Color Tint(int id)
     {
         var a = Mathf.PosMod(Mathf.Sin(id * 12.9898f + 4.1f) * 43758.547f, 1f);
         var b = Mathf.PosMod(Mathf.Sin(id * 78.233f + 1.7f) * 24634.635f, 1f);
-        var k = 0.8f + 0.22f * a;
-        var t = (b - 0.5f) * 0.07f;
-        return new Color(k * (1 + t), k, k * (1 - t * 1.3f));
+        var k = 0.9f + 0.2f * a;
+        var hue = Tints[Mathf.Clamp((int)(b * Tints.Length), 0, Tints.Length - 1)];
+        return new Color(hue.R * k, hue.G * k, hue.B * k);
     }
+
+    private static readonly Color[] Tints =
+    {
+        new(1.12f, 1.05f, 0.88f), new(1.1f, 0.98f, 0.82f), new(1.14f, 0.92f, 0.82f), new(0.92f, 0.99f, 1.1f),
+        new(1.12f, 1.12f, 1.1f), new(1.06f, 1f, 0.86f), new(0.96f, 1.05f, 0.97f), new(1f, 1f, 1f),
+    };
 
     /// <summary>
     /// Murs du volume principal aux angles chanfreinés : UV en mètres (1 U = <paramref name="uLen"/> m, V compté

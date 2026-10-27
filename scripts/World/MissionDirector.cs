@@ -19,6 +19,8 @@ public class MissionDirector
     private bool _finished;
     private float _endCheckDelay = 3f;
     private const int MaxActive = 140;
+    /// <summary>Ennemis encore actifs au-delà desquels une phase minutée attend (× taille de l'escouade).</summary>
+    private const int TimedPhaseCrowd = 14;
     // Survie : prochaine vague, vagues lancées, début du compte à rebours.
     private float _nextWave = -1f, _surviveStart = -1f;
     private int _wave;
@@ -80,10 +82,10 @@ public class MissionDirector
             if (nest.State == EnemyState.Dead || nest.IsPortal) continue;
             _nestTimers[nest] -= dt;
             if (_nestTimers[nest] > 0) continue;
-            _nestTimers[nest] = 3.2f / PlayerScale;
+            _nestTimers[nest] = 4.5f / PlayerScale;
             if (active >= MaxActive) continue;
             var near = _w.EnemiesById.Values.Count(e => !e.IsStatic && e.GlobalPosition.DistanceTo(nest.GlobalPosition) < 40f);
-            if (near >= 10) continue;
+            if (near >= Mathf.RoundToInt(6 * PlayerScale)) continue;
             var type = _w.Rng.Randf() < 0.2f ? EnemyType.RedAnt : EnemyType.BlackAnt;
             var a = _w.Rng.Randf() * Mathf.Tau;
             var ring = 9f * nest.Def.Size + 2f * Enemies.Get(type).Size;
@@ -101,8 +103,10 @@ public class MissionDirector
         {
             var next = _m.Phases[_phase + 1];
             var pendingThisPhase = _queue.Count;
+            // Phase minutée : elle attend en plus que le terrain se soit dégagé (au plus 60 s de retard), pour ne jamais
+            // empiler les vagues sur une escouade débordée.
             var ready = next.TriggerTime > 0
-                ? t - 0 >= next.TriggerTime
+                ? t >= next.TriggerTime && (active <= Mathf.RoundToInt(TimedPhaseCrowd * PlayerScale) || t >= next.TriggerTime + 60f)
                 : pendingThisPhase == 0 && active <= next.TriggerRemaining && t - _phaseStart > 4f;
             if (ready) StartPhase(_phase + 1);
         }

@@ -253,7 +253,9 @@ public static partial class CityBuilder
             var hd = RuinKit.Hash(b.Id, 3, 2);
             if (hd < 0.62f)
             {
-                RuinKit.DamageFacades(b, hd < 0.24f, b.Id);
+                // Calque de façade sur un immeuble sur trois seulement (lourd sur un sur dix) ; les autres gardent leurs
+                // couleurs intactes, comme la ville de Monster Attack au début de l'invasion.
+                if (hd < 0.3f) RuinKit.DamageFacades(b, hd < 0.1f, b.Id);
                 // Toit noirci (et percé pour les plus touchés) : lisible depuis les hauteurs.
                 var roofY = b.Position.Y + b.Size.Y + 0.04f;
                 var rs = Mathf.Min(b.Size.X, b.Size.Z) * 0.9f;

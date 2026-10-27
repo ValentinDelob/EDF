@@ -153,8 +153,18 @@ public static class Effects
         return g;
     }
 
+    /// <summary>
+    /// Traçante de balle : courte traînée lumineuse qui file vers la cible (voir <see cref="MuzzleFx.Tracer"/>). Trait épais ou
+    /// durable (rayons d'ennemis : <paramref name="width"/> &gt; 0,15 m ou <paramref name="life"/> &gt; 0,1 s) : faisceau
+    /// lumineux sur tout le trajet, qui s'amincit.
+    /// </summary>
     public static void Tracer(Node3D parent, Vector3 from, Vector3 to, Color color, float width = 0.06f, float life = 0.07f)
     {
+        if (width <= 0.15f && life <= 0.1f)
+        {
+            MuzzleFx.Tracer(parent, from, to, color, width);
+            return;
+        }
         var len = from.DistanceTo(to);
         if (len < 0.5f) return;
         var mesh = new MeshInstance3D
@@ -171,23 +181,9 @@ public static class Effects
         tw.TweenCallback(Callable.From(mesh.QueueFree));
     }
 
-    public static void MuzzleFlash(Node3D parent, Vector3 pos, Color color, float size = 0.5f)
-    {
-        var m = new MeshInstance3D
-        {
-            Mesh = new SphereMesh { Radius = size * 0.5f, Height = size, RadialSegments = 8, Rings = 4 },
-            MaterialOverride = Mats.Glow(color, 8f),
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-        };
-        parent.AddChild(m);
-        m.GlobalPosition = pos;
-        var light = new OmniLight3D { LightColor = color, LightEnergy = Settings.I.ReduceFlashes ? 0.8f : 2.5f, OmniRange = 6f };
-        parent.AddChild(light);
-        light.GlobalPosition = pos;
-        var tw = m.CreateTween();
-        tw.TweenProperty(m, "scale", Vector3.One * 0.1f, 0.05f);
-        tw.TweenCallback(Callable.From(() => { m.QueueFree(); light.QueueFree(); }));
-    }
+    /// <summary>Flamme de bouche (étoile de feu, pétales le long du canon si <paramref name="dir"/> est donné) : voir <see cref="MuzzleFx"/>.</summary>
+    public static void MuzzleFlash(Node3D parent, Vector3 pos, Color color, float size = 0.5f, Vector3? dir = null) =>
+        MuzzleFx.Spawn(parent, pos, color, size, dir);
 
     /// <summary>
     /// Explosion (effets seuls, appelée sur chaque pair) : kind 0 explosif, 2 plasma, 4 acide. Voir <see cref="ExplosionFx"/>.

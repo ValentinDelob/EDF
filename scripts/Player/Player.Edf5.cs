@@ -257,7 +257,7 @@ public partial class Player
         if (!AirRaid.SendsItself(s)) Net.I.SendEdf5Shot(s.Id, muzzle, dir, seed);
         Edf5Sounds.Fire(s, muzzle, true);
         if (s.Kind is Edf5Kind.Bullet or Edf5Kind.BoundGun or Edf5Kind.Rocket or Edf5Kind.GuidedRocket or Edf5Kind.GrenadeLauncher)
-            Effects.MuzzleFlash(World.FxRoot, muzzle, new Color(1f, 0.7f, 0.3f), s.Pellets > 1 || s.Kind != Edf5Kind.Bullet ? 0.75f : 0.45f);
+            Effects.MuzzleFlash(World.FxRoot, muzzle, new Color(1f, 0.7f, 0.3f), s.Pellets > 1 || s.Kind != Edf5Kind.Bullet ? 0.75f : 0.45f, dir);
         var kick = s.Family switch
         {
             // Fencer : canons à main et canons lourds (recul réduit par les stabilisateurs et l'exosquelette de bombardement).

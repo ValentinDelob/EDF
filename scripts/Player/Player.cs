@@ -117,8 +117,13 @@ public partial class Player : CharacterBody3D
         foreach (var w in Weapons) w.EarnPoints(damage);
     }
 
-    /// <summary>Distance de la caméra à l'épaule : vue rapprochée (le Grenadier, plus massif, un peu plus loin).</summary>
-    private static float CamDistance(SoldierClass cls, bool aiming) => aiming ? 1.7f : cls == SoldierClass.Heavy ? 3.5f : 2.9f;
+    /// <summary>
+    /// Distance de la caméra au pivot, cadrage d'EDF : caméra dans l'axe du soldat, au-dessus de la tête, le soldat entier dans le
+    /// tiers bas de l'image sous le réticule (le Fencer, plus massif, un peu plus loin). En visée, on se rapproche par-dessus l'épaule.
+    /// </summary>
+    private static float CamDistance(SoldierClass cls, bool aiming) => aiming ? 2.6f : cls == SoldierClass.Heavy ? 5.2f : 4.5f;
+    /// <summary>Décalage latéral de la caméra : nul hors visée (soldat centré comme dans EDF), épaule droite en visée.</summary>
+    private const float AimShoulder = 0.6f;
     public WeaponState Weapon => Weapons.Count > 0 ? Weapons[Mathf.Clamp(Current, 0, Weapons.Count - 1)] : null;
 
     public static Player Create(World world, SoldierClass cls, List<WeaponInstance> loadout, float maxArmor)
@@ -143,12 +148,12 @@ public partial class Player : CharacterBody3D
         p.Model = SoldierModel.Create(cls);
         p.AddChild(p.Model);
 
-        p._camHeight = cls == SoldierClass.Heavy ? 1.9f : 1.65f;
+        p._camHeight = cls == SoldierClass.Heavy ? 2.25f : 1.95f;
         p._camYaw = new Node3D { Position = new Vector3(0, p._camHeight, 0) };
         p.AddChild(p._camYaw);
         p._camPitch = new Node3D();
         p._camYaw.AddChild(p._camPitch);
-        p._arm = new SpringArm3D { SpringLength = CamDistance(cls, false), CollisionMask = 1, Margin = 0.3f, Position = new Vector3(0.85f, 0.15f, 0) };
+        p._arm = new SpringArm3D { SpringLength = CamDistance(cls, false), CollisionMask = 1, Margin = 0.3f, Position = new Vector3(0f, 0.35f, 0) };
         p._arm.AddExcludedObject(p.GetRid());
         p._camPitch.AddChild(p._arm);
         p.Camera = new Camera3D { Current = true, Fov = Settings.I.Fov, Far = 3000f, Near = 0.08f };
@@ -519,7 +524,9 @@ public partial class Player : CharacterBody3D
         var camDist = grabbed ? (Aiming ? 3.4f : 5.6f) : CamDistance(Def.Id, Aiming);
         _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, camDist, Mathf.Clamp(dt * (grabbed ? 4f : 10f), 0, 1));
         // Épaule décalée de côté : la tête de la fourmi et la victime se lisent de trois quarts, pas l'une derrière l'autre.
-        _arm.Position = _arm.Position.Lerp(new Vector3(grabbed ? 1.7f : 0.85f, 0.15f + (Vehicle?.CameraLift ?? 0f) + (grabbed ? 0.3f : 0f), 0), Mathf.Clamp(dt * 4f, 0, 1));
+        var shoulder = grabbed ? 1.7f : Vehicle == null && Aiming ? AimShoulder : 0f;
+        var lift = Vehicle != null ? 0.15f + Vehicle.CameraLift : grabbed ? 0.45f : Aiming ? 0.15f : 0.35f;
+        _arm.Position = _arm.Position.Lerp(new Vector3(shoulder, lift, 0), Mathf.Clamp(dt * (grabbed ? 4f : 9f), 0, 1));
         if (World.Underground) ClampShoulder();
         _shake = Mathf.MoveToward(_shake, 0, dt * 2.5f);
         Camera.HOffset = (float)GD.RandRange(-1, 1) * _shake * 0.25f;
@@ -801,7 +808,7 @@ public partial class Player : CharacterBody3D
             _ => "rifle",
         };
         Sfx.Ui(sound, sound == "sniper" ? 2f : -3f);
-        Effects.MuzzleFlash(World.FxRoot, muzzle, t.Class == SoldierClass.Airborne ? new Color(0.5f, 0.75f, 1f) : new Color(1f, 0.7f, 0.3f), t.Pellets > 1 ? 0.7f : 0.45f);
+        Effects.MuzzleFlash(World.FxRoot, muzzle, t.Class == SoldierClass.Airborne ? new Color(0.5f, 0.75f, 1f) : new Color(1f, 0.7f, 0.3f), t.Pellets > 1 ? 0.7f : 0.45f, AimForward);
         _recoil = Mathf.Min(1.5f, _recoil + (t.Category == "Fusil de précision" ? 1.2f : t.Pellets > 1 ? 1f : 0.25f));
         _pitch += Mathf.DegToRad(t.Category == "Fusil de précision" ? 1.5f : t.Pellets > 1 ? 1.2f : 0.25f) * (AnchorTime > 0 ? 0.2f : 1f);
         Net.I.SendShotFx(t.Class == SoldierClass.Airborne ? 1 : 0, muzzle, lastEnd);
@@ -900,7 +907,7 @@ public partial class Player : CharacterBody3D
         }
         Net.I.SendShotFx(10 + (int)kind, muzzle, muzzle + vel);
         Sfx.Ui(kind == ProjectileKind.Plasma ? "plasma" : kind == ProjectileKind.Grenade ? "launcher" : "rocket", -2f);
-        Effects.MuzzleFlash(World.FxRoot, muzzle, kind == ProjectileKind.Plasma ? new Color(0.5f, 0.75f, 1f) : new Color(1f, 0.6f, 0.2f), 0.8f);
+        Effects.MuzzleFlash(World.FxRoot, muzzle, kind == ProjectileKind.Plasma ? new Color(0.5f, 0.75f, 1f) : new Color(1f, 0.6f, 0.2f), 0.8f, dir);
         _recoil = Mathf.Min(1.5f, _recoil + 0.9f);
         _pitch += Mathf.DegToRad(kind == ProjectileKind.Shell ? 2.5f : 0.8f) * (AnchorTime > 0 ? 0.2f : 1f);
     }

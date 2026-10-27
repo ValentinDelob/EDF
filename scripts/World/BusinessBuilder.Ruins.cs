@@ -39,7 +39,7 @@ public static partial class BusinessBuilder
             {
                 if (b.Position.Y > 1f) { b.AddPanelScars(1 + (int)(RuinKit.Hash(b.Id, 2, 5) * 4), b.Id * 3 + 1, c.Night); continue; }
                 var hd = RuinKit.Hash(b.Id, 3, 5);
-                b.AddPanelScars(4 + (int)(hd * 12), b.Id * 3, c.Night);
+                b.AddPanelScars(2 + (int)(hd * 6), b.Id * 3, c.Night);
                 // (pas de calque de vitres brisées sur 150 m de mur-rideau : illisible et bruité ; les panneaux arrachés suffisent)
                 if (hd < 0.3f && plumes < 5)
                 {
@@ -60,7 +60,8 @@ public static partial class BusinessBuilder
             var hb = RuinKit.Hash(b.Id, 3, 2);
             if (hb < 0.5f && Mats.FacadeVariantOf(b.FacadeMat) >= 0) // pas de calque sur le parking ouvert
             {
-                RuinKit.DamageFacades(b, false, b.Id); // calque léger seulement : le lourd devient un damier illisible de loin sur les grands volumes
+                // Calque léger seulement (le lourd devient un damier illisible de loin sur les grands volumes), un immeuble sur quatre.
+                if (hb < 0.25f) RuinKit.DamageFacades(b, false, b.Id);
                 var roofY = b.Position.Y + b.Size.Y + 0.04f;
                 var rs = Mathf.Min(b.Size.X, b.Size.Z) * 0.9f;
                 r.Decal(hb < 0.25f ? Mats.Decal.Crater : Mats.Decal.Scorch, b.Position + new Vector3((hb - 0.3f) * b.Size.X * 0.5f, 0, 0), rs * (hb < 0.25f ? 0.8f : 1f), b.Id, roofY);
