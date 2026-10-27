@@ -80,3 +80,8 @@ EDF 5). Recoupement avec le wiki anglais d'EDF 5 (Weapons EDF5, Automatic Artill
 | MLRA | 16 missiles, 12 coups/s, 34 dégâts, rechargement 1 s, souffle 2 m, verrouillage 329 m / 16 cibles en 0,068 s | identiques |
 | FG7 Hand Gatling | 320 coups, 20 coups/s, 17 → 8,5 dégâts, rechargement 8 s, portée 208 m, 240 m/s, mise en rotation 1 s | identiques |
 | Splendor Shot | 13,6 × 15 × 8 (15 bombes de 8 éclats), éclats en demi-sphère vers l'extérieur | identiques (corrigé en v0.16.2) |
+| Goliath D1 | 1 roquette, 328,4 dégâts (★8), rechargement 3 s (★5), souffle 15,9 m (★8), zoom ×3 | identiques |
+| Mag Blaster | 1132 coups (★8), 60 coups/s, 3,4 dégâts (★8), recharge 2 s (★5), portée 180 m (★5), énergie 39 (★8) ; puissance qui baisse quand le chargeur se vide | identiques |
+| Limpet Gun | 8 bombes, 3,5 coups/s, 34 dégâts, rechargement 1,5 s, souffle 4,4 m, portée 1091,5 m | identiques |
+
+Six armes des quatre classes recoupées, toutes identiques (étoiles comprises) ; seule la mécanique du Splendor Shot différait, corrigée en v0.16.2.
