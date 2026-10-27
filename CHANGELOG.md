@@ -1,5 +1,24 @@
 # Journal des versions
 
+## v0.16.0 — Modèles d'armes détaillés et banc d'essai des armes
+
+- **Toutes les armes remodelées dans Blender** (151 modèles d'armes et 25 objets de l'Air Raider) : silhouettes et dimensions propres à chaque famille, arêtes biseautées, découpes (fentes d'aération, évidements, rainures), vis, stries de prise, inscriptions au pochoir. Fini les blocs.
+- **Textures de détail** cuites pour chaque modèle (occlusion, usure des arêtes, crasse) : peinture écaillée qui laisse voir le métal, arêtes polies, grain du polymère, salissures dans les creux, marquages usés. Couleurs propres à chaque famille.
+- **Banc d'essai des armes** (`--weapon-audit`, plan dans `docs/PLAN_TEST_ARMES.md`, résultats dans `docs/AUDIT_ARMES.md`) : les 907 armes des quatre classes sont mesurées une à une (dégâts par coup, cadence, rechargement, vitesse des projectiles, DPS) et comparées aux valeurs d'EDF 5 : **883 conformes**, 24 écarts restants listés dans le rapport.
+- **Corrections trouvées par le banc d'essai** :
+  - Cadence exacte des armes très rapides (Mag Blaster et Rapier à 60 coups/s, Raven et Sirius à 30 coups/s) même quand les images ralentissent : les coups dus partent dans la même image.
+  - Plus de recul sur les armes à énergie de la Wing Diver (rayons, lasers, arcs, éclairs) ; recul par coup réduit pour les armes très rapides. Le MONSTER et le Closed Laser restent sur la cible.
+  - Explosions : dégâts pleins dans tout le rayon, comme dans EDF 5 (bombes collantes, roquettes, grenades, mortiers…).
+  - Missiles et lances guidées : guidage terminal, ils ne tournent plus autour d'une cible immobile (MLRA, Mirage, Ghost Chaser).
+  - Obus de plasma de la Wing Diver à leur vitesse d'EDF 5 ; Splasher : gerbe tirée devant soi.
+  - Lance-grenades et bombes collantes à leur vitesse d'EDF 5 (elles étaient plafonnées).
+  - Bound Gun : les balles ne partaient pas (vitesse nulle).
+  - Flame Revolver : flammes à 20 coups/s, à la vitesse et la portée d'EDF 5 ; les flammes rapides ne traversent plus la cible.
+  - Limpet Splendor, Splendor Shot, Buster Bomb, détecteurs : l'ennemi qui porte la bombe reçoit la moitié des éclats ; Splendor Shot : une bombe de 15 éclats.
+  - Leviathan, Haytal, Phoenix sans kit de guidage : tir droit.
+  - Changer d'arme pendant la décharge d'une arme à rafale chargée l'arrête (l'arme suivante ne se vidait plus toute seule).
+  - Rafales rapides (FGS Diffusion Gatling…) : la rafale tient dans l'intervalle de la cadence.
+
 ## v0.15.1 — Corrections
 
 - **Balles explosives** (Minion Buster, mitrailleuses à impulsions de la Wing Diver, canons de la canonnière…) : l'insecte touché de plein fouet prend toujours les dégâts. Une grande fourmi a son centre loin du point d'impact, et l'explosion, de rayon réduit, ne l'atteignait pas. Même correction pour les roquettes et grenades qui explosent sur un grand ennemi.

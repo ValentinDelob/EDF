@@ -302,6 +302,8 @@ public partial class Player : CharacterBody3D
     {
         var dt = (float)delta;
         if (World.Ended) { Velocity = Vector3.Zero; return; }
+        // Armes au pas fixe de la physique (cadence, rechargement, énergie), comme le tir.
+        foreach (var w in Weapons) w.Tick(dt);
         if (Vehicle != null)
         {
             Vehicle.DriveTick(this, dt, _yaw, _pitch);
@@ -496,7 +498,6 @@ public partial class Player : CharacterBody3D
         _camYaw.Rotation = new Vector3(0, _yaw, 0);
         _camPitch.Rotation = new Vector3(_pitch, 0, 0);
 
-        foreach (var w in Weapons) w.Tick(dt);
         AbilityCooldown = Mathf.Max(0, AbilityCooldown - dt);
         GrenadeCooldown = Mathf.Max(0, GrenadeCooldown - dt);
         RallyTime = Mathf.Max(0, RallyTime - dt);
@@ -672,7 +673,7 @@ public partial class Player : CharacterBody3D
             Reload();
             return;
         }
-        ws.Cooldown = 1f / Mathf.Max(ws.W.FireRate, 0.05f);
+        ws.NextShot();
         ws.Ammo--;
         _lastFireTime = Time.GetTicksMsec() / 1000f;
         switch (t.Kind)
@@ -1223,8 +1224,10 @@ public partial class Player : CharacterBody3D
         if (BotLookAt is { } look)
         {
             var tl = look - _camYaw.GlobalPosition;
-            _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(-tl.X, -tl.Z), Mathf.Clamp(dt * 4f, 0, 1));
-            _pitch = Mathf.Lerp(_pitch, Mathf.Clamp(Mathf.Atan2(tl.Y, new Vector2(tl.X, tl.Z).Length()), -1.2f, 1.1f), Mathf.Clamp(dt * 4f, 0, 1));
+            // En tir forcé (banc d'essai), la visée reste exactement sur le point, recul compensé comme le ferait un joueur.
+            var rate = BotForceFire ? 1f : Mathf.Clamp(dt * 4f, 0, 1);
+            _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(-tl.X, -tl.Z), rate);
+            _pitch = Mathf.Lerp(_pitch, Mathf.Clamp(Mathf.Atan2(tl.Y, new Vector2(tl.X, tl.Z).Length()), -1.2f, 1.1f), rate);
             _botFire = BotForceFire && Mathf.Abs(Mathf.AngleDifference(_yaw, Mathf.Atan2(-tl.X, -tl.Z))) < 0.05f;
             if (BotForceFire && Weapon.Ammo == 0 && !Weapon.Reloading) Reload();
             return;
@@ -1268,7 +1271,12 @@ public partial class Player : CharacterBody3D
     /// <summary>Le bot esquive comme un joueur : pas chassés réguliers, sprint hors de la zone du canon de la forteresse.</summary>
     private void BotDodge(float dt)
     {
-        if (Vehicle != null || BotStill) return;
+        if (Vehicle != null || BotStill)
+        {
+            // Pas chassé en cours au moment où le bot s'arrête (banc d'essai, captures) : relâché.
+            if (BotStill && _botStrafe != 0) { _botStrafe = 0; Input.ActionRelease("move_left"); Input.ActionRelease("move_right"); }
+            return;
+        }
         var danger = false;
         foreach (var e in World.EnemiesById.Values)
             if (e.CannonZone is Vector3 z && new Vector2(z.X - GlobalPosition.X, z.Z - GlobalPosition.Z).Length() < 12f) { danger = true; break; }

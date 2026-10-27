@@ -32,6 +32,14 @@ public static partial class AutoTest
             Player.BotStill = true;
             WhenPlayerReady(app, 2f, p => WeaponCam(app, p, cam));
         }
+        // --weapon-audit[=filtre] (avec --class=N) : plan de test des armes (voir AutoTest.Audit.cs).
+        if (Screenshot.CmdArg("weapon-audit") is { } audit)
+        {
+            if (Screenshot.CmdArg("class") == null) Profile.I.Data.SelectedClass = SoldierClass.Rifleman;
+            Player.BotAiming = Screenshot.CmdArg("aim") != null;
+            Enemy.Frozen = true;
+            WhenPlayerReady(app, 2f, p => WeaponAudit(app, p, audit));
+        }
         if (Screenshot.CmdArg("edf5-fire") is { } filter)
         {
             if (Screenshot.CmdArg("class") == null) Profile.I.Data.SelectedClass = SoldierClass.Rifleman;
@@ -93,6 +101,7 @@ public static partial class AutoTest
         // Wing Diver : cœur le plus puissant (les armes de haut niveau coûtent plus que l'énergie d'un cœur de départ).
         if (p.Def.Id == SoldierClass.Airborne) { p.Core = Grant("vzplasmacore"); p.Energy = p.MaxEnergy; }
         GD.Print($"[edf5] stand de tir : {specs.Count} armes");
+        Ally.HoldFire = true;
         Player.BotStill = true;
         Player.BotForceFire = true;
         var errors = 0;

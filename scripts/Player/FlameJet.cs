@@ -53,12 +53,18 @@ public partial class FlameJet : Node3D
     }
 
     /// <summary>Émet les flammèches de <paramref name="dt"/> secondes de tir.</summary>
-    public void Emit(Edf5Spec s, float damage, Vector3 from, Vector3 dir, float dt, bool local)
+    /// <remarks>
+    /// Flame Revolver du Fencer : flammes tirées à la cadence de l'arme (« Rate of Fire »), à leur vitesse et leur portée
+    /// d'EDF 5 ; lance-flammes du Ranger : jet continu de 60 flammes/s.
+    /// </remarks>
+    public void Emit(Edf5Spec s, float damage, Vector3 from, Vector3 dir, float dt, bool local, float rate = 60f, float speedM = 0f, float rangeM = 0f)
     {
         var cannon = s.Family == "flamecannon";
-        var speed = cannon ? 58f : s.Name == "Burner" ? 28f : 36f;
-        var life = cannon ? 0.95f : s.Name == "Burner" ? 0.42f : 0.6f;
-        _carry += dt * 60f;
+        // Flammes rapides plafonnées à 90 m/s : chaque flamme avance par pas d'une image et doit pouvoir toucher (pas de saut
+        // à travers un insecte) ; durée allongée d'autant, dans la limite du freinage de l'air.
+        var speed = speedM > 0 ? Mathf.Min(speedM, 90f) : cannon ? 58f : s.Name == "Burner" ? 28f : 36f;
+        var life = speedM > 0 && rangeM > 0 ? Mathf.Min(rangeM / speed * 1.25f, 1.4f) : cannon ? 0.95f : s.Name == "Burner" ? 0.42f : 0.6f;
+        _carry += dt * rate;
         var rng = _world.Rng;
         while (_carry >= 1f && _licks.Count < Capacity)
         {

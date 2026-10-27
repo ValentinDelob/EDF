@@ -853,8 +853,8 @@ public partial class World : Node3D
             var d = e.BodyDistance(pos) - e.Def.Size * 1.2f;
             if (e.Def.Type == EnemyType.Nest) d = e.GlobalPosition.DistanceTo(pos) - 6f * e.Def.Size;
             if (d > radius) continue;
-            var f = Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
-            var amount = dmg * f;
+            // EDF 5 : dégâts pleins dans tout le rayon de l'explosion (pas d'atténuation avec la distance).
+            var amount = dmg;
             if (e.Def.Type == EnemyType.Nest) amount /= 0.35f; // annule la réduction de HostDamageEnemy
             HostDamageEnemy(e.Id, amount, e.Center, by, false);
         }

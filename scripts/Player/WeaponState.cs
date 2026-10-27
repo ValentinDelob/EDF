@@ -57,9 +57,21 @@ public class WeaponState
         ReloadLeft = W.Reload;
     }
 
+    /// <summary>
+    /// Coup parti : prochain coup dans 1 / cadence. Le reliquat de l'image (temps de recharge dépassé) est reporté : la cadence
+    /// d'EDF 5 reste exacte quelle que soit la fréquence des images (une arme à 12 coups/s en tire bien 12).
+    /// <paramref name="sustained"/> : tir automatique tenu, tout le retard est rattrapé (plusieurs coups dans la même image si la
+    /// cadence dépasse celle des images) ; sinon le report est borné à 0,05 s (pas de rafale gratuite après une pause).
+    /// </summary>
+    public void NextShot(bool sustained = false) => Cooldown = Mathf.Max(Cooldown, sustained ? -MaxLag : -0.05f) + 1f / Mathf.Max(W.FireRate, 0.05f);
+
+    /// <summary>Retard rattrapable au plus (s) : une image lente (10 images/s) ne fait pas perdre de coups.</summary>
+    public const float MaxLag = 0.25f;
+
     public void Tick(float dt)
     {
-        Cooldown = Mathf.Max(0, Cooldown - dt);
+        // Négatif : retard accumulé sur le prochain coup (reporté par NextShot), borné à MaxLag.
+        Cooldown = Mathf.Max(-MaxLag, Cooldown - dt);
         if (ReloadLeft > 0)
         {
             // Frappes à points : un léger écoulement (3 pt/s) s'ajoute aux points gagnés en combat.

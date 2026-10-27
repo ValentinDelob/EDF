@@ -13,15 +13,15 @@
 import bpy, bmesh, math
 from mathutils import Vector, Matrix
 
-MATS = ["Metal", "Polymer", "Paint", "Accent", "Alloy", "Rubber", "Glass", "Lens", "Glow", "Energy"]
-METAL, POLY, PAINT, ACCENT, ALLOY, RUBBER, GLASS, LENS, GLOW, ENERGY = range(10)
+MATS = ["Metal", "Polymer", "Paint", "Accent", "Alloy", "Rubber", "Glass", "Lens", "Glow", "Energy", "Marking"]
+METAL, POLY, PAINT, ACCENT, ALLOY, RUBBER, GLASS, LENS, GLOW, ENERGY, MARKING = range(11)
 
 # Couleurs de travail (rendus de contrôle) ; dans le jeu, Paint/Accent viennent de la variante.
 BASE = {"Metal": ((0.045, 0.045, 0.05), 0.42, 0.85), "Polymer": ((0.035, 0.035, 0.034), 0.7, 0.0),
         "Paint": ((0.16, 0.17, 0.12), 0.6, 0.1), "Accent": ((0.32, 0.27, 0.18), 0.65, 0.05),
         "Alloy": ((0.42, 0.43, 0.45), 0.35, 0.9), "Rubber": ((0.02, 0.02, 0.02), 0.95, 0.0),
         "Glass": ((0.02, 0.03, 0.04), 0.05, 0.5), "Lens": ((0.1, 0.25, 0.35), 0.05, 0.3),
-        "Glow": ((1.0, 0.15, 0.08), 0.3, 0.0), "Energy": ((0.3, 0.75, 1.0), 0.3, 0.0)}
+        "Glow": ((1.0, 0.15, 0.08), 0.3, 0.0), "Energy": ((0.3, 0.75, 1.0), 0.3, 0.0), "Marking": ((0.82, 0.78, 0.62), 0.7, 0.0)}
 
 
 def clear():
@@ -480,17 +480,385 @@ class Gun:
             p.obj("opt_" + n, mats, root)
         for n, c in self.points.items():
             empty(n, P(-c[0], c[1], c[2]), root)
+        finish()
+        _auto_marks(self)
         return root
 
 
-def export(path):
+def export(path, mask=True):
+    """Export glTF du modèle ; avec mask, texture de détail cuite à côté (<nom>_mask.png, 512 px, 1024 au-delà de 1,3 m)."""
+    bake = bake_mask(path[:-4] + "_mask.jpg", 1024 if _size() > 1.3 else 512) if mask else None
     bpy.ops.object.select_all(action='DESELECT')
     for o in bpy.data.objects:
         if not o.name.startswith("Studio"):
             o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
                               export_texcoords=True, export_normals=True, export_materials='EXPORT')
+    if bake:
+        bake()
 
 
 def tris():
     return sum(len(p.vertices) - 2 for o in bpy.data.objects if o.type == 'MESH' for p in o.data.polygons)
+
+
+# ───────────────────────── Finition : biseaux, marquages, texture de détail ─────────────────────────
+
+def _meshes():
+    return [o for o in bpy.data.objects if o.type == 'MESH' and not o.name.startswith(("Prev", "Studio"))]
+
+
+def _size():
+    from mathutils import Vector
+    pts = [o.matrix_world @ Vector(c) for o in _meshes() for c in o.bound_box]
+    if not pts:
+        return 1.0
+    return max(max(p[i] for p in pts) - min(p[i] for p in pts) for i in range(3))
+
+
+def finish():
+    """Biseaux arrondis sur toutes les arêtes vives (largeur selon la taille de l'objet) et normales pondérées : les pièces
+    accrochent la lumière comme du vrai matériel usiné, plus aucun pavé à arêtes coupantes."""
+    w = min(max(_size() * 0.0016, 0.0007), 0.03)
+    for o in _meshes():
+        b = o.modifiers.new("Bevel", 'BEVEL')
+        b.width = w
+        b.segments = 1
+        b.limit_method = 'ANGLE'
+        b.angle_limit = math.radians(32)
+        b.harden_normals = True
+        b.miter_outer = 'MITER_ARC'
+        n = o.modifiers.new("WeightedNormal", 'WEIGHTED_NORMAL')
+        n.keep_sharp = True
+
+
+def stencil(part, text, u, z, x, height, mat=MARKING, side=1, depth=0.0006, font_bold=True):
+    """Marquage au pochoir (texte en relief très fin) sur le flanc droit (side=1) ou gauche (side=-1) en x, lisible depuis
+    l'extérieur ; (u, z) = début de la ligne."""
+    cu = bpy.data.curves.new("stencil", 'FONT')
+    cu.body = text
+    cu.size = height
+    cu.extrude = depth / 2
+    cu.align_x = 'LEFT'
+    ob = bpy.data.objects.new("stencil", cu)
+    bpy.context.collection.objects.link(ob)
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    bpy.data.objects.remove(ob)
+    bpy.data.curves.remove(cu)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bpy.data.meshes.remove(me)
+    # Texte dans le plan XY de Blender : on le couche sur le flanc (plan u-z du repère de travail).
+    for v in bm.verts:
+        tx, ty, tz = v.co.x, v.co.y, v.co.z
+        uu = u + (tx if side > 0 else -tx)
+        v.co = P(x + side * tz, uu, z + ty)
+    if side < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    part.add(bm, mat)
+
+
+def bake_mask(path, size=512, samples=20):
+    """Texture de détail de l'arme (enregistrée en JPEG à côté du modèle) : R = occlusion ambiante, G = usure des arêtes
+    (arêtes saillantes), B = salissure (creux × bruit). Dépliage UV commun à toutes les pièces, exporté avec le modèle :
+    à appeler AVANT export(), la cuisson modifie ensuite les matériaux (le modèle est reconstruit à chaque make())."""
+    objs = _meshes()
+    vl = bpy.context.view_layer
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objs:
+        o.select_set(True)
+    vl.objects.active = objs[0]
+    # Opérateurs d'édition : contexte d'une vue 3D (le script peut tourner sans éditeur actif).
+    wins = bpy.context.window_manager.windows
+    win = wins[0] if len(wins) else None
+    area = next((a for a in win.screen.areas if a.type == 'VIEW_3D'), None) if win else None
+    kw = {"window": win, "area": area, "region": next(r for r in area.regions if r.type == 'WINDOW')} if area else {}
+    with bpy.context.temp_override(**kw, active_object=objs[0], selected_objects=objs, selected_editable_objects=objs):
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.006, area_weight=0.0, scale_to_bounds=True)
+        bpy.ops.object.mode_set(mode='OBJECT')
+    return lambda: _bake(objs, path, size, samples)
+
+
+def _bake(objs, path, size, samples):
+    sc = bpy.context.scene
+    img = bpy.data.images.new("Mask", size, size, alpha=False)
+    sz = _size()
+    done = set()
+    for o in objs:
+        for m in o.data.materials:
+            if m is None or m.name in done:
+                continue
+            done.add(m.name)
+            nt = m.node_tree
+            for n in list(nt.nodes):
+                nt.nodes.remove(n)
+            out = nt.nodes.new("ShaderNodeOutputMaterial")
+            em = nt.nodes.new("ShaderNodeEmission")
+            ao = nt.nodes.new("ShaderNodeAmbientOcclusion")
+            ao.samples = 16
+            ao.inputs["Distance"].default_value = max(sz * 0.06, 0.01)
+            bev = nt.nodes.new("ShaderNodeBevel")
+            bev.samples = 8
+            bev.inputs["Radius"].default_value = max(sz * 0.004, 0.0015)
+            geo = nt.nodes.new("ShaderNodeNewGeometry")
+            dot = nt.nodes.new("ShaderNodeVectorMath")
+            dot.operation = 'DOT_PRODUCT'
+            nt.links.new(bev.outputs["Normal"], dot.inputs[0])
+            nt.links.new(geo.outputs["Normal"], dot.inputs[1])
+            edge = nt.nodes.new("ShaderNodeMapRange")
+            edge.inputs["From Min"].default_value = 0.995
+            edge.inputs["From Max"].default_value = 0.9
+            nt.links.new(dot.outputs["Value"], edge.inputs["Value"])
+            tex = nt.nodes.new("ShaderNodeTexCoord")
+            noise = nt.nodes.new("ShaderNodeTexNoise")
+            noise.inputs["Scale"].default_value = 18.0 / max(sz, 0.2)
+            noise.inputs["Detail"].default_value = 6.0
+            nt.links.new(tex.outputs["Object"], noise.inputs["Vector"])
+            inv = nt.nodes.new("ShaderNodeMath")
+            inv.operation = 'SUBTRACT'
+            inv.inputs[0].default_value = 1.0
+            nt.links.new(ao.outputs["AO"], inv.inputs[1])
+            grime = nt.nodes.new("ShaderNodeMath")
+            grime.operation = 'MULTIPLY'
+            grime.use_clamp = True
+            nt.links.new(inv.outputs["Value"], grime.inputs[0])
+            nt.links.new(noise.outputs["Fac"], grime.inputs[1])
+            comb = nt.nodes.new("ShaderNodeCombineColor")
+            nt.links.new(ao.outputs["AO"], comb.inputs[0])
+            nt.links.new(edge.outputs["Result"], comb.inputs[1])
+            nt.links.new(grime.outputs["Value"], comb.inputs[2])
+            nt.links.new(comb.outputs["Color"], em.inputs["Color"])
+            nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
+            it = nt.nodes.new("ShaderNodeTexImage")
+            it.image = img
+            nt.nodes.active = it
+    prev = sc.render.engine
+    sc.render.engine = 'CYCLES'
+    sc.cycles.samples = samples
+    sc.cycles.device = 'CPU'
+    sc.render.bake.margin = 6
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.bake(type='EMIT')
+    sc.render.engine = prev
+    img.filepath_raw = path
+    img.file_format = 'JPEG'
+    try:
+        img.save(quality=88)
+    except TypeError:
+        img.save()
+    bpy.data.images.remove(img)
+    return path
+
+
+# ───────────────────────── Détails : découpes, vis, stries, marquages ─────────────────────────
+
+def _bbox(bm):
+    if not bm.verts:
+        return (0.0, 0.0, 0.0)
+    return tuple(max(v.co[k] for v in bm.verts) - min(v.co[k] for v in bm.verts) for k in range(3))
+
+
+def _boolean(bm, cutters, solver):
+    """Différence booléenne d'une copie de bm par les formes données, réunies en une seule (bmesh neuf)."""
+    me = bpy.data.meshes.new("carve")
+    bm.to_mesh(me)
+    ob = bpy.data.objects.new("carve", me)
+    bpy.context.collection.objects.link(ob)
+    joined = bmesh.new()
+    for c in cutters:
+        tmp = bpy.data.meshes.new("tmpc")
+        c.to_mesh(tmp)
+        joined.from_mesh(tmp)
+        bpy.data.meshes.remove(tmp)
+    cm = bpy.data.meshes.new("cutter")
+    joined.to_mesh(cm)
+    joined.free()
+    co = bpy.data.objects.new("cutter", cm)
+    bpy.context.collection.objects.link(co)
+    co.hide_render = True
+    mod = ob.modifiers.new("cut", 'BOOLEAN')
+    mod.operation = 'DIFFERENCE'
+    mod.solver = solver
+    mod.object = co
+    if solver == 'EXACT':
+        # Formes de découpe qui se chevauchent (une seule opération) et pièces non étanches (assemblages de primitives).
+        mod.use_self = True
+        mod.use_hole_tolerant = True
+    dg = bpy.context.evaluated_depsgraph_get()
+    res_me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+    out = bmesh.new()
+    out.from_mesh(res_me)
+    bpy.data.meshes.remove(res_me)
+    bpy.data.objects.remove(co)
+    bpy.data.meshes.remove(cm)
+    bpy.data.objects.remove(ob)
+    bpy.data.meshes.remove(me)
+    return out
+
+
+def _sound(src, res):
+    """La découpe n'a pas détruit la pièce : assez de faces et mêmes dimensions (à 20 % près)."""
+    if len(res.faces) < max(4, 0.6 * len(src.faces)):
+        return False
+    b0, b1 = _bbox(src), _bbox(res)
+    return all(b1[k] >= 0.8 * b0[k] - 1e-5 for k in range(3))
+
+
+def carve(bm, cutters, solver='EXACT'):
+    """
+    Découpe booléenne (différence) d'une pièce par une ou plusieurs formes ; renvoie la pièce découpée (bmesh). Les formes sont
+    réunies en une seule opération ; le résultat est vérifié (une découpe ratée peut vider la pièce sans erreur) : en cas
+    d'échec, les formes sont reprises une à une et celles qui abîment la pièce sont écartées.
+    """
+    cutters = list(cutters)
+    if not cutters:
+        return bm
+    res = _boolean(bm, cutters, solver)
+    if _sound(bm, res):
+        bm.free()
+        for c in cutters:
+            c.free()
+        return res
+    res.free()
+    cur = bm
+    for c in cutters:
+        r = _boolean(cur, [c], solver)
+        if _sound(cur, r):
+            cur.free()
+            cur = r
+        else:
+            r.free()
+        c.free()
+    return cur
+
+
+def slots(u0, u1, n, x, z, w=0.006, h=0.02, depth=0.02, axis='x'):
+    """Formes de découpe : n fentes oblongues réparties de u0 à u1, traversant le flanc (axis 'x') ou le dessus ('z')."""
+    out = []
+    step = (u1 - u0) / max(1, n)
+    for k in range(n):
+        uu = u0 + step * (k + 0.5)
+        if axis == 'x':
+            out.append(box(depth, w, h, (x, uu, z), min(w, h) * 0.45, 3))
+        else:
+            out.append(box(h, w, depth, (x, uu, z), min(w, h) * 0.45, 3))
+    return out
+
+
+def holes_ring(u, r, n, hole_r, length=0.03, z=0.0, x=0.0):
+    """Formes de découpe : n trous radiaux autour de l'axe u (frein de bouche, manchon ventilé)."""
+    out = []
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=10, radius1=hole_r, radius2=hole_r, depth=length)
+        bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'Y'), verts=bm.verts)
+        bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(a, 3, 'Y'), verts=bm.verts)
+        bmesh.ops.translate(bm, vec=P(x + math.cos(a) * r, u, z + math.sin(a) * r), verts=bm.verts)
+        out.append(bm)
+    return out
+
+
+def screw(part, u, z, x, r=0.0028, side=1, mat=METAL):
+    """Tête de vis cruciforme (ou rivet) sur un flanc (side ±1 : normale ±x)."""
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=12, radius1=r, radius2=r * 0.8, depth=r * 0.7)
+    bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2 * side, 3, 'Y'), verts=bm.verts)
+    bmesh.ops.translate(bm, vec=P(x + side * r * 0.3, u, z), verts=bm.verts)
+    part.add(bm, mat)
+    part.add(box(r * 0.5, r * 1.5, r * 0.3, (x + side * r * 0.62, u, z), 0, 1), POLY)
+    part.add(box(r * 0.5, r * 0.3, r * 1.5, (x + side * r * 0.62, u, z), 0, 1), POLY)
+
+
+def serrations(part, u0, u1, z0, z1, x, n, side=1, mat=POLY, depth=0.0012):
+    """Stries de prise (n nervures verticales) sur un flanc."""
+    step = (u1 - u0) / n
+    for k in range(n):
+        uu = u0 + step * (k + 0.5)
+        part.add(box(depth, step * 0.45, z1 - z0, (x + side * depth / 2, uu, (z0 + z1) / 2), 0, 1), mat)
+
+
+def marks(texts, u, z, height, sides=(1, -1), mat_index=None):
+    """
+    Marquages au pochoir posés sur la surface réelle de l'arme : un rayon tiré de chaque côté (±x Blender) trouve le flanc au
+    point (u, z) du repère de travail, le texte y est collé, lisible depuis l'extérieur. texts : lignes (la première en grand).
+    Objet « Body_marks » (matériau Marking), enfant de la racine de l'arme. À appeler après build().
+    """
+    from mathutils import Vector
+    root = next((o for o in bpy.data.objects if o.type == 'EMPTY' and o.parent is None and not o.name.startswith(("Prev", "Studio"))), None)
+    body = bpy.data.objects.get("Body")
+    if root is None or body is None:
+        return
+    dg = bpy.context.evaluated_depsgraph_get()
+    verts, faces = [], []
+    for sd in sides:
+        # Point visé en coordonnées Blender : x = ±1 m (côté), y = −u, z.
+        y, zz = -u, z
+        origin = Vector((sd * 2.0, y, zz))
+        hit, loc, nrm, _, ob, _ = bpy.context.scene.ray_cast(dg, origin, Vector((-sd, 0, 0)))
+        if not hit or abs(nrm.x) < 0.6:
+            continue
+        sx = loc.x + sd * 0.00035
+        line_h = height
+        cy = 0.0
+        for li, text in enumerate(texts):
+            h = line_h if li == 0 else line_h * 0.55
+            cu = bpy.data.curves.new("mk", 'FONT')
+            cu.body = text
+            cu.size = h
+            cu.extrude = 0.0
+            ob2 = bpy.data.objects.new("mk", cu)
+            bpy.context.collection.objects.link(ob2)
+            dg2 = bpy.context.evaluated_depsgraph_get()
+            me = bpy.data.meshes.new_from_object(ob2.evaluated_get(dg2))
+            bpy.data.objects.remove(ob2)
+            bpy.data.curves.remove(cu)
+            w = max((v.co.x for v in me.vertices), default=0.0)
+            base = len(verts)
+            for v in me.vertices:
+                gx, gy = v.co.x - w / 2, v.co.y - cy
+                # Vu depuis +x, la droite du lecteur est +y Blender (l'arrière de l'arme) ; depuis −x, c'est −y.
+                verts.append((sx, y + (gx if sd > 0 else -gx), zz + gy))
+            for f in me.polygons:
+                idx = [base + i for i in f.vertices]
+                faces.append(idx if sd > 0 else list(reversed(idx)))
+            bpy.data.meshes.remove(me)
+            cy += h * 1.25
+    if not faces:
+        return
+    me = bpy.data.meshes.new("Body_marks")
+    me.from_pydata(verts, [], faces)
+    mats = body.data.materials
+    for m in mats:
+        me.materials.append(m)
+    mi = next((i for i, m in enumerate(mats) if m and m.name.startswith("Marking")), 0)
+    for poly in me.polygons:
+        poly.material_index = mi
+    o = bpy.data.objects.new("Body_marks", me)
+    bpy.context.collection.objects.link(o)
+    o.parent = root
+    return o
+
+
+def _auto_marks(g):
+    """Marquages de l'arme : nom (LABELS[famille] du module, sinon le nom de famille) et ligne « EDF » + numéro de série, sur
+    les flancs du boîtier au-dessus de la poignée (MARK_AT[famille] = (u, z) pour un autre emplacement ; None : aucun)."""
+    lab = globals().get("LABELS", {})
+    at = globals().get("MARK_AT", {})
+    if g.name in at and at[g.name] is None:
+        return
+    text = lab.get(g.name, g.name.upper())
+    if g.name in at:
+        u, z = at[g.name]
+    else:
+        grip = g.points.get("Grip", (0, 0.0, -0.08))
+        u, z = grip[1] + 0.035, 0.0
+    h = min(max(_size() * 0.011, 0.006), 0.06)
+    serial = "EDF-" + str(sum(ord(c) * (i + 7) for i, c in enumerate(g.name)) % 9000 + 1000)
+    marks([text, serial], u, z, h)

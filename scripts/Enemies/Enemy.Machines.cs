@@ -126,8 +126,11 @@ public partial class Enemy
 
     // ---------------- Points faibles ----------------
 
+    /// <summary>Banc d'essai des armes : aucun point faible (dégâts mesurés = dégâts de l'arme).</summary>
+    public static bool NoWeakPoints;
+
     /// <summary>Forme de collision touchée = point faible ? (tête des insectes, genoux du Marcheur, noyau du Tripode, soute ouverte).</summary>
-    public bool IsWeakShape(int shape) => Def.Type switch
+    public bool IsWeakShape(int shape) => !NoWeakPoints && Def.Type switch
     {
         EnemyType.Walker => shape is 1 or 2,
         EnemyType.Tripod => shape == 1,

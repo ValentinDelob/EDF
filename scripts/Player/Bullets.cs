@@ -175,10 +175,10 @@ public partial class Bullets : Node3D
             if (e.State == EnemyState.Dead) continue;
             var d = e == direct ? 0f : e.BodyDistance(at) - e.Def.Size * 1.2f;
             if (d > radius) continue;
-            var f = Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
+            // Dégâts pleins dans tout le rayon (EDF 5).
             perEnemy ??= new Dictionary<Enemy, (float, Vector3, bool)>();
             perEnemy.TryGetValue(e, out var acc);
-            perEnemy[e] = (acc.dmg + dmg * f * mul, e.Center, acc.weak);
+            perEnemy[e] = (acc.dmg + dmg * mul, e.Center, acc.weak);
         }
     }
 

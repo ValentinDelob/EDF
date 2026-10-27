@@ -64,7 +64,9 @@ public static class Edf5Fire
                 var sniper = s.Category == "Fusil de précision";
                 // Fencer : obus des canons à main et canons lourds (traits épais), canons Galleon.
                 var shell = s.Family is "handcannon" or "gallic" or "powerdyne" or "galleon";
-                var life = range / Mathf.Max(speed, 1f);
+                // Sans « Shot Speed » dans les tables (Bound Gun) : 360 m/s (6 m par image d'EDF 5).
+                if (speed <= 0) speed = 360f;
+                var life = range / speed;
                 for (var i = 0; i < Math.Max(1, s.Pellets); i++)
                 {
                     var d = Spread(dir, spread, rng);
@@ -120,7 +122,9 @@ public static class Edf5Fire
                     // Départ : direction de la visée relevée selon le lanceur, avec la dispersion d'une salve ; missiles à kit de
                     // guidage du Fencer (Leviathan, Haytal, Phoenix) sans cible : tir droit.
                     var scatter = s.GuideOnly && lockTarget == null ? (n > 1 ? 0.18f : 0.02f) : fl.scatter;
-                    var d = (dir + Vector3.Up * (lockTarget != null ? fl.up : Mathf.Min(fl.up, 0.08f)) + RandomOnSphere(rng) * scatter).Normalized();
+                    // Sans cible : départ droit vers la visée (sauf le relèvement léger des lanceurs ordinaires).
+                    var up = lockTarget != null ? fl.up : s.GuideOnly ? 0f : Mathf.Min(fl.up, 0.08f);
+                    var d = (dir + Vector3.Up * up + RandomOnSphere(rng) * scatter).Normalized();
                     var p = Projectile.Spawn(world, ProjectileKind.Missile, from, d * fl.launch, local, dmg * (shooter?.DamageMul ?? 1f), blast);
                     p.Life = s.Family is "leviathan" or "tortoise" or "prominence" or "fgimpact" ? 20f : 12f;
                     p.MaxSpeed = fl.top;
@@ -159,7 +163,7 @@ public static class Edf5Fire
                     }
                     else d = Spread(dir, spread, rng);
                     var sp = s.Family is "stampede" or "splash" ? speed * (0.75f + 0.5f * rng.Randf()) : speed;
-                    var v = d * Mathf.Min(sp, 140f) + Vector3.Up * (s.Family is "stampede" or "splash" or "sticky" ? 5f : 2.5f);
+                    var v = d * sp + Vector3.Up * (s.Family is "stampede" or "splash" or "sticky" ? 5f : 2.5f);
                     var p = Projectile.Spawn(world, ProjectileKind.Grenade, from, v, local, dmg * (shooter?.DamageMul ?? 1f), blast);
                     p.Gravity = GrenadeGravity;
                     p.Life = s.Fuse > 0 ? s.Fuse : 10f;
@@ -228,10 +232,11 @@ public static class Edf5Fire
         float dmg, float spread, float speed, float blast)
     {
         var burst = s.Family is "splendor" or "busterbomb" or "detector";
-        var many = s.Family == "limpetshot" || s.Name == "Splendor Shot";
+        // Limpet Shot : plusieurs bombes par tir ; Splendor (Shot compris), Buster Bomb, détecteurs : « Pellets » = éclats.
+        var many = s.Family == "limpetshot";
         var bombs = many ? Math.Max(1, s.Pellets) : 1;
-        var frags = s.Name == "Splendor Shot" ? 8 : burst ? Math.Max(1, s.Pellets) : 0;
-        var sp = Mathf.Clamp(speed > 0 ? speed : 300f, 60f, 260f);
+        var frags = burst ? Math.Max(1, s.Pellets) : 0;
+        var sp = speed > 0 ? speed : 300f;
         for (var i = 0; i < bombs; i++)
         {
             var d = many ? Spread(dir, Mathf.Max(spread, Mathf.DegToRad(6f)), rng) : Spread(dir, spread, rng);
@@ -246,9 +251,18 @@ public static class Edf5Fire
                 var n = frags;
                 p.CustomImpact = (at, nrm) =>
                 {
-                    // Gerbe d'éclats dans toutes les directions (hémisphère tourné vers l'extérieur de la surface).
+                    // Gerbe d'éclats : collée à un ennemi, il reçoit la moitié des éclats ; les autres partent vers l'extérieur.
                     Effects.Explosion(world, at, 1.6f, ExplosionFx.Explosive);
-                    for (var k = 0; k < n; k++)
+                    var flying = n;
+                    if (local && p.StuckTo is Enemy host && host.State != EnemyState.Dead)
+                    {
+                        var into = n / 2;
+                        flying = n - into;
+                        Net.I.SendDamageEnemy(host.Id, dmg * into, at, false);
+                        world.LocalHitFx(host, at, true, dmg * into, false);
+                        world.LocalPlayer?.EarnCredits(dmg * into);
+                    }
+                    for (var k = 0; k < flying; k++)
                     {
                         var fd = (RandomOnSphere(rng) + nrm * 0.6f).Normalized();
                         Bullets.For(world).Add(new Bullets.Shot
@@ -329,15 +343,17 @@ public static class Edf5Fire
                 return true;
             case Edf5Kind.PlasmaShot:
             {
-                var sp = Mathf.Clamp(speed > 0 ? speed : 120f, 40f, 180f);
+                // Vitesse d'EDF 5 (« Shot Speed »).
+                var sp = speed > 0 ? speed : 120f;
                 for (var i = 0; i < pellets; i++)
                 {
                     Vector3 d;
-                    if (s.Family == "splasher") d = (dir + Vector3.Up * 0.6f + RandomOnSphere(rng) * 0.35f).Normalized();
+                    // Splasher : gerbe de boules de plasma lancée devant soi, en légère cloche.
+                    if (s.Family == "splasher") d = (dir + Vector3.Up * 0.06f + RandomOnSphere(rng) * 0.12f).Normalized();
                     else if (pellets > 1 && s.Family != "plasmafall") d = dir.Rotated(Vector3.Up, Mathf.Lerp(-1f, 1f, i / (float)(pellets - 1)) * Mathf.DegToRad(5f));
                     else d = Spread(dir, spread, rng);
                     var up = s.Family == "plasmafall" ? Vector3.Up * (i * 0.08f) : Vector3.Zero;
-                    var p = Projectile.Spawn(world, ProjectileKind.Plasma, from, (d + up).Normalized() * sp * (s.Family == "splasher" ? 0.45f : 1f), local, dmg * mul, Mathf.Max(blast, 2f));
+                    var p = Projectile.Spawn(world, ProjectileKind.Plasma, from, (d + up).Normalized() * sp, local, dmg * mul, Mathf.Max(blast, 2f));
                     p.Gravity = s.Family == "plasmafall" ? 28f : s.Family is "bigcannon" or "heavycannon" ? 14f : 9f;
                     p.Life = Mathf.Clamp(range / sp, 2f, 14f);
                 }

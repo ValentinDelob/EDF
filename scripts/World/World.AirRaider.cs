@@ -75,7 +75,7 @@ public partial class World
             if (e.State == EnemyState.Dead) continue;
             var d = e.BodyDistance(pos) - e.Def.Size * 1.2f;
             if (d > radius) continue;
-            total += dmg * Mathf.Clamp(1f - Mathf.Max(d, 0) / radius * 0.6f, 0.4f, 1f);
+            total += dmg;
         }
         return total;
     }

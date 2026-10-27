@@ -247,7 +247,7 @@ public partial class Player
             _thrustIdx = idx;
             ws.Cooldown = (idx == 0 ? 0.6f : 0.8f) / Mathf.Max(ws.W.Swing, 0.3f);
         }
-        else ws.Cooldown = 1f / Mathf.Max(ws.W.FireRate, 0.05f);
+        else ws.NextShot();
         _lastThrust = now;
         FireFencer(ws, idx);
         if (ws.Ammo <= 0) Reload();
@@ -258,6 +258,7 @@ public partial class Player
     {
         var s = ws.W.T.Spec;
         ws.Ammo--;
+        ShotsFired++;
         _lastFireTime = Time.GetTicksMsec() / 1000f;
         var from = GlobalPosition + Vector3.Up * 1.3f;
         var reach = s.Kind == Edf5Kind.Pierce && s.Family != "spinedriver" ? FencerFire.PierceReach(ws.W.Range) : Mathf.Max(ws.W.Range, 30f);

@@ -11,6 +11,9 @@ namespace Rempart;
 /// </summary>
 public partial class Ally : Node3D
 {
+    /// <summary>Tests (bancs d'essai des armes) : les escouades ne tirent pas (dégâts mesurés = ceux du joueur seul).</summary>
+    public static bool HoldFire;
+
     public int Id;
     public float Health = 120;
     public float MaxHealth = 120;
@@ -104,7 +107,7 @@ public partial class Ally : Node3D
             var aim = _target.Center - (pos + Vector3.Up * 1.5f);
             _yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(aim.X, aim.Z), Mathf.Clamp(dt * 8f, 0, 1));
             _pitch = Mathf.Atan2(aim.Y, new Vector2(aim.X, aim.Z).Length());
-            if (_fireCd <= 0)
+            if (_fireCd <= 0 && !HoldFire)
             {
                 _fireCd = (float)GD.RandRange(0.35, 0.6);
                 var hit = _target.Center + new Vector3((float)GD.RandRange(-0.8, 0.8), (float)GD.RandRange(-0.5, 0.8), (float)GD.RandRange(-0.8, 0.8));

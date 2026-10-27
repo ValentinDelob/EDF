@@ -16,7 +16,7 @@ public partial class Player
     private readonly List<Projectile> _bombs = new();
     /// <summary>Ennemis verrouillés par le lance-missiles tenu (dans l'ordre du verrouillage).</summary>
     public readonly List<Enemy> Locks = new();
-    private float _lockT, _streamT;
+    private float _lockT, _streamT, _streamAmmo;
     /// <summary>Cible en cours de verrouillage (réticule du HUD) et progression 0..1.</summary>
     public Enemy LockPending { get; private set; }
     public float LockProgress { get; private set; }
@@ -29,6 +29,7 @@ public partial class Player
     private bool _chargeHeld;
     /// <summary>Rafale d'une arme à charge en cours de décharge (Phalanx, Lightning Bow, Pulse, Closed Laser, MONSTER…).</summary>
     private bool _discharging;
+    private WeaponState _dischargeWs;
     private float _shotPower = 1f;
 
     /// <summary>
@@ -70,14 +71,18 @@ public partial class Player
     /// </summary>
     private void HandleChargeBurst(WeaponState ws, float dt, bool held)
     {
+        // Changement d'arme pendant une décharge : elle s'arrête (l'arme suivante ne se vide pas toute seule).
+        if (_discharging && _dischargeWs != ws) { _discharging = false; _chargeHeld = false; }
         if (_discharging)
         {
             if (ws.Ammo <= 0) { _discharging = false; return; }
             if (ws.Cooldown > 0) return;
-            // Cadence supérieure à l'image (60 coups/s) : plusieurs coups dans la même image.
-            var n = Mathf.Clamp(Mathf.RoundToInt(dt * ws.W.FireRate), 1, 4);
-            for (var i = 0; i < n && ws.Ammo > 0; i++) ShootOnce(ws);
-            ws.Cooldown = n / Mathf.Max(ws.W.FireRate, 0.05f);
+            // Cadence supérieure à l'image (60 coups/s) : tous les coups dus partent dans la même image.
+            for (var i = 0; i < 16 && ws.Ammo > 0 && ws.Cooldown <= 0; i++)
+            {
+                ws.NextShot(true);
+                ShootOnce(ws);
+            }
             _lastFireTime = Time.GetTicksMsec() / 1000f;
             return;
         }
@@ -96,12 +101,17 @@ public partial class Player
         _chargeHeld = held;
         // Bot : chargeur déjà plein (au départ, après un changement d'arme) : il tire aussitôt.
         if (!release && Bot && _botFire && ws.Ammo >= ws.W.Magazine) release = true;
-        if (release && ws.Ammo > 0) { _discharging = true; ws.Charge = 0; }
+        if (release && ws.Ammo > 0) { _discharging = true; _dischargeWs = ws; ws.Charge = 0; ws.Cooldown = 0; }
     }
+
+    /// <summary>Tir automatique tenu à l'image précédente (le retard de cadence est alors rattrapé).</summary>
+    private bool _autoHeld;
 
     private void HandleFireEdf5(WeaponState ws, float dt, bool held, bool pressed)
     {
         var s = ws.W.T.Spec;
+        var sustained = _autoHeld && held && ws.W.T.Automatic;
+        _autoHeld = held;
         UpdateLocks(ws, dt);
         // Fencer : frappes, lances, boucliers, mise en rotation des canons automatiques.
         if (Def.Id == SoldierClass.Heavy && HandleFencer(ws, s, dt, held, pressed)) return;
@@ -119,6 +129,8 @@ public partial class Player
             _burstT -= dt;
             // Longues rafales (Disruptor : 1200 coups à 60/s) : à la cadence de l'arme, plusieurs coups par image s'il le faut.
             var gap = s.Burst >= 10 ? 1f / Mathf.Max(ws.W.FireRate, 1f) : s.Kind is Edf5Kind.Rocket ? 0.12f : s.Kind is Edf5Kind.PlasmaShot ? 0.15f : 0.06f;
+            // La rafale tient dans l'intervalle entre deux rafales (armes rapides à rafales : canons rotatifs FGS…).
+            if (s.Burst < 10) gap = Mathf.Min(gap, 1f / Mathf.Max(ws.W.FireRate * s.Burst, 1f));
             for (var n = 0; n < 4 && _burstT <= 0 && ws.Ammo > 0 && _burstLeft > 0; n++)
             {
                 _burstT += gap;
@@ -172,7 +184,7 @@ public partial class Player
             if (pressed) Sfx.Ui("empty");
             return;
         }
-        ws.Cooldown = 1f / Mathf.Max(ws.W.FireRate, 0.05f);
+        ws.NextShot(sustained);
         _lastFireTime = Time.GetTicksMsec() / 1000f;
         if (s.Kind == Edf5Kind.Missile)
         {
@@ -190,14 +202,24 @@ public partial class Player
         }
 
         ShootOnce(ws);
+        // Cadence supérieure à celle des images (Mag Blaster, Rapier : 60 coups/s) : les coups dus partent dans la même image.
+        for (var n = 0; n < 16 && ws.W.T.Automatic && ws.Cooldown <= 0 && ws.Ammo > 0; n++)
+        {
+            ws.NextShot(true);
+            ShootOnce(ws);
+        }
         if (ws.Ammo <= 0 && s.Kind is not (Edf5Kind.Bomb or Edf5Kind.Limpet)) Reload();
     }
 
     /// <summary>Un coup : munition, départ local, réplique réseau, son, flamme de bouche, recul.</summary>
+    /// <summary>Coups tirés par le soldat local (banc d'essai des armes).</summary>
+    public static int ShotsFired;
+
     private void ShootOnce(WeaponState ws, Node3D target = null)
     {
         var s = ws.W.T.Spec;
         ws.Ammo--;
+        ShotsFired++;
         var range = ws.W.Range;
         var aim = AimPoint(Mathf.Max(range, 60f), out _);
         var muzzle = MuzzlePos;
@@ -237,6 +259,10 @@ public partial class Player
                 "Grenades" => 0.7f, _ => s.Kind == Edf5Kind.Bullet ? 0.22f : 0.4f,
             },
         };
+        // Armes à énergie de la Wing Diver (rayons, lasers, arcs) : pas de recul ; armes très rapides : recul par coup réduit
+        // (la visée ne monte pas plus vite qu'à 8 coups/s).
+        if (s.Kind is Edf5Kind.Beam or Edf5Kind.Laser or Edf5Kind.Arc or Edf5Kind.Spark) kick = 0f;
+        else if (ws.W.FireRate > 8f && ws.W.T.Automatic) kick *= 8f / ws.W.FireRate;
         if (Def.Id == SoldierClass.Heavy) kick *= 1f - FGear.RecoilCut;
         _recoil = Mathf.Min(1.5f, _recoil + kick);
         _pitch += Mathf.DegToRad(kick * 1.1f) * (AnchorTime > 0 ? 0.2f : 1f);
@@ -248,11 +274,16 @@ public partial class Player
         var s = ws.W.T.Spec;
         _beamActive = true;
         _lastFireTime = Time.GetTicksMsec() / 1000f;
-        var use = Mathf.Max(1, Mathf.RoundToInt(dt * 60f));
+        // Munitions au rythme du jet : 60/s, ou la cadence de l'arme (Flame Revolver : 20/s).
+        var rate = s.Rof.Present ? ws.W.FireRate : 60f;
+        _streamAmmo += dt * rate;
+        var use = (int)_streamAmmo;
+        _streamAmmo -= use;
         ws.Ammo = Mathf.Max(0, ws.Ammo - use);
         var muzzle = MuzzlePos;
         var dir = (AimPoint(60f, out _) - muzzle).Normalized();
-        if (s.Kind == Edf5Kind.Flame) FlameJet.For(World).Emit(s, ws.W.Damage * DamageMul, muzzle, dir, dt, true);
+        if (s.Kind == Edf5Kind.Flame)
+            FlameJet.For(World).Emit(s, ws.W.Damage * DamageMul, muzzle, dir, dt, true, rate, s.Rof.Present ? ws.W.ShotSpeed : 0f, ws.W.Range);
         else HealBeam(ws, muzzle, dir, dt);
         _streamT -= dt;
         if (_streamT <= 0)

@@ -68,20 +68,22 @@ public partial class SoldierModel
     private static int ApplyGunMats(Node3D model, Edf5Spec s)
     {
         var (paint, accent) = GunColors(s);
-        return ApplyMats(model, paint, accent, s);
+        return ApplyMats(model, paint, accent, s, Mats.GunMask($"res://assets/models/weapons/{ModelName(s)}.glb"));
     }
 
     /// <summary>Matières du jeu d'un modèle Blender (armes, objets de l'Air Raider) ; options de variante si <paramref name="s"/>.</summary>
-    public static int ApplyMats(Node3D model, Color paint, Color accent, Edf5Spec s = null)
+    /// <remarks><paramref name="mask"/> : texture de détail cuite du modèle (usure, creux) ; sans elle, matières unies.</remarks>
+    public static int ApplyMats(Node3D model, Color paint, Color accent, Edf5Spec s = null, Texture2D mask = null)
     {
         var mats = new Dictionary<string, Material>
         {
-            ["Metal"] = Mats.GunSteel(),
-            ["Polymer"] = Mats.GunPolymer(new Color(0.045f, 0.045f, 0.043f)),
-            ["Paint"] = Mats.GunPaint(paint),
-            ["Accent"] = Mats.GunPaint(accent),
-            ["Alloy"] = Mats.Metal(new Color(0.42f, 0.43f, 0.45f), 0.35f),
-            ["Rubber"] = Mats.GunPolymer(new Color(0.02f, 0.02f, 0.02f)),
+            ["Metal"] = Mats.GunSurface(Mats.GunKind.Metal, new Color(0.075f, 0.076f, 0.082f), mask),
+            ["Polymer"] = Mats.GunSurface(Mats.GunKind.Polymer, new Color(0.05f, 0.05f, 0.048f), mask),
+            ["Paint"] = Mats.GunSurface(Mats.GunKind.Paint, paint, mask),
+            ["Accent"] = Mats.GunSurface(Mats.GunKind.Paint, accent, mask),
+            ["Alloy"] = Mats.GunSurface(Mats.GunKind.Alloy, new Color(0.42f, 0.43f, 0.45f), mask),
+            ["Rubber"] = Mats.GunSurface(Mats.GunKind.Rubber, new Color(0.025f, 0.025f, 0.025f), mask),
+            ["Marking"] = Mats.GunSurface(Mats.GunKind.Marking, paint.Luminance > 0.45f ? new Color(0.12f, 0.12f, 0.12f) : new Color(0.85f, 0.8f, 0.62f), mask),
             ["Glass"] = Mats.GunLens(),
             ["Lens"] = Mats.GunLens(),
             ["Glow"] = Mats.Glow(new Color(1f, 0.15f, 0.08f), 3f),
@@ -187,8 +189,38 @@ public partial class SoldierModel
         _ => Hold.Shoulder,
     };
 
-    /// <summary>Couleurs de la famille (peinture, accent), comme les rendus de contrôle de tools/blender/weapons.</summary>
-    private static (Color paint, Color accent) GunColors(Edf5Spec s) => s.Family switch
+    private static Dictionary<string, (Color, Color)> _palettes;
+
+    /// <summary>
+    /// Palettes des modèles (assets/models/weapons/palettes/&lt;module&gt;.json, écrites par l'export Blender) : la couleur du
+    /// jeu est toujours celle du modèle. Clé : nom du modèle (famille, ou objet partagé de l'Air Raider).
+    /// </summary>
+    private static Dictionary<string, (Color, Color)> Palettes()
+    {
+        if (_palettes != null) return _palettes;
+        _palettes = new Dictionary<string, (Color, Color)>();
+        const string dir = "res://assets/models/weapons/palettes";
+        if (!DirAccess.DirExistsAbsolute(dir)) return _palettes;
+        foreach (var f in DirAccess.GetFilesAt(dir))
+        {
+            if (!f.EndsWith(".json")) continue;
+            var json = Json.ParseString(FileAccess.GetFileAsString($"{dir}/{f}"));
+            if (json.VariantType != Variant.Type.Dictionary) continue;
+            foreach (var (k, v) in json.AsGodotDictionary())
+            {
+                var a = v.AsGodotArray();
+                Color C(Variant c) { var x = c.AsGodotArray(); return new Color((float)x[0], (float)x[1], (float)x[2]); }
+                _palettes[k.AsString()] = (C(a[0]), C(a[1]));
+            }
+        }
+        return _palettes;
+    }
+
+    /// <summary>Couleurs de la famille (peinture, accent) : palette du modèle exporté, sinon valeurs ci-dessous.</summary>
+    private static (Color paint, Color accent) GunColors(Edf5Spec s) =>
+        Palettes().TryGetValue(ModelName(s), out var pc) ? pc : GunColorsFallback(s);
+
+    private static (Color paint, Color accent) GunColorsFallback(Edf5Spec s) => s.Family switch
     {
         "pa11" => (new Color(0.05f, 0.05f, 0.048f), new Color(0.3f, 0.27f, 0.2f)),
         "raven" => (new Color(0.2f, 0.17f, 0.12f), new Color(0.05f, 0.05f, 0.05f)),

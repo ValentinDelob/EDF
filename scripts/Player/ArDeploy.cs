@@ -86,7 +86,7 @@ public static class AirRaidModels
         }
         if (scene == null) return null;
         var model = scene.Instantiate<Node3D>();
-        SoldierModel.ApplyMats(model, paint, accent);
+        SoldierModel.ApplyMats(model, paint, accent, null, Mats.GunMask($"res://assets/models/airraid/{name}.glb"));
         return model;
     }
 

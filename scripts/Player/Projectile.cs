@@ -51,6 +51,9 @@ public partial class Projectile : Node3D
     /// <summary>Dégâts d'un tir ennemi renvoyé (multiple des dégâts infligés aux soldats : échelle des ennemis).</summary>
     public const float ReflectDamageMul = 8f;
     private Node3D _stuckTo;
+
+    /// <summary>Ce à quoi la grenade collante est collée (null sinon).</summary>
+    public Node3D StuckTo => _stuckTo;
     private Vector3 _stuckOffset;
 
     /// <summary>Le projectile traverse ce corps (le véhicule qui l'a tiré).</summary>
@@ -237,7 +240,11 @@ public partial class Projectile : Node3D
             var want = (goal - GlobalPosition).Normalized();
             var cur = Velocity / Mathf.Max(sp, 0.001f);
             var ang = cur.AngleTo(want);
-            var step = Mathf.Min(1f, TurnRate * dt / Mathf.Max(ang, 0.0001f));
+            // Guidage terminal vers une cible verrouillée : près du but, le virage suffit toujours à l'atteindre (rayon de virage
+            // inférieur à la distance restante) ; un missile d'EDF 5 ne tourne pas en rond autour d'une cible immobile.
+            var turn = TurnRate;
+            if (_homingTarget != null && ClimbTo <= 0) turn = Mathf.Max(turn, sp / Mathf.Max(goal.DistanceTo(GlobalPosition), 1f) * 1.6f);
+            var step = Mathf.Min(1f, turn * dt / Mathf.Max(ang, 0.0001f));
             Velocity = cur.Slerp(want, step).Normalized() * sp;
         }
         Velocity += Vector3.Down * Gravity * dt;
