@@ -35,6 +35,8 @@ rechargement (`RELOAD`), la distance réelle bouche du canon → surface visée 
 | DPS soutenu | dégâts mesurés × chargeur / (chargeur / cadence + rechargement), avec les mesures ci-dessus | même formule avec les valeurs d'EDF 5 | −25 % / +15 % |
 | Fin du scénario | le banc d'essai termine l'arme | — | doit terminer |
 
+Bombes à éclats (Splendor, Buster Bomb, détecteurs) : « n.m. » — dans EDF 5 leurs éclats partent vers l'extérieur et
+épargnent l'ennemi sur lequel la bombe est collée ; le scénario (bombe tirée sur la cible) ne mesure pas leurs dégâts.
 Natures sans dégâts directs (postes de soutien, kits et balises de guidage, abris, leurres, Speed Star, boucliers) : « n.m. »
 (non mesuré par ce scénario) ; vérifications dédiées ci-dessous. Grenades à retardement : elles rebondissent sur la cible ;
 dégâts constatés, « n.m. » si elles explosent hors de portée. Lance-missiles à kit de guidage (Haytal, Leviathan, Phoenix) sans
@@ -67,3 +69,14 @@ uv run python tools/weapon_audit.py build/audit_0.log build/audit_1.log build/au
 
 `--weapon-audit=<id,id,…>`, `=<famille>`, `=<type>` ou `=<nature>` restreint le plan ; `--aim` fait tirer le bot en visée.
 Résultats : [AUDIT_ARMES.md](AUDIT_ARMES.md).
+
+## Valeurs de référence
+
+Les valeurs attendues viennent des tables d'armes d'EDF 5 (`scripts/Data/Edf5/Edf5Weapons.*.cs`, générées depuis l'atwiki
+EDF 5). Recoupement avec le wiki anglais d'EDF 5 (Weapons EDF5, Automatic Artillery, Limpet Guns) :
+
+| Arme | Wiki EDF 5 | Tables du jeu |
+|---|---|---|
+| MLRA | 16 missiles, 12 coups/s, 34 dégâts, rechargement 1 s, souffle 2 m, verrouillage 329 m / 16 cibles en 0,068 s | identiques |
+| FG7 Hand Gatling | 320 coups, 20 coups/s, 17 → 8,5 dégâts, rechargement 8 s, portée 208 m, 240 m/s, mise en rotation 1 s | identiques |
+| Splendor Shot | 13,6 × 15 × 8 (15 bombes de 8 éclats), éclats en demi-sphère vers l'extérieur | identiques (corrigé en v0.16.2) |

@@ -238,10 +238,11 @@ public static class Edf5Fire
         float dmg, float spread, float speed, float blast)
     {
         var burst = s.Family is "splendor" or "busterbomb" or "detector";
-        // Limpet Shot : plusieurs bombes par tir ; Splendor (Shot compris), Buster Bomb, détecteurs : « Pellets » = éclats.
-        var many = s.Family == "limpetshot";
+        // Limpet Shot et Splendor Shot (EDF 5 : 13,6 × 15 × 8) : plusieurs bombes par tir ; Splendor Shot : 8 éclats par bombe ;
+        // autres Splendor, Buster Bomb, détecteurs : « Pellets » = éclats.
+        var many = s.Family == "limpetshot" || s.Name == "Splendor Shot";
         var bombs = many ? Math.Max(1, s.Pellets) : 1;
-        var frags = burst ? Math.Max(1, s.Pellets) : 0;
+        var frags = s.Name == "Splendor Shot" ? 8 : burst ? Math.Max(1, s.Pellets) : 0;
         var sp = speed > 0 ? speed : 300f;
         for (var i = 0; i < bombs; i++)
         {
@@ -257,18 +258,11 @@ public static class Edf5Fire
                 var n = frags;
                 p.CustomImpact = (at, nrm) =>
                 {
-                    // Gerbe d'éclats : collée à un ennemi, il reçoit la moitié des éclats ; les autres partent vers l'extérieur.
+                    // Gerbe d'éclats en demi-sphère dans la direction du dessus de la bombe (EDF 5) : collée sur un ennemi,
+                    // elle l'épargne presque ; posée sous des ennemis ou dans un espace fermé, elle fait le plus de dégâts.
                     Effects.Explosion(world, at, 1.6f, ExplosionFx.Explosive);
-                    var flying = n;
-                    if (local && p.StuckTo is Enemy host && host.State != EnemyState.Dead)
-                    {
-                        var into = n / 2;
-                        flying = n - into;
-                        Net.I.SendDamageEnemy(host.Id, dmg * into, at, false);
-                        world.LocalHitFx(host, at, true, dmg * into, false);
-                        world.LocalPlayer?.EarnCredits(dmg * into);
-                    }
-                    for (var k = 0; k < flying; k++)
+                    if (p.StuckTo != null) nrm = p.StuckNormal;
+                    for (var k = 0; k < n; k++)
                     {
                         var fd = (RandomOnSphere(rng) + nrm * 0.6f).Normalized();
                         Bullets.For(world).Add(new Bullets.Shot

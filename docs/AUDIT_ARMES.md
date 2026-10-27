@@ -645,30 +645,6 @@ Généré par `tools/weapon_audit.py` à partir de `--weapon-audit` (plan : [PLA
 | spritefalldestroy | Satellite | 1 | PASS (dégâts infligés) | — | — | — | — |
 | spritefallshootingmode3 | Satellite | 2 | PASS (dégâts infligés) | — | — | — | — |
 | bulgelaserbeammodez | Satellite | 1 | PASS (dégâts infligés) | — | PASS (30.80 / 30.80 s) | — | — |
-| limpetgun | Limpet | 8 | PASS (34.0 / 34.0, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
-| limpetsniper | Limpet | 3 | PASS (226.5 / 226.5, +0 %) | PASS (1.22 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetgund | Limpet | 8 | PASS (68.0 / 67.9, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
-| limpetsnipera2 | Limpet | 3 | PASS (362.5 / 362.4, +0 %) | PASS (1.22 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetgunm2 | Limpet | 8 | PASS (102.0 / 101.9, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
-| limpetsniperd | Limpet | 3 | PASS (611.5 / 611.5, +0 %) | PASS (1.22 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetsplendor | Limpet | 15 | PASS (74.2 / 100.0, -26 %) | PASS (5.60 / 5.50 par s) | PASS (1.80 / 1.80 s) | — | — |
-| limpetgunm3 | Limpet | 9 | PASS (187.0 / 186.9, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
-| splendorshot | Limpet | 3 | PASS (163.0 / 204.0, -20 %) | PASS (1.22 / 1.20 par s) | PASS (3.70 / 3.70 s) | — | — |
-| limpetchaingun | Limpet | 36 | PASS (51.0 / 51.0, +0 %) | PASS (20.59 / 20.00 par s) | PASS (1.50 / 1.50 s) | — | — |
-| limpetsnipera3 | Limpet | 5 | PASS (792.5 / 792.7, -0 %) | PASS (1.21 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetdetector | Limpet | 5 | PASS (665.6 / 1018.5, -35 %) | PASS (1.73 / 1.70 par s) | PASS (5.88 / 5.90 s) | — | — |
-| limpetshot | Limpet | 6 | PASS (1323.0 / 1324.8, -0 %) | PASS (2.34 / 2.30 par s) | PASS (2.90 / 2.90 s) | — | — |
-| busterbomb | Limpet | 3 | PASS (1443.8 / 1904.0, -24 %) | PASS (2.40 / 2.30 par s) | PASS (2.20 / 2.20 s) | — | — |
-| limpetsplendorme | Limpet | 18 | PASS (317.3 / 408.0, -22 %) | PASS (8.79 / 8.60 par s) | PASS (1.50 / 1.50 s) | — | — |
-| limpetsniperf3 | Limpet | 5 | PASS (1585.5 / 1585.4, +0 %) | PASS (1.73 / 1.70 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetdetectorme | Limpet | 5 | PASS (1711.9 / 3057.0, -44 %) | PASS (1.21 / 1.20 par s) | PASS (5.08 / 5.10 s) | — | — |
-| limpetgunma | Limpet | 8 | PASS (509.5 / 509.6, -0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
-| limpetsniperme | Limpet | 3 | PASS (3397.5 / 3397.4, +0 %) | PASS (1.76 / 1.70 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetgunmt | Limpet | 12 | PASS (849.4 / 849.3, +0 %) | PASS (6.88 / 6.70 par s) | PASS (1.80 / 1.80 s) | — | — |
-| limpetsplendorzd | Limpet | 23 | PASS (628.9 / 814.8, -23 %) | PASS (10.23 / 10.00 par s) | PASS (1.20 / 1.20 s) | — | — |
-| limpetsniperzd | Limpet | 3 | PASS (5096.0 / 5096.0, +0 %) | PASS (1.76 / 1.70 par s) | PASS (2.90 / 2.90 s) | — | — |
-| limpetchaingunzd | Limpet | 36 | PASS (424.8 / 424.7, +0 %) | PASS (20.59 / 20.00 par s) | PASS (1.10 / 1.10 s) | — | — |
-| limpetsplendorzam | Limpet | 23 | PASS (775.9 / 1087.2, -29 %) | PASS (10.23 / 10.00 par s) | PASS (1.20 / 1.20 s) | — | — |
 | robotbomb | Robot | 6 | PASS (dégâts infligés) | — | PASS (2.70 / 2.70 s) | — | — |
 | assaultbeetle | Robot | 7 | PASS (dégâts infligés) | — | PASS (3.70 / 3.70 s) | — | — |
 | typebrobotbomb | Robot | 7 | PASS (dégâts infligés) | — | PASS (2.70 / 2.70 s) | — | — |
@@ -750,6 +726,30 @@ Généré par `tools/weapon_audit.py` à partir de `--weapon-audit` (plan : [PLA
 | suppressgunmh | Bullet | 1 | PASS (12839.2 / 12839.0, +0 %) | — | PASS (3.00 / 3.00 s) | — | — |
 | suppressgunmh2 | Bullet | 2 | PASS (12819.6 / 12819.1, +0 %) | — | PASS (3.00 / 3.00 s) | — | PASS (6626 / 6626) |
 | absolutedzbunker | Bunker | 5 | n.m. | — | PASS (44.10 / 44.10 s) | — | — |
+| limpetgun | Limpet | 8 | PASS (34.0 / 34.0, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
+| limpetsniper | Limpet | 3 | PASS (226.5 / 226.5, +0 %) | PASS (1.22 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetgund | Limpet | 8 | PASS (68.0 / 67.9, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
+| limpetsnipera2 | Limpet | 3 | PASS (362.5 / 362.4, +0 %) | PASS (1.22 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetgunm2 | Limpet | 8 | PASS (102.0 / 101.9, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
+| limpetsniperd | Limpet | 3 | PASS (611.5 / 611.5, +0 %) | PASS (1.22 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetsplendor | Limpet | 15 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (5.60 / 5.50 par s) | PASS (1.80 / 1.80 s) | — | — |
+| limpetgunm3 | Limpet | 9 | PASS (187.0 / 186.9, +0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
+| splendorshot | Limpet | 3 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (1.22 / 1.20 par s) | PASS (3.70 / 3.70 s) | — | — |
+| limpetchaingun | Limpet | 36 | PASS (51.0 / 51.0, +0 %) | PASS (20.59 / 20.00 par s) | PASS (1.50 / 1.50 s) | — | — |
+| limpetsnipera3 | Limpet | 5 | PASS (792.5 / 792.7, -0 %) | PASS (1.21 / 1.20 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetdetector | Limpet | 5 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (1.73 / 1.70 par s) | PASS (5.88 / 5.90 s) | — | — |
+| limpetshot | Limpet | 6 | PASS (1200.5 / 1324.8, -9 %) | PASS (2.34 / 2.30 par s) | PASS (2.90 / 2.90 s) | — | — |
+| busterbomb | Limpet | 3 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (2.40 / 2.30 par s) | PASS (2.20 / 2.20 s) | — | — |
+| limpetsplendorme | Limpet | 18 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (8.72 / 8.60 par s) | PASS (1.50 / 1.50 s) | — | — |
+| limpetsniperf3 | Limpet | 5 | PASS (1585.5 / 1585.4, +0 %) | PASS (1.73 / 1.70 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetdetectorme | Limpet | 5 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (1.21 / 1.20 par s) | PASS (5.08 / 5.10 s) | — | — |
+| limpetgunma | Limpet | 8 | PASS (509.5 / 509.6, -0 %) | PASS (3.56 / 3.50 par s) | PASS (1.50 / 1.50 s) | — | — |
+| limpetsniperme | Limpet | 3 | PASS (3397.5 / 3397.4, +0 %) | PASS (1.76 / 1.70 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetgunmt | Limpet | 12 | PASS (849.5 / 849.3, +0 %) | PASS (6.88 / 6.70 par s) | PASS (1.80 / 1.80 s) | — | — |
+| limpetsplendorzd | Limpet | 23 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (10.23 / 10.00 par s) | PASS (1.20 / 1.20 s) | — | — |
+| limpetsniperzd | Limpet | 3 | PASS (5096.0 / 5096.0, +0 %) | PASS (1.76 / 1.70 par s) | PASS (2.90 / 2.90 s) | — | — |
+| limpetchaingunzd | Limpet | 36 | PASS (424.5 / 424.7, -0 %) | PASS (20.59 / 20.00 par s) | PASS (1.10 / 1.10 s) | — | — |
+| limpetsplendorzam | Limpet | 23 | n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5) | PASS (10.23 / 10.00 par s) | PASS (1.20 / 1.20 s) | — | — |
 
 ## Heavy (175/175)
 

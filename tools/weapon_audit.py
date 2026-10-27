@@ -86,6 +86,9 @@ for w in weapons.values():
     r["dmg_attendu"] = round(exp, 1)
     if kind in NOMEASURE or fam == "speedstar":
         checks["dégâts"] = "n.m."
+    elif kind == "Limpet" and fam in ("splendor", "busterbomb", "detector"):
+        # EDF 5 : éclats projetés en demi-sphère vers l'extérieur ; collée à la cible, la bombe l'épargne presque.
+        checks["dégâts"] = "n.m. (éclats dirigés vers l'extérieur : une bombe collée à l'ennemi l'épargne, comme dans EDF 5)"
     elif len(w["shots"]) == 0:
         checks["dégâts"] = "ÉCHEC (aucun tir)"
     elif total <= 0 and float(m.get("fuse", 0) or 0) > 0 and kind in ("HandGrenade", "GrenadeLauncher") and m.get("family") != "sticky":

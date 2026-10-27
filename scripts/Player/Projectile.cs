@@ -54,6 +54,8 @@ public partial class Projectile : Node3D
 
     /// <summary>Ce à quoi la grenade collante est collée (null sinon).</summary>
     public Node3D StuckTo => _stuckTo;
+    /// <summary>Normale de la surface où la grenade s'est collée (dessus de la bombe).</summary>
+    public Vector3 StuckNormal { get; private set; } = Vector3.Up;
     private Vector3 _stuckOffset;
 
     /// <summary>Le projectile traverse ce corps (le véhicule qui l'a tiré).</summary>
@@ -280,6 +282,7 @@ public partial class Projectile : Node3D
             if (Sticky && hc is Node3D n3)
             {
                 _stuckTo = n3;
+                StuckNormal = hn;
                 _stuckOffset = n3.GlobalTransform.AffineInverse() * hp;
                 GlobalPosition = hp;
                 return;

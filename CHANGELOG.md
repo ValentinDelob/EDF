@@ -1,5 +1,10 @@
 # Journal des versions
 
+## v0.16.2 — Bombes Splendor fidèles à EDF 5
+
+- **Splendor** (Limpet Splendor, Splendor Shot, Buster Bomb, détecteurs) : retour au comportement d'EDF 5, vérifié sur le wiki du jeu — les éclats partent en demi-sphère dans la direction du dessus de la bombe (normale de la surface où elle s'est collée) ; collée sur un ennemi, elle l'épargne presque, posée sous des ennemis elle fait le plus de dégâts. Splendor Shot : 15 bombes de 8 éclats (13,6 × 15 × 8). Annule l'essai de la v0.16.0 (éclats donnés à l'ennemi porteur, une seule bombe).
+- Valeurs de référence du banc d'essai recoupées avec le wiki d'EDF 5 (MLRA, FG7 Hand Gatling, Splendor Shot).
+
 ## v0.16.1 — Lance-roquettes sur l'épaule et corrections du banc d'essai
 
 - **Lance-roquettes et lance-missiles portés sur l'épaule**, comme dans les jeux de guerre modernes : le tube repose sur le dessus de l'épaule droite, la tête à sa gauche, main droite sur la poignée de tir, main gauche sur la poignée avant ; au repos, il reste sur l'épaule, bouche relevée. Ils ne rentrent plus dans l'épaule.
