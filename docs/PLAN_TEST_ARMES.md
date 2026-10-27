@@ -89,3 +89,11 @@ EDF 5). Recoupement avec le wiki anglais d'EDF 5 (Weapons EDF5, Automatic Artill
 | ZE-GUN | 2 tourelles, 11,3 dégâts, rechargement 29,4 s | identiques |
 
 Dix armes des quatre classes recoupées, toutes identiques (étoiles comprises) ; seule la mécanique du Splendor Shot différait, corrigée en v0.16.2.
+
+### Vérification complète des tables
+
+`uv run python tools/edf5/check_tables.py` compare toutes les armes du jeu (`Edf5Weapons.*.cs`) à la table de référence
+d'EDF 5 (`tools/edf5/weapons.json`, wiki « Weapons EDF5 », relevé du site officiel weapon.edf.jpn.com/5_eng, aujourd'hui
+fermé), par nom et niveau : munitions, cadence, dégâts, rechargement / charge, portée, vitesse, souffle.
+Résultat : **3884 valeurs comparées, 0 écart**. Absents du jeu : les 38 équipements de soutien du Fusilier (protections,
+détecteurs, dispositifs de verrouillage multiple — ce ne sont pas des armes) et les véhicules de l'Air Raider (à venir).
