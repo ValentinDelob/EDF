@@ -7,6 +7,10 @@ from mathutils import Vector
 # Poches, points de surface et camouflage : mêmes outils que le Ranger.
 exec(open(os.path.join(HERE, "ranger.py"), encoding="utf-8").read(), globals())
 
+# Pièces rigides pour le jeu (préfixe du nom → os) : casque, visière, casque audio et micro sur la tête ; sac radio sur le dos.
+RIGID = {"Helmet": "head", "Visor": "head", "EarCup": "head", "Mic": "head", "RadioPack": "spine_03", "RadioUnit": "spine_03",
+         "RadioKnob": "spine_03", "RadioDisplay": "spine_03", "Antenna": "spine_03"}
+
 
 def outfit(base):
     W = bone_table(base)
@@ -18,13 +22,13 @@ def outfit(base):
     def wsum(i, names):
         return sum(x for b, x in W[i].items() if b in names)
 
-    cloth = camo_material("RaiderUniform", [(0.05, 0.055, 0.05), (0.075, 0.08, 0.07), (0.035, 0.04, 0.036), (0.1, 0.1, 0.085)],
+    cloth = camo_material("RaiderUniform", [(0.11, 0.12, 0.105), (0.16, 0.17, 0.15), (0.075, 0.085, 0.075), (0.21, 0.21, 0.18)],
                           scale=3.0)
     glove = mat("RaiderGlove", (0.03, 0.028, 0.025), 0.55, bump=0.3, bump_scale=600)
-    vest = mat("RaiderVest", (0.085, 0.07, 0.04), 0.7, sheen=0.3, bump=0.5, bump_scale=500)
-    webbing = mat("RaiderWebbing", (0.035, 0.03, 0.018), 0.75, bump=0.6, bump_scale=300)
+    vest = mat("RaiderVest", (0.16, 0.135, 0.08), 0.7, sheen=0.3, bump=0.5, bump_scale=500)
+    webbing = mat("RaiderWebbing", (0.07, 0.06, 0.036), 0.75, bump=0.6, bump_scale=300)
     orange = mat("RaiderOrange", (0.9, 0.28, 0.02), 0.45, sheen=0.2, bump=0.3, bump_scale=400)
-    hshell = mat("RaiderHelmet", (0.09, 0.095, 0.085), 0.45, coat=0.3, bump=0.1, bump_scale=200)
+    hshell = mat("RaiderHelmet", (0.16, 0.17, 0.15), 0.45, coat=0.3, bump=0.1, bump_scale=200)
     black = mat("RaiderBlack", (0.012, 0.012, 0.013), 0.45, bump=0.2, bump_scale=400)
     metal = mat("RaiderMetal", (0.05, 0.05, 0.055), 0.35, metal=0.8)
     smoke = bpy.data.materials.new("RaiderVisor")
@@ -58,8 +62,10 @@ def outfit(base):
         arms = part(i, {"upperarm_l", "upperarm_r", "lowerarm_l", "lowerarm_r"})
         return (part(i, torso) > 0.6 and arms < 0.15 and sp1.z - 0.04 < co.z < neck.z - 0.03
                 and not (abs(co.x) > 0.11 and abs(n.x) > 0.75 and co.z > sp3.z + 0.06))
-    layer(base, "Vest", vest_keep, 0.026, smooth_iter=12, smooth=0.8, mats=(vest, orange), subdiv=1, solidify=0.014,
-          classify=lambda c, n, idx: 1 if abs(c.z - (sp3.z - 0.04)) < 0.014 or abs(c.z - (sp3.z - 0.1)) < 0.014 else 0)
+    layer(base, "Vest", vest_keep, 0.026, smooth_iter=12, smooth=0.8, mats=(vest, webbing), subdiv=1, solidify=0.014)
+    for k, zs in enumerate((sp3.z - 0.04, sp3.z - 0.1)):
+        layer(base, f"VestStripe_{k}", lambda i, co, n, zs=zs: vest_keep(i, co, n) and abs(co.z - zs) < 0.013, 0.041,
+              smooth_iter=6, smooth=0.8, mats=(orange,), subdiv=1, solidify=0.003)
     # Poches : chargeurs de PDW, radio tactique (antenne, voyant), tablette de ciblage sur le ventre.
     for k, x in enumerate((-0.09, 0.09)):
         z = sp1.z + 0.05
@@ -100,6 +106,7 @@ def outfit(base):
     hc = sum(head, Vector()) / len(head)
     cut = lambda p: p.z > eyes.z + 0.045 - max(0.0, p.y - hd.y + 0.02) * 1.4 - max(0.0, abs(p.x) - 0.05) * 0.3
     trim_hair(cut)
+    scalp(base, W)
     helm, hv = shell(base, "Helmet", [p for p in head if cut(p)], hc, 1.17, (hshell, black))
     # Visière fumée relevée : arc sur le front du casque, légèrement inclinée vers l'arrière.
     front_y, hx = extent(hv, eyes.z + 0.08)

@@ -1,5 +1,20 @@
 # Journal des versions
 
+## v0.18.0 — Ranger, Fencer et Air Raider réalistes
+
+- **Nouveaux modèles pour les trois autres classes**, faits dans Blender sur la même base réaliste que la Wing Diver
+  (MakeHuman) :
+  - **Ranger** (Fusilier, et soldats alliés) : treillis camouflé, gilet porte-plaques à poches (chargeurs, radio, trousse
+    de secours), ceinturon et étui, genouillères et coudières, gants, rangers, casque de combat à lunettes et support de
+    vision nocturne, sac d'assaut.
+  - **Fencer** (Lourd) : exosquelette en acier (cuirasse, épaulières massives, gantelets, cuissards et jambières, vérins
+    hydrauliques le long des jambes), casque intégral à visière lumineuse orange, groupe d'alimentation dorsal à
+    propulseurs.
+  - **Air Raider** (Appui) : tenue de travail gris-vert, gilet à bandes orange, tablette de ciblage, désignateur laser,
+    casque à visière relevée avec casque audio et micro, gros sac radio à antenne.
+- Animés comme la Wing Diver : squelette qui suit l'animation du soldat, mains sur l'arme, doigts refermés ; expressions du
+  visage (clignement, effort, douleur, cri, concentration) pour le Ranger et l'Air Raider.
+
 ## v0.17.1 — Coiffure de la Wing Diver
 
 - **Plus de trou à l'arrière du crâne** : la calotte de cheveux (nuque comprise) reste fixée à la tête ; seules les mèches

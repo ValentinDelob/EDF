@@ -774,6 +774,25 @@ def boots(base, W, name="BootWhite", color=(0.8, 0.81, 0.83), rough=0.28, coat=0
         finish_obj(ob, base, bevel=0.006, subdiv=2)
 
 
+def scalp(base, W):
+    """Cuir chevelu : sous-couche châtain sous la calotte de cheveux (aucune peau visible entre les mèches ni à la nuque)."""
+    def part(i, names):
+        tot = sum(W[i].values()) or 1.0
+        return sum(x for b, x in W[i].items() if b in names) / tot
+    hair = next((o for o in bpy.data.objects if o.type == "MESH" and CFG["hair"] in o.name.lower()), None)
+    if not hair:
+        return
+    from mathutils.kdtree import KDTree
+    hw = hair.matrix_world
+    tree = KDTree(len(hair.data.vertices))
+    for v in hair.data.vertices:
+        tree.insert(hw @ v.co, v.index)
+    tree.balance()
+    bw = base.matrix_world
+    layer(base, "Scalp", lambda i, co, n: part(i, {"head", "neck_01"}) > 0.6 and tree.find(bw @ co)[2] < 0.011,
+          0.0015, smooth_iter=2, smooth=0.5, mats=(mat("Scalp", (0.06, 0.04, 0.028), 0.7),))
+
+
 def armor(base):
     """
     Étape 3 : armure blanche laquée à liserés bleu marine (plastron galbé, épaulières, protège-avant-bras, plaques de hanches et
@@ -847,18 +866,7 @@ def armor(base):
         return 0.2 < part(i, {"neck_01"}) < 0.85 and co.z < hd.z - 0.04
     layer(base, "Collar", neckring, 0.006, smooth_iter=6, mats=(collar,), subdiv=2, solidify=0.012)
     boots(base, W)
-    # Cuir chevelu : sous-couche châtain sous la calotte de cheveux (aucune peau visible entre les mèches ni à la nuque).
-    hair = next((o for o in bpy.data.objects if o.type == "MESH" and CFG["hair"] in o.name.lower()), None)
-    if hair:
-        from mathutils.kdtree import KDTree
-        hw = hair.matrix_world
-        tree = KDTree(len(hair.data.vertices))
-        for v in hair.data.vertices:
-            tree.insert(hw @ v.co, v.index)
-        tree.balance()
-        bw = base.matrix_world
-        layer(base, "Scalp", lambda i, co, n: part(i, {"head", "neck_01"}) > 0.6 and tree.find(bw @ co)[2] < 0.011,
-              0.0015, smooth_iter=2, smooth=0.5, mats=(mat("Scalp", (0.06, 0.04, 0.028), 0.7),))
+    scalp(base, W)
 
     # Pas de casque : tête nue (cheveux et visage visibles).
 

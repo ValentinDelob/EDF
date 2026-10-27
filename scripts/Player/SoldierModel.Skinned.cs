@@ -5,8 +5,9 @@ using Godot;
 namespace Rempart;
 
 /// <summary>
-/// Wing Diver modélisée dans Blender (tools/blender/wingdiver, MPFB 2 / MakeHuman CC0) : maillage déformé par un squelette
-/// (assets/models/characters/wingdiver.glb). Le squelette suit l'animation procédurale du soldat : les nœuds du modèle
+/// Personnages modélisés dans Blender (tools/blender/wingdiver, MPFB 2 / MakeHuman CC0) : maillages déformés par un squelette
+/// (assets/models/characters : ranger.glb, wingdiver.glb, airraider.glb, fencer.glb). Le squelette suit l'animation procédurale
+/// du soldat : les nœuds du modèle
 /// procédural (bassin, buste, tête, bras, jambes) restent la référence (mêmes poses, mêmes prises de l'arme, mêmes réseaux),
 /// leurs maillages sont cachés et chaque os en recopie la rotation (bras : aussi la position des articulations, pour que les
 /// mains tiennent l'arme). Queue de cheval animée par ressort (SpringBoneSimulator3D), expressions du visage en clés de forme
@@ -14,8 +15,17 @@ namespace Rempart;
 /// </summary>
 public partial class SoldierModel
 {
-    private const string WingDiverPath = "res://assets/models/characters/wingdiver.glb";
-    /// <summary>Échelle du modèle : épaules à la hauteur de celles du soldat procédural (bras de même longueur).</summary>
+    /// <summary>Modèle à squelette de chaque classe (build_char.py --char …).</summary>
+    private static string SkinnedPath(SoldierClass c) => c switch
+    {
+        SoldierClass.Rifleman => "res://assets/models/characters/ranger.glb",
+        SoldierClass.Airborne => "res://assets/models/characters/wingdiver.glb",
+        SoldierClass.Support => "res://assets/models/characters/airraider.glb",
+        SoldierClass.Heavy => "res://assets/models/characters/fencer.glb",
+        _ => null,
+    };
+
+    /// <summary>Échelle de la Wing Diver (validée en jeu) ; les autres : épaules à la hauteur de celles du soldat procédural.</summary>
     private const float WingDiverScale = 1.1f;
 
     private Node3D _skinRoot;
@@ -42,17 +52,18 @@ public partial class SoldierModel
 
     private static readonly string[] Expressions = { "blink", "smile", "effort", "pain", "shout", "focus" };
 
-    /// <summary>Wing Diver : charge le modèle à squelette ; faux si absent (le soldat procédural reste affiché).</summary>
+    /// <summary>Charge le modèle à squelette de la classe ; faux si absent (le soldat procédural reste affiché).</summary>
     private bool AttachSkinned()
     {
-        if (Class != SoldierClass.Airborne || !ResourceLoader.Exists(WingDiverPath)) return false;
-        var scene = GD.Load<PackedScene>(WingDiverPath);
+        var path = SkinnedPath(Class);
+        if (path == null || !ResourceLoader.Exists(path)) return false;
+        var scene = GD.Load<PackedScene>(path);
         if (scene == null) return false;
         _skinRoot = scene.Instantiate<Node3D>();
-        _skinRoot.Scale = Vector3.One * WingDiverScale;
         AddChild(_skinRoot);
         _skel = FindSkeleton(_skinRoot);
         if (_skel == null) { _skinRoot.QueueFree(); _skinRoot = null; return false; }
+        _skinRoot.Scale = Vector3.One * (Class == SoldierClass.Airborne ? WingDiverScale : ShoulderScale());
         // Maillages procéduraux du corps cachés (l'arme, le bouclier et les flammes du réacteur restent).
         foreach (var n in _hips.FindChildren("*", "MeshInstance3D", true, false))
         {
@@ -65,7 +76,7 @@ public partial class SoldierModel
             // Formes de commande du squelette de MPFB exportées avec le modèle : jamais affichées.
             if (mi.Name.ToString().StartsWith("Icosphere")) { mi.Visible = false; continue; }
             mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
-            WingDiverMaterials(mi);
+            CharacterMaterials(mi);
             if (mi.Mesh is ArrayMesh am && am.GetBlendShapeCount() > 0)
             {
                 var idx = new int[Expressions.Length];
@@ -77,6 +88,15 @@ public partial class SoldierModel
         PlaceJetFlames();
         AddPonytail();
         return true;
+    }
+
+    /// <summary>Échelle qui met l'épaule du modèle (upperarm_l au repos) à la hauteur de celle du soldat procédural.</summary>
+    private float ShoulderScale()
+    {
+        var b = _skel.FindBone("upperarm_l");
+        if (b < 0) return 1f;
+        var y = (ModelXf(_skel) * _skel.GetBoneGlobalRest(b)).Origin.Y;
+        return y > 0.5f ? ModelXf(_armL, true).Origin.Y / y : 1f;
     }
 
     private static Skeleton3D FindSkeleton(Node root)
@@ -233,7 +253,7 @@ public partial class SoldierModel
 
     // ───────── Matières ─────────
 
-    private static void WingDiverMaterials(MeshInstance3D mi)
+    private static void CharacterMaterials(MeshInstance3D mi)
     {
         var mesh = mi.Mesh;
         if (mesh == null) return;

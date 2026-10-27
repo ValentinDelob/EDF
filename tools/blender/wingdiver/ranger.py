@@ -4,6 +4,10 @@
 import bpy, bmesh, math
 from mathutils import Vector
 
+# Pièces rigides pour le jeu (préfixe du nom → os) : casque et accessoires sur la tête, sac sur le haut du dos.
+RIGID = {"Helmet": "head", "Goggle": "head", "NVGMount": "head", "Backpack": "spine_03", "PackStrap": "spine_03",
+         "PackPocket": "spine_03"}
+
 
 def camo_material(name, colors, scale=7.0):
     """Camouflage en taches (bruit seuillé en 4 couleurs, coordonnées de l'objet) et grain de toile."""
@@ -225,6 +229,7 @@ def outfit(base):
     hc = sum(head, Vector()) / len(head)
     cut = lambda p: p.z > eyes.z + 0.04 - max(0.0, p.y - hd.y + 0.02) * 1.4 - max(0.0, abs(p.x) - 0.05) * 0.4
     trim_hair(cut)
+    scalp(base, W)
     helm, hv = shell(base, "Helmet", [p for p in head if cut(p)], hc, 1.17, (olive, black))
     front_y, hx = extent(hv, eyes.z + 0.075)
     band(base, "Goggles", (black,), hd.y + 0.01, hx + 0.004, abs(front_y - hd.y - 0.01) + 0.004, eyes.z + 0.075, 0.03, 160)

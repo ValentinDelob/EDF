@@ -1,8 +1,10 @@
-# Export de la Wing Diver pour le jeu (exécuté par build_char.py avec --export DOSSIER, dans le même espace de noms).
+# Export d'un personnage pour le jeu (exécuté par build_char.py avec --export DOSSIER, dans le même espace de noms).
+# Wing Diver ci-dessous ; Ranger, Fencer et Air Raider : mêmes étapes, tenue réunie en un maillage (pièces rigides sur un os,
+# voir RIGID dans leur script), camouflage cuit en texture, matériaux procéduraux ramenés à des valeurs constantes.
 # Maillages déformés par le squelette « game_engine » de MPFB (poids recopiés du corps), chaîne d'os de la queue de cheval
 # (hair_01 → hair_04, animée par ressort dans le jeu), expressions du visage en clés de forme (blink, smile, effort, pain,
 # shout, focus) sur le corps, les sourcils et les cils, textures (peau, yeux, cheveux, combinaison cuite), unité de vol rigide
-# sur spine_03, repères des buses (JetNozzle_l / _r). Un seul .glb : assets/models/characters/wingdiver.glb.
+# sur spine_03, repères des buses (JetNozzle_l / _r). Un seul .glb par personnage : assets/models/characters/<perso>.glb.
 import bpy, bmesh, os, math
 import numpy as np
 from mathutils import Vector
@@ -259,25 +261,26 @@ def save_image(img, out_dir, fname):
 
 
 def hair_texture(src, out_dir):
-    """Texture des cheveux teintée châtain (même réglage que le rendu : désaturée, multipliée)."""
+    """Texture des cheveux teintée (même réglage que le rendu : désaturée, multipliée par la teinte du personnage)."""
     w, h = src.size
     px = np.array(src.pixels[:], dtype=np.float32).reshape(h, w, 4)
     lum = px[..., :3].mean(axis=2, keepdims=True)
     # Valeurs de l'image en sRVB : châtain moyen (le rendu de Blender multipliait en linéaire, bien plus sombre ici).
-    rgb = (lum + (px[..., :3] - lum) * 0.4) * np.array([0.95, 0.68, 0.48], dtype=np.float32)
+    tint = [0.95, 0.68, 0.48] if CHAR == "wingdiver" else [min(1.0, c ** (1 / 2.2) * 1.5) for c in CFG["hair_tint"]]
+    rgb = (lum + (px[..., :3] - lum) * 0.4) * np.array(tint, dtype=np.float32)
     out = np.concatenate([np.clip(rgb, 0, 1), px[..., 3:4]], axis=2)
-    img = bpy.data.images.new("wd_hair", w, h, alpha=True)
+    img = bpy.data.images.new(f"{PREFIX}_hair", w, h, alpha=True)
     img.pixels[:] = out.ravel()
-    return save_image(img, out_dir, "wd_hair.png")
+    return save_image(img, out_dir, f"{PREFIX}_hair.png")
 
 
-def bake_suit(suit, out_dir, size=2048):
+def bake_suit(suit, out_dir, size=2048, name="wd_suit"):
     """Couleur de la combinaison (panneaux, coutures) cuite dans sa texture (même dépliage que la peau)."""
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"
     sc.cycles.samples = 4
     sc.cycles.device = "CPU"
-    img = bpy.data.images.new("wd_suit", size, size, alpha=False)
+    img = bpy.data.images.new(name, size, size, alpha=False)
     mat = suit.data.materials[0]
     node = mat.node_tree.nodes.new("ShaderNodeTexImage")
     node.image = img
@@ -287,19 +290,108 @@ def bake_suit(suit, out_dir, size=2048):
     suit.select_set(True)
     bpy.context.view_layer.objects.active = suit
     bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, margin=8)
-    save_image(img, out_dir, "wd_suit.png")
+    save_image(img, out_dir, f"{name}.png")
     return img
+
+
+PREFIX = "wd" if CHAR == "wingdiver" else CHAR
+
+
+def flatten_materials(objs):
+    """
+    Matériaux procéduraux → valeurs constantes (couleur, rugosité, métal, émission) : l'export glTF ne suit pas les nœuds
+    (crasse d'occlusion, grain en relief). Couleur d'origine : celle du nœud d'occlusion (finition) ou de l'entrée elle-même.
+    """
+    done = set()
+    for o in objs:
+        for m in o.data.materials:
+            if not m or m.name in done or not m.node_tree:
+                continue
+            done.add(m.name)
+            nt = m.node_tree
+            p = next((n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"), None)
+            if not p:
+                continue
+            bc = p.inputs["Base Color"]
+            if bc.is_linked and not any(n.type == "TEX_IMAGE" for n in nt.nodes):
+                ao = next((n for n in nt.nodes if n.type == "AMBIENT_OCCLUSION"), None)
+                ramp = next((n for n in nt.nodes if n.type == "VALTORGB"), None)
+                if ao:
+                    col = tuple(ao.inputs["Color"].default_value)
+                elif ramp:
+                    els = ramp.color_ramp.elements
+                    col = tuple(sum(e.color[k] for e in els) / len(els) for k in range(4))
+                else:
+                    col = tuple(bc.default_value)
+                for l in list(bc.links):
+                    nt.links.remove(l)
+                bc.default_value = col
+            for l in list(p.inputs["Normal"].links):
+                nt.links.remove(l)
+
+
+def export_outfit(base, out_dir, rig, obs):
+    """Ranger, Fencer, Air Raider : tenue réunie en un maillage à squelette (pièces rigides sur leur os, voir RIGID)."""
+    rigid = globals().get("RIGID", {})
+    parts = [o for o in obs if o.type == "MESH" and o is not base and not o.name.startswith(("Human", "Plane", "Icosphere"))]
+    # Camouflage (motif procédural en coordonnées de l'objet) cuit dans la texture du treillis (dépliage de la peau).
+    uni = obs.get("Uniform")
+    if uni and any(m and any(n.type == "VALTORGB" for n in m.node_tree.nodes) for m in uni.data.materials):
+        for m in uni.modifiers:
+            if m.type == "SUBSURF":
+                m.uv_smooth = "NONE"
+                m.levels = m.render_levels = 1
+        tex = bake_suit(uni, out_dir, 1024, f"{PREFIX}_uniform")
+        uni.data.materials.clear()
+        uni.data.materials.append(image_material(f"{PREFIX}_Uniform", tex, rough=0.8))
+    flatten_materials(parts)
+    for o in parts:
+        # Couches tirées du corps (déjà denses) : sans subdivision ; pièces modelées : un niveau (coques, poches arrondies).
+        for m in [m for m in o.modifiers if m.type == "SUBSURF"]:
+            if len(o.data.polygons) > 1500:
+                o.modifiers.remove(m)
+            else:
+                m.levels = 1
+        apply_modifiers(o, keep=())
+        n = len(o.data.polygons)
+        edges = {}
+        for poly in o.data.polygons:
+            for ek in poly.edge_keys:
+                edges[ek] = edges.get(ek, 0) + 1
+        if n > 400 and all(c > 1 for c in edges.values()):
+            # Allègement des pièces fermées (coques, plaques épaissies) ; le personnage reste vers 50 000 triangles.
+            d = o.modifiers.new("Allègement", "DECIMATE")
+            d.ratio = 0.35 if n > 1500 else 0.5
+            apply_modifiers(o, keep=())
+    for o in parts:
+        bone = next((b for pre, b in rigid.items() if o.name.startswith(pre)), None)
+        copy_weights(base, o, rig, rigid_bone=bone)
+    for o in bpy.context.view_layer.objects:
+        o.select_set(False)
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    out = bpy.context.active_object
+    out.name = "Outfit"
+    print(f"[perso] tenue : {len(parts)} pièces, {len(out.data.polygons)} faces", flush=True)
+    return out
 
 
 def export_game(base, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     rig = base.parent
     obs = bpy.data.objects
+    # Pièces cachées (cheveux et visage sous un casque intégral) : retirées.
+    for o in [o for o in obs if o.type == "MESH" and o.hide_render]:
+        bpy.data.objects.remove(o)
     # 1. Expressions (sur le corps complet, avant toute suppression de sommets), suivies par sourcils et cils.
-    add_expressions(base)
-    brows = [o for o in obs if o.type == "MESH" and ("eyebrow" in o.name.lower() or "eyelash" in o.name.lower())]
-    for o in brows:
-        follow_expressions(base, o)
+    if obs.get("Human.high-poly"):
+        add_expressions(base)
+        brows = [o for o in obs if o.type == "MESH" and ("eyebrow" in o.name.lower() or "eyelash" in o.name.lower())]
+        for o in brows:
+            follow_expressions(base, o)
+    outfit = export_outfit(base, out_dir, rig, obs) if CHAR != "wingdiver" else None
     # 2. Combinaison : niveau de subdivision du rendu pour la cuisson, puis maillage de jeu (subdivision 1, UV linéaires).
     suit = obs.get("Suit")
     if suit:
@@ -350,13 +442,14 @@ def export_game(base, out_dir):
     for o in layers:
         copy_weights(base, o, rig, rigid_bone="spine_03" if o.name == "BackPlate" else None)
     # 5. Queue de cheval : chaîne d'os animée en jeu.
-    hair = next((o for o in obs if o.type == "MESH" and "ponytail" in o.name.lower()), None)
+    hair = next((o for o in obs if o.type == "MESH" and CFG["hair"] in o.name.lower()), None)
     if hair:
         apply_modifiers(hair)
-        bw = base.matrix_world
-        hidx = {g.index for g in base.vertex_groups if g.name in ("head", "neck_01")}
-        skull = [bw @ v.co for v in base.data.vertices if sum(g.weight for g in v.groups if g.group in hidx) > 0.5]
-        ponytail_bones(rig, hair, skull)
+        if "ponytail" in CFG["hair"]:
+            bw = base.matrix_world
+            hidx = {g.index for g in base.vertex_groups if g.name in ("head", "neck_01")}
+            skull = [bw @ v.co for v in base.data.vertices if sum(g.weight for g in v.groups if g.group in hidx) > 0.5]
+            ponytail_bones(rig, hair, skull)
         hair.data.materials.clear()
         hair.data.materials.append(image_material("WD_Hair", hair_texture(first_image_cache["hair"], out_dir), alpha=True, rough=0.45))
     # 6. Corps : peau cachée retirée, peau texturée.
@@ -364,8 +457,12 @@ def export_game(base, out_dir):
     delete_hidden(base)
     base.data.materials.clear()
     base.data.materials.append(image_material("WD_Skin", skin, rough=0.5))
+    if not base.data.vertices:
+        # Corps entièrement couvert (Fencer) : pas de peau exportée.
+        bpy.data.objects.remove(base)
+        base = None
     for o in obs:
-        if o.type != "MESH" or o in (base, hair) or o.name in [l.name for l in layers] or o.name == "Jetpack":
+        if o.type != "MESH" or o in (base, hair, outfit) or o.name in [l.name for l in layers] or o.name == "Jetpack":
             continue
         low = o.name.lower()
         if "eyebrow" in low or "eyelash" in low:
@@ -390,7 +487,7 @@ def export_game(base, out_dir):
     # 7. Export (squelette, maillages déformés, clés de forme, textures intégrées).
     for o in [o for o in obs if o.type in ("LIGHT", "CAMERA") or o.name.startswith(("Plane", "Icosphere"))]:
         bpy.data.objects.remove(o)
-    path = os.path.join(out_dir, "wingdiver.glb")
+    path = os.path.join(out_dir, f"{CHAR}.glb")
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=False, export_skins=True, export_morph=True,
                               export_morph_normal=True, export_animations=False, export_apply=False, export_yup=True,
                               export_image_format="AUTO")
@@ -410,7 +507,7 @@ def remember_images():
         img = first_image(o)
         if low == base.name.lower():
             first_image_cache["skin"] = img
-        elif "ponytail" in low:
+        elif CFG["hair"] in low:
             first_image_cache["hair"] = img
         elif "high-poly" in low:
             first_image_cache["eyes"] = img

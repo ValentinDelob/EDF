@@ -8,6 +8,10 @@ from mathutils import Vector
 # Coques, bandeaux et poches : outils communs (ranger.py).
 exec(open(os.path.join(HERE, "ranger.py"), encoding="utf-8").read(), globals())
 
+# Pièces rigides pour le jeu (préfixe du nom → os) : casque intégral sur la tête, groupe d'alimentation sur le dos.
+RIGID = {"Helmet": "head", "ChinGuard": "head", "Visor": "head", "Crest": "head", "PowerUnit": "spine_03", "Vent_": "spine_03",
+         "Booster": "spine_03"}
+
 
 def hull(name, pts, mats, scale=1.0, center=None, squash=(1, 1, 1)):
     """Coque en enveloppe convexe des points (agrandie de scale autour du centre) : pièces de blindage massives et lisses."""
@@ -53,9 +57,9 @@ def outfit(base):
         ab = b - a
         return (co - a).dot(ab) / ab.length_squared
 
-    under = mat("FencerUnder", (0.03, 0.032, 0.035), 0.55, sheen=0.3, bump=0.4, bump_scale=700)
-    steel = mat("FencerSteel", (0.075, 0.082, 0.09), 0.42, metal=0.35, coat=0.35, bump=0.05, bump_scale=150)
-    dark = mat("FencerDark", (0.05, 0.052, 0.056), 0.4, metal=0.7)
+    under = mat("FencerUnder", (0.05, 0.053, 0.058), 0.55, sheen=0.3, bump=0.4, bump_scale=700)
+    steel = mat("FencerSteel", (0.2, 0.215, 0.23), 0.45, metal=0.15, coat=0.35, bump=0.05, bump_scale=150)
+    dark = mat("FencerDark", (0.07, 0.073, 0.078), 0.45, metal=0.35)
     orange = mat("FencerOrange", (0.85, 0.32, 0.04), 0.35, coat=0.5)
     rubber = mat("FencerRubber", (0.015, 0.015, 0.016), 0.7, bump=0.5, bump_scale=250)
     visor = glow_mat("FencerVisor", (1.0, 0.45, 0.08), 18.0)
@@ -66,9 +70,9 @@ def outfit(base):
     hide_under(base, set(), 0.5)
     base.vertex_groups["under_suit"].add([v.index for v in base.data.vertices], 1.0, "REPLACE")
     for o in bpy.data.objects:
-        # Cheveux, sourcils et cils : cachés sous le casque intégral.
+        # Cheveux, sourcils, cils, yeux et bouche : cachés sous le casque intégral.
         if o.type == "MESH" and o is not base and o.parent == base.parent and any(
-                k in o.name.lower() for k in (CFG["hair"], CFG["brows"], CFG["lashes"], "eye")):
+                k in o.name.lower() for k in (CFG["hair"], CFG["brows"], CFG["lashes"], "high-poly", "teeth", "tongue")):
             o.hide_render = o.hide_viewport = True
 
     pts = {v.index: base.matrix_world @ v.co for v in body_vertices(base)}

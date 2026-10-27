@@ -315,7 +315,7 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
 - Les coups partent toujours de la bouche du canon : le soldat épaule et fait face à la visée au moment du tir (`Player.ReadyToFire`, `SoldierModel.SnapAim`) ; la traînée des balles ne dépasse pas leur point de départ (`Bullets.Shot.Origin`).
 - Guidage terminal (`Projectile`) : près d'une cible verrouillée, le virage est relevé pour que le rayon de virage reste sous la distance restante (un missile ne tourne pas autour d'une cible immobile).
 
-## Wing Diver modélisée (Commando aéroporté)
+## Personnages modélisés (Wing Diver, Ranger, Fencer, Air Raider)
 
 - **Construction** (`tools/blender/wingdiver/build_char.py`, lancé par `tools/blender/wingdiver/run.sh JOURNAL --stage 4
   [--preview DOSSIER] [--export DOSSIER]`, Blender en arrière-plan sur le bureau invisible) : corps féminin réaliste généré
@@ -337,6 +337,19 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
   poignets prennent la position des articulations procédurales (les mains tiennent l'arme) ; doigts refermés sur la
   poignée. Queue de cheval : `SpringBoneSimulator3D`. Expressions pilotées par l'état (clignement, effort au tir et en vol,
   douleur selon `Pain` = `Player.DamageFlash`, cri à terre, concentration en visée). Flammes du réacteur sous les buses.
+- **Autres classes** (`build_char.py --char ranger|fencer|airraider`, tenue dans `ranger.py`, `fencer.py`, `airraider.py`,
+  fonction `outfit(base)`) : corps MPFB propre à chaque classe (`CHARS` : morphologie, peau, yeux, coiffure). Ranger
+  (Fusilier) : treillis camouflé (motif de bruit cuit en texture à l'export), gilet porte-plaques à poches, ceinturon, casque
+  à lunettes (`shell` : enveloppe convexe du crâne au-dessus du bord, cheveux masqués dessous par `trim_hair`), sac d'assaut.
+  Fencer (Lourd) : sous-combinaison, coques en enveloppe convexe par segment (`hull`), cuirasse, épaulières, gantelets,
+  vérins sur les jambes, casque intégral à visière lumineuse, groupe d'alimentation ; visage et cheveux retirés. Air Raider
+  (Appui) : tenue de travail, gilet à bandes orange, casque à visière relevée, casque audio et micro, sac radio à antenne.
+  Pantalon rentré dans les tiges (bords épinglés au lissage : `layer(..., pin_border=True)`).
+- **Export des autres classes** (`export_outfit`) : toutes les pièces réunies en un maillage `Outfit` ; pièces listées dans
+  `RIGID` (casques, sacs) sur un seul os, les autres prennent les poids du sommet du corps le plus proche ; matériaux
+  procéduraux ramenés à des valeurs constantes (`flatten_materials`) ; pièces fermées allégées (`DECIMATE`), pièces ouvertes
+  intactes (bords nets). ~50 000 triangles par personnage. En jeu, `SkinnedPath` choisit le modèle de la classe ;
+  l'échelle met l'épaule du modèle à la hauteur de celle du soldat procédural (`ShoulderScale`), la Wing Diver garde ×1,1.
 
 ## Modèles détaillés des armes et banc d'essai
 

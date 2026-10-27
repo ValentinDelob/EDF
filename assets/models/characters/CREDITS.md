@@ -1,5 +1,11 @@
 # Personnages — crédits
 
+## Ranger, Fencer, Air Raider (`ranger.glb`, `fencer.glb`, `airraider.glb`)
+
+Modélisés dans Blender par `tools/blender/wingdiver/build_char.py --char …` (tenues dans `ranger.py`, `fencer.py`,
+`airraider.py` : travail original du projet). Corps, visages, yeux, sourcils, cils, cheveux courts, peau et unités
+d'expression : **MakeHuman** (CC0), via **MPFB 2** (outil seulement), comme pour la Wing Diver ci-dessous.
+
 ## Wing Diver (`wingdiver.glb`)
 
 Modélisée dans Blender par `tools/blender/wingdiver/build_char.py` (combinaison, armure, bottes, unité de vol, matériaux et
