@@ -83,5 +83,9 @@ EDF 5). Recoupement avec le wiki anglais d'EDF 5 (Weapons EDF5, Automatic Artill
 | Goliath D1 | 1 roquette, 328,4 dégâts (★8), rechargement 3 s (★5), souffle 15,9 m (★8), zoom ×3 | identiques |
 | Mag Blaster | 1132 coups (★8), 60 coups/s, 3,4 dégâts (★8), recharge 2 s (★5), portée 180 m (★5), énergie 39 (★8) ; puissance qui baisse quand le chargeur se vide | identiques |
 | Limpet Gun | 8 bombes, 3,5 coups/s, 34 dégâts, rechargement 1,5 s, souffle 4,4 m, portée 1091,5 m | identiques |
+| Lysander Z | 11 coups, 0,28 coup/s, ≈ 6795 dégâts, rechargement 3,5 s, portée 1462,5 m | identiques (6794,7) |
+| Rapier | 566 coups (★8), 60 coups/s, 1,1 × 6 dégâts, recharge 0,5 s, portée 30 m (★5) | identiques |
+| Blasthole Spear | 8 coups, rechargement 2 s ; attaque 1 : 543,2 / 50 m, attaque 2 : 679 / 60 m | identiques (679 × 0,8 = 543,2) |
+| ZE-GUN | 2 tourelles, 11,3 dégâts, rechargement 29,4 s | identiques |
 
-Six armes des quatre classes recoupées, toutes identiques (étoiles comprises) ; seule la mécanique du Splendor Shot différait, corrigée en v0.16.2.
+Dix armes des quatre classes recoupées, toutes identiques (étoiles comprises) ; seule la mécanique du Splendor Shot différait, corrigée en v0.16.2.
