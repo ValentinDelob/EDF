@@ -1,5 +1,11 @@
 # Journal des versions
 
+## v0.17.1 — Coiffure de la Wing Diver
+
+- **Plus de trou à l'arrière du crâne** : la calotte de cheveux (nuque comprise) reste fixée à la tête ; seules les mèches
+  qui s'éloignent du crâne suivent la queue de cheval animée. Sous-couche châtain sous les cheveux (aucune peau visible entre
+  les mèches).
+
 ## v0.17.0 — Wing Diver réaliste
 
 - **Nouvelle Wing Diver** (Commando aéroporté), modélisée dans Blender : femme au corps réaliste (base MakeHuman), visage,

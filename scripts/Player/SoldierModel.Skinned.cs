@@ -285,6 +285,12 @@ public partial class SoldierModel
                     m.Roughness = 0.38f;
                     m.Metallic = 0.6f;
                     break;
+                case "Scalp":
+                    // Cuir chevelu sous les cheveux : châtain sombre, mat (les trous entre les mèches ne montrent pas la peau).
+                    m.AlbedoTexture = null;
+                    m.AlbedoColor = new Color(0.075f, 0.05f, 0.035f);
+                    m.Roughness = 0.75f;
+                    break;
                 case "Collar" or "Glove" or "BootSole":
                     m.AlbedoColor = new Color(0.015f, 0.015f, 0.017f);
                     m.Roughness = src.ResourceName == "Glove" ? 0.33f : 0.6f;

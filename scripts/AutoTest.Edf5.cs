@@ -73,11 +73,15 @@ public static partial class AutoTest
         {
             var cam = new Camera3D { Fov = 34, Current = true };
             w.AddChild(cam);
-            var focus = p.GlobalPosition + Vector3.Up * 1.35f + fwd * 0.25f;
+            // headback / headside : gros plans de la tête (coiffure).
+            var head = view.StartsWith("head");
+            var focus = p.GlobalPosition + Vector3.Up * (head ? 1.72f : 1.35f) + fwd * (head ? 0f : 0.25f);
             cam.GlobalPosition = focus + view switch
             {
                 "front" => right * 1.6f + fwd * 2.0f + Vector3.Up * 0.25f,
                 "back" => right * 1.4f - fwd * 2.0f + Vector3.Up * 0.35f,
+                "headback" => right * 0.25f - fwd * 0.75f + Vector3.Up * 0.12f,
+                "headside" => right * 0.75f - fwd * 0.2f + Vector3.Up * 0.05f,
                 _ => right * 2.4f + fwd * 0.6f + Vector3.Up * 0.15f,
             };
             cam.LookAt(focus, Vector3.Up);

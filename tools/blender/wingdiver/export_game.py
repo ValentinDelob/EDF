@@ -149,7 +149,7 @@ def delete_hidden(base):
         base.modifiers.remove(m)
 
 
-def ponytail_bones(rig, hair):
+def ponytail_bones(rig, hair, skull_points):
     """Chaîne d'os de la queue de cheval (hair_01 → hair_04, sous « head ») et poids des mèches le long de la chaîne."""
     head = rig.matrix_world @ rig.data.bones["head"].head_local
     hw = hair.matrix_world
@@ -184,17 +184,32 @@ def ponytail_bones(rig, hair):
     groups = {f"hair_{k + 1:02d}": (hair.vertex_groups.get(f"hair_{k + 1:02d}") or hair.vertex_groups.new(name=f"hair_{k + 1:02d}"))
               for k in range(n)}
     hg = hair.vertex_groups.get("head") or hair.vertex_groups.new(name="head")
+    # Seules les mèches éloignées du crâne suivent la chaîne : la calotte (collée à la peau, nuque comprise) reste sur la tête.
+    skin = KDTree(len(skull_points))
+    for k, p in enumerate(skull_points):
+        skin.insert(p, k)
+    skin.balance()
+    moved = 0
     for i, p in tail:
+        d = skin.find(p)[2]
+        infl = max(0.0, min(1.0, (d - 0.018) / 0.025))
+        if infl <= 0.0:
+            continue
+        moved += 1
         t = max(0.0, min(0.999, (ztop - p.z) / max(ztop - zbot, 1e-4))) * n
         k = int(t)
         f = t - k
         for g in list(hair.data.vertices[i].groups):
             hair.vertex_groups[g.group].remove([i])
-        groups[f"hair_{k + 1:02d}"].add([i], 1.0 - f * 0.5, "REPLACE")
+        a = groups[f"hair_{k + 1:02d}"]
         if k + 1 < n:
-            groups[f"hair_{k + 2:02d}"].add([i], f * 0.5, "REPLACE")
-        elif k == 0:
-            hg.add([i], 0.3, "REPLACE")
+            a.add([i], infl * (1.0 - f * 0.5), "REPLACE")
+            groups[f"hair_{k + 2:02d}"].add([i], infl * f * 0.5, "REPLACE")
+        else:
+            a.add([i], infl, "REPLACE")
+        if infl < 1.0:
+            hg.add([i], 1.0 - infl, "REPLACE")
+    print(f"[perso] mèches sur la chaîne : {moved}", flush=True)
     print(f"[perso] queue de cheval : {len(tail)} sommets, de {ztop:.2f} à {zbot:.2f} m", flush=True)
 
 
@@ -300,7 +315,7 @@ def export_game(base, out_dir):
     # 3. Pièces de l'armure et unité de vol : modificateurs appliqués (subdivision réduite pour le jeu).
     layers = [o for o in obs if o.type == "MESH" and o.name in (
         "Suit", "Gloves", "BootShaft", "Shoe_l", "Shoe_r", "ChestPlate", "BackPlate", "Shoulders", "Forearms", "HipPlates",
-        "ThighPlates", "KneePads", "Collar") or o.name.startswith("Mark_Chest")]
+        "ThighPlates", "KneePads", "Collar", "Scalp") or o.name.startswith("Mark_Chest")]
     jet = [o for o in obs if o.type == "MESH" and o.name.startswith(JET_PREFIX)]
     for o in layers + jet:
         for m in [m for m in o.modifiers if m.type == "SUBSURF"]:
@@ -338,7 +353,10 @@ def export_game(base, out_dir):
     hair = next((o for o in obs if o.type == "MESH" and "ponytail" in o.name.lower()), None)
     if hair:
         apply_modifiers(hair)
-        ponytail_bones(rig, hair)
+        bw = base.matrix_world
+        hidx = {g.index for g in base.vertex_groups if g.name in ("head", "neck_01")}
+        skull = [bw @ v.co for v in base.data.vertices if sum(g.weight for g in v.groups if g.group in hidx) > 0.5]
+        ponytail_bones(rig, hair, skull)
         hair.data.materials.clear()
         hair.data.materials.append(image_material("WD_Hair", hair_texture(first_image_cache["hair"], out_dir), alpha=True, rough=0.45))
     # 6. Corps : peau cachée retirée, peau texturée.
