@@ -94,6 +94,7 @@ public partial class RemotePlayer : Node3D
         var speed = grabbed ? 0f : new Vector3(_netVel.X, 0, _netVel.Z).Length();
         _recoil = Mathf.MoveToward(_recoil, 0, dt * 4f);
         Model.Grabbed = grabbed;
+        Model.Motion = grabbed ? Vector3.Zero : _netVel;
         Model.Animate(dt, speed, _pitch, !grabbed && (_flags & 4) != 0, (_flags & 64) != 0, Downed, (_flags & 8) != 0, _recoil);
         if ((_flags & 64) != 0 || _jet != null)
         {

@@ -351,6 +351,25 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
   intactes (bords nets). ~50 000 triangles par personnage. En jeu, `SkinnedPath` choisit le modèle de la classe ;
   l'échelle met l'épaule du modèle à la hauteur de celle du soldat procédural (`ShoulderScale`), la Wing Diver garde ×1,1.
 
+## Animation du soldat (`SoldierModel.cs` `Animate`, `SoldierModel.Locomotion.cs`)
+
+- **Déplacement mesuré** : vitesse du soldat dans le repère du modèle (`Motion`, fournie par `Player` et `RemotePlayer`,
+  sinon mesurée d'une image à l'autre pour les alliés ; vitesse annoncée sans déplacement dans les menus : course sur place),
+  accélération et vitesse de rotation lissées.
+- **Cycle de pas** (`GaitParams`, `FootPath`) : phase calée sur la vitesse (cadence, part d'appui, levée du pied, rebond du
+  bassin qui s'inverse entre marche et course) ; Fencer : pas lourds et appuyés. Chevilles posées sur le trajet du pas et
+  jambes résolues par IK (`LegIK` : flexion, écart, genou) ; déroulé du pied (attaque du talon, poussée des orteils). En
+  visée, le bassin se tourne vers la direction de marche (pas chassés, recul) et le buste compense : le canon reste sur la
+  visée. Penché selon la vitesse et l'accélération ; sprint : bras gauche libre qui balance.
+- **Sauts et esquives** : montée (genou haut, jambe arrière tendue), descente (jambes ramenées), réception amortie selon la
+  vitesse de chute ; roulade (`RollT`, `RollDir` : corps groupé qui tourne d'un tour autour de son centre, arme contre la
+  poitrine, soldat tourné vers la roulade) ; ruée du Fencer et poussée de la Wing Diver (`Dash` : fente) ; vol couché dans
+  le sens du déplacement.
+- **Arme dans les mains** (`GunSpring`) : ressort amorti, rebond et roulis alterné à chaque appui, inertie aux
+  accélérations et aux virages, balancement du pas, réduits en visée ; les mains suivent par l'IK des bras.
+- **Banc** : `--anim-test` (`AutoTest.Anim.cs`, avec `--class=N --shots=dossier`) : caméra de côté, direction la plus
+  dégagée, séquence attente, course, sprint, pas chassés et recul en visée, saut, roulade ; rafales `anim_<phase>_NN`.
+
 ## Modèles détaillés des armes et banc d'essai
 
 - **Construction en arrière-plan** : `tools/blender/build.sh <journal> <module> [familles…] [--export] [--preview DOSSIER]` lance `blender -b --factory-startup --python tools/blender/build_weapons.py` par `tools/hidden_run.ps1` (bureau Windows invisible, priorité basse : aucune fenêtre). Modules : `rifles`, `longguns`, `launchers`, `special`, `wingdiver`, `fencer`, `airraider` (« obj:nom » : objets du monde). `--palette` n'écrit que les couleurs ; `--preview` fait les rendus de contrôle (`weapons/preview.py` : profil orthographique et trois-quarts).

@@ -529,7 +529,10 @@ public partial class Player : CharacterBody3D
         var horiz = new Vector3(Velocity.X, 0, Velocity.Z);
         var firing = Time.GetTicksMsec() / 1000f - _lastFireTime < 0.8f;
         float targetYaw;
-        if (Aiming || firing || Flying) targetYaw = _yaw + Mathf.Pi;
+        var rolling = _dodgeTime > 0 && !grabbed && !Downed;
+        // Roulade : le soldat se tourne vers sa direction (roulade avant), puis revient face à la visée.
+        if (rolling) targetYaw = Mathf.Atan2(_dodgeDir.X, _dodgeDir.Z);
+        else if (Aiming || firing || Flying) targetYaw = _yaw + Mathf.Pi;
         else if (grabbed)
         {
             // Pris dans les mandibules : face à la tête de la fourmi.
@@ -538,10 +541,14 @@ public partial class Player : CharacterBody3D
         }
         else if (horiz.LengthSquared() > 0.5f) targetYaw = Mathf.Atan2(horiz.X, horiz.Z);
         else targetYaw = _modelYaw;
-        _modelYaw = Mathf.LerpAngle(_modelYaw, targetYaw, Mathf.Clamp(dt * 12f, 0, 1));
+        _modelYaw = Mathf.LerpAngle(_modelYaw, targetYaw, Mathf.Clamp(dt * (rolling ? 30f : 12f), 0, 1));
         Model.Rotation = new Vector3(0, _modelYaw, 0);
         Model.Grabbed = grabbed;
         Model.Pain = DamageFlash;
+        Model.Motion = grabbed ? Vector3.Zero : Velocity;
+        Model.RollT = rolling ? 1f - _dodgeTime / 0.45f : -1f;
+        Model.RollDir = _dodgeDir;
+        Model.Dash = _dashTime > 0 && !grabbed;
         Model.Animate(dt, grabbed ? 0f : horiz.Length(), _pitch, !grabbed && !IsOnFloor(), Flying, Downed, Aiming, _recoil);
 
         Model.Visible = Vehicle == null;

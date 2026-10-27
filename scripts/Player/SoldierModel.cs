@@ -13,7 +13,6 @@ public partial class SoldierModel : Node3D
     private Node3D _hips, _torso, _head, _armL, _armR, _foreL, _foreR, _legL, _legR, _shinL, _shinR, _gun;
     private Node3D _handL, _handR, _footL, _footR;
     private Node3D _jetFlames;
-    private float _cycle;
     private float _t;
     public Node3D Muzzle { get; private set; }
     public SoldierClass Class;
@@ -727,63 +726,148 @@ public partial class SoldierModel : Node3D
         _lastPose = (speed, aimPitch, airborne, flying, downed, aiming, recoil);
         _t += dt;
         float Ease(float rate) => Mathf.Min(1f, dt * rate);
+        var heavy = Class == SoldierClass.Heavy;
+        var k = heavy ? 1.12f : 1f;
 
         _downBlend = Mathf.MoveToward(_downBlend, downed ? 1f : 0f, dt * 4f);
         if (downed) { speed = 0; airborne = false; flying = false; aiming = false; recoil = 0; }
         _grabBlend = Mathf.MoveToward(_grabBlend, Grabbed && !downed ? 1f : 0f, dt * 6f);
         if (_grabBlend > 0f) { speed = 0; airborne = false; flying = false; }
+        var gb = Mathf.SmoothStep(0, 1, _grabBlend);
+        var rolling = RollT >= 0f && !downed && _grabBlend <= 0f;
 
-        // Tir récent : l'arme reste épaulée un instant même sans visée.
+        // Tir récent : l'arme reste épaulée un instant même sans visée (pas pendant une roulade).
         if (recoil > 0.02f) _fireHold = 0.8f;
         _fireHold = Mathf.Max(0, _fireHold - dt);
-        var aimT = aiming || _fireHold > 0 ? 1f : 0f;
+        var aimT = (aiming || _fireHold > 0) && !rolling ? 1f : 0f;
         _aimBlend = Mathf.MoveToward(_aimBlend, aimT, dt * 7f);
         var aimB = Mathf.SmoothStep(0, 1, _aimBlend);
-        _airBlend = Mathf.MoveToward(_airBlend, airborne && !flying ? 1f : 0f, dt * 6f);
+        _airBlend = Mathf.MoveToward(_airBlend, airborne && !flying && !rolling ? 1f : 0f, dt * 7f);
         _flyBlend = Mathf.MoveToward(_flyBlend, flying ? 1f : 0f, dt * 4f);
+        _rollBlend = Mathf.MoveToward(_rollBlend, rolling ? 1f : 0f, dt * 14f);
+        var rollB = Mathf.SmoothStep(0, 1, _rollBlend);
+        _dashBlend = Mathf.MoveToward(_dashBlend, Dash && !rolling ? 1f : 0f, dt * 10f);
+        var dashB = Mathf.SmoothStep(0, 1, _dashBlend);
 
-        // Réception de saut : flexion des genoux proportionnelle au temps de chute.
-        if (airborne) _airTime += dt;
+        // ── Déplacement (repère du modèle) ──
+        var mv = MotionLocal(dt, speed);
+        if (downed || _grabBlend > 0f) mv = Vector3.Zero;
+        var hv = new Vector3(mv.X, 0, mv.Z);
+        var spd = hv.Length();
+
+        // Réception de saut : flexion selon la vitesse de chute.
+        if (airborne) { _airTime += dt; _fallSpeed = Mathf.Max(_fallSpeed, -mv.Y); }
         else
         {
-            if (_wasAir && _airTime > 0.25f) _land = Mathf.Clamp(_airTime * 0.9f, 0.35f, 1f);
+            if (_wasAir && _airTime > 0.2f) _land = Mathf.Clamp(0.25f + _fallSpeed * 0.055f, 0.3f, 1f);
             _airTime = 0;
+            _fallSpeed = 0;
         }
         _wasAir = airborne;
         _land = Mathf.MoveToward(_land, 0, dt * 3.2f);
+        var land = Mathf.SmoothStep(0, 1, _land);
 
-        var run = Mathf.Clamp(speed / 7f, 0, 1.4f) * (1 - _airBlend) * (1 - _flyBlend);
-        _cycle += dt * (4f + Mathf.Min(speed, 12f) * 1.2f) * (run > 0.05f ? 1 : 0);
-        var s = Mathf.Sin(_cycle);
-        var c = Mathf.Cos(_cycle);
-        var gaitW = Mathf.Min(run, 1.2f);
+        // ── Cycle de pas (phase 0 : appui gauche, 0,5 : appui droit) ──
+        var ground = (1 - _airBlend) * (1 - _flyBlend) * (1 - _downBlend) * (1 - gb);
+        var moving = spd > 0.35f && ground > 0.01f;
+        _gaitBlend = Mathf.MoveToward(_gaitBlend, moving ? Mathf.Clamp(spd / 1.2f, 0f, 1f) : 0f, dt * 6f);
+        var (cadence, stanceF, lift, bobA, runW) = GaitParams(spd);
+        var prevPhase = _phase;
+        if (moving) _phase = Mathf.PosMod(_phase + dt * cadence, 1f);
+        var stepL = moving && _phase < prevPhase;
+        var stepR = moving && prevPhase < 0.5f && _phase >= 0.5f;
+        var cyc = _phase * Mathf.Tau;
+        var s = Mathf.Sin(cyc);
+        var c = Mathf.Cos(cyc);
+        var gaitW = _gaitBlend * ground;
         var breath = Mathf.Sin(_t * 1.7f);
-        var still = 1 - Mathf.Clamp(run * 3f, 0, 1);
+        var still = 1 - _gaitBlend;
+        var stance = aimB * still;
+        var sprintW = heavy ? 0f : Mathf.Clamp((spd - 7.2f) / 2f, 0f, 1f);
+        // Direction de marche : le bassin s'y tourne (de côté, en diagonale, à reculons) ; le buste reste face à la visée.
+        var dirA = spd > 0.35f ? Mathf.Atan2(hv.X, hv.Z) : 0f;
+        var legA = Mathf.Abs(dirA) > 1.75f ? dirA - Mathf.Sign(dirA) * Mathf.Pi : dirA;
+        _legYaw = Mathf.LerpAngle(_legYaw, Mathf.Clamp(legA, -1.1f, 1.1f) * 0.75f * _gaitBlend, Ease(8f));
+
+        // ── Bassin ──
+        var hipLow = heavy ? 0.05f : Mathf.Lerp(0.02f, 0.03f, runW);
+        var bob = bobA * Mathf.Cos(2f * cyc - stanceF * Mathf.Tau) * gaitW;
+        var hipsY = HipY - hipLow * gaitW + bob - 0.03f * stance - 0.2f * land - 0.07f * dashB + breath * 0.002f;
+        var oscYaw = -c * Mathf.Lerp(0.1f, 0.16f, runW) * gaitW * (1 - aimB * 0.5f);
+        var hipsYaw = _legYaw + oscYaw - 0.22f * aimB * still;
+        var hipsRoll = s * Mathf.Lerp(0.04f, 0.025f, runW) * gaitW * (heavy ? 1.6f : 1f);
+        var hipsPos = new Vector3(0, hipsY, 0).Lerp(new Vector3(0, 0.25f, 0), _downBlend);
+        var hipsRot = new Vector3(0, hipsYaw, hipsRoll).Lerp(new Vector3(-1.4f, 0, 0), _downBlend);
+        // Saisi : bassin ballotté (le corps se tord pour se dégager).
+        hipsRot += new Vector3(0.28f + Mathf.Sin(_t * 5.3f) * 0.14f, Mathf.Sin(_t * 3.7f) * 0.22f, Mathf.Sin(_t * 15.1f) * 0.22f + Mathf.Sin(_t * 6.1f) * 0.12f) * gb;
+        // Vol : le corps se couche dans le sens du déplacement et s'incline dans les virages.
+        hipsRot += new Vector3(Mathf.Clamp(mv.Z / 14f, -0.4f, 0.8f) * 0.45f, 0, -Mathf.Clamp(mv.X / 14f, -1f, 1f) * 0.35f) * _flyBlend;
+        var hx = new Transform3D(Basis.FromEuler(hipsRot), hipsPos);
+        if (rollB > 0.001f)
+        {
+            // Roulade d'esquive : corps groupé qui fait un tour complet autour de l'axe perpendiculaire à la direction.
+            var rd = (IsInsideTree() ? GlobalBasis : Basis).Orthonormalized().Inverse() * RollDir;
+            rd.Y = 0;
+            rd = rd.LengthSquared() > 1e-4f ? rd.Normalized() : Vector3.Back;
+            var axis = Vector3.Up.Cross(rd).Normalized();
+            if (rolling) _rollSpin = Mathf.Tau * Mathf.SmoothStep(0f, 1f, Mathf.Clamp(RollT / 0.85f, 0f, 1f));
+            // Centre du corps groupé (boule d'environ 0,5 m de rayon qui roule au sol) ; le bassin est un peu dessous et en arrière.
+            var center = new Vector3(0, 0.52f, 0);
+            var rolled = new Transform3D(new Basis(axis, _rollSpin), center) * new Transform3D(Basis.Identity, new Vector3(0, -0.14f, 0) - rd * 0.1f);
+            hx = hx.InterpolateWith(rolled, rollB);
+        }
+        _hips.Transform = dt >= 0.5f ? hx : new Transform3D(hx.Basis, _hips.Position.Lerp(hx.Origin, Ease(rollB > 0.01f ? 40f : 20f)));
 
         // ── Jambes ──
-        var stride = 0.5f * gaitW;
-        var thL = -s * stride;
-        var thR = s * stride;
-        var knL = (0.12f + Mathf.Max(0, c) * 1.15f) * gaitW;
-        var knR = (0.12f + Mathf.Max(0, -c) * 1.15f) * gaitW;
-        // Posture de tir à l'arrêt : pied gauche en avant, genoux souples.
-        var stance = aimB * still;
-        thL += -0.16f * stance; thR += 0.1f * stance;
-        knL += 0.12f * stance; knR += 0.14f * stance;
-        // Saut : jambes repliées ; vol : jambes pendantes vers l'arrière.
-        thL = Mathf.Lerp(thL, -0.6f, _airBlend); knL = Mathf.Lerp(knL, 1.0f, _airBlend);
-        thR = Mathf.Lerp(thR, 0.15f, _airBlend); knR = Mathf.Lerp(knR, 0.5f, _airBlend);
+        // Au sol : chevilles sur le trajet du pas (IK), pied immobile au sol pendant l'appui.
+        var gyaw = new Basis(Vector3.Up, _legYaw);
+        var dir = spd > 0.35f ? (gyaw.Inverse() * hv).Normalized() : Vector3.Back;
+        var reach = Mathf.Min(stanceF * spd / cadence * 0.5f, heavy ? 0.36f : 0.44f);
+        var width = 0.1f * k + 0.02f * stance - 0.015f * runW;
+        Vector3 Foot(float p, float sd)
+        {
+            var walk = FootPath(p, stanceF, reach, lift, runW, dir, new Vector3(sd * width, 0, 0));
+            // Debout : pieds écartés ; en visée, pied gauche devant, pied droit en arrière.
+            var idle = new Vector3(sd * (0.105f * k + 0.03f * stance), AnkleY, (sd > 0 ? 0.11f : -0.09f) * stance + 0.01f);
+            // Ruée : fente, pied avant fléchi, pied arrière tendu et un peu levé (glissade de l'exosquelette).
+            var lunge = new Vector3(sd * width, AnkleY + (sd > 0 ? 0.02f : 0.07f), sd > 0 ? 0.3f : -0.42f);
+            return gyaw * idle.Lerp(walk, _gaitBlend).Lerp(lunge, dashB);
+        }
+        float Roll(float p)
+        {
+            // Inclinaison du pied (+ : talon levé) : attaque du talon, déroulé, poussée sur les orteils, pied pointé puis relevé.
+            if (p < stanceF)
+            {
+                var q = p / stanceF;
+                return q < 0.15f ? -0.25f * (1 - q / 0.15f) * (1 - runW) : q > 0.7f ? 0.6f * (q - 0.7f) / 0.3f : 0f;
+            }
+            return Mathf.Lerp(0.55f, -0.15f, Mathf.SmoothStep(0f, 1f, (p - stanceF) / (1f - stanceF)));
+        }
+        var pL = _phase;
+        var pR = Mathf.PosMod(_phase + 0.5f, 1f);
+        LegIK(_legL, Foot(pL, 1f), out var thL, out var knL, out var abL);
+        LegIK(_legR, Foot(pR, -1f), out var thR, out var knR, out var abR);
+        var footGL = -(thL + knL) + Roll(pL) * gaitW;
+        var footGR = -(thR + knR) + Roll(pR) * gaitW;
+        var abGL = abL;
+        var abGR = abR;
+        // Saut : à la montée, genou gauche haut et jambe droite tendue en arrière ; à la descente, jambes ramenées sous le corps.
+        var rise = Mathf.SmoothStep(-3f, 3f, mv.Y);
+        var fall = Mathf.Clamp((-mv.Y - 6f) / 10f, 0f, 1f);
+        var aThL = Mathf.Lerp(Mathf.Lerp(-0.35f, -1.05f, rise), -0.12f, fall);
+        var aKnL = Mathf.Lerp(Mathf.Lerp(0.6f, 1.6f, rise), 0.3f, fall);
+        var aThR = Mathf.Lerp(Mathf.Lerp(-0.12f, 0.3f, rise), 0.05f, fall);
+        var aKnR = Mathf.Lerp(Mathf.Lerp(0.4f, 0.75f, rise), 0.25f, fall);
+        thL = Mathf.Lerp(thL, aThL, _airBlend); knL = Mathf.Lerp(knL, aKnL, _airBlend);
+        thR = Mathf.Lerp(thR, aThR, _airBlend); knR = Mathf.Lerp(knR, aKnR, _airBlend);
+        // Vol : jambes pendantes vers l'arrière.
         var sway = Mathf.Sin(_t * 2.1f) * 0.06f;
         thL = Mathf.Lerp(thL, 0.12f + sway, _flyBlend); knL = Mathf.Lerp(knL, 0.45f, _flyBlend);
         thR = Mathf.Lerp(thR, 0.22f - sway, _flyBlend); knR = Mathf.Lerp(knR, 0.6f, _flyBlend);
-        // Réception.
-        thL -= 0.55f * _land; thR -= 0.45f * _land;
-        knL += 1.0f * _land; knR += 0.9f * _land;
         // À terre.
         thL = Mathf.Lerp(thL, -0.15f, _downBlend); knL = Mathf.Lerp(knL, 0.35f, _downBlend);
         thR = Mathf.Lerp(thR, 0.05f, _downBlend); knR = Mathf.Lerp(knR, 0.7f, _downBlend);
         // Saisi : jambes pendantes qui battent l'air (pédalage désordonné).
-        var gb = Mathf.SmoothStep(0, 1, _grabBlend);
         if (gb > 0f)
         {
             var k1 = Mathf.Sin(_t * 8.5f);
@@ -791,38 +875,33 @@ public partial class SoldierModel : Node3D
             thL = Mathf.Lerp(thL, -0.15f + k1 * 0.55f, gb); knL = Mathf.Lerp(knL, 0.55f + Mathf.Max(0, -k1) * 1.1f, gb);
             thR = Mathf.Lerp(thR, 0.05f + k2 * 0.55f, gb); knR = Mathf.Lerp(knR, 0.55f + Mathf.Max(0, -k2) * 1.1f, gb);
         }
-        var spread = 0.035f + 0.04f * stance + 0.12f * gb;
-        _legL.Rotation = new Vector3(thL, 0, spread);
-        _legR.Rotation = new Vector3(thR, 0, -spread);
+        // Roulade : cuisses contre la poitrine.
+        thL = Mathf.Lerp(thL, -2.0f, rollB); knL = Mathf.Lerp(knL, 2.3f, rollB);
+        thR = Mathf.Lerp(thR, -1.9f, rollB); knR = Mathf.Lerp(knR, 2.25f, rollB);
+        var gw = ground * (1 - rollB);
+        var spread = 0.035f + 0.12f * gb + 0.08f * rollB;
+        abL = Mathf.Lerp(spread, abGL, gw);
+        abR = Mathf.Lerp(-spread, abGR, gw);
+        _legL.Rotation = new Vector3(thL, 0, abL);
+        _legR.Rotation = new Vector3(thR, 0, abR);
         _shinL.Rotation = new Vector3(knL, 0, 0);
         _shinR.Rotation = new Vector3(knR, 0, 0);
-        var toe = (1 - _flyBlend) * (1 - _airBlend * 0.5f);
-        _footL.Rotation = new Vector3(-(thL + knL) * 0.85f * toe + 0.25f * _flyBlend, 0, -spread);
-        _footR.Rotation = new Vector3(-(thR + knR) * 0.85f * toe + 0.25f * _flyBlend, 0, spread);
-
-        // ── Bassin ──
-        var bob = Mathf.Abs(c) * 0.035f * gaitW - 0.02f * gaitW;
-        var hipsY = HipY + bob - 0.13f * _land - 0.03f * stance + breath * 0.002f;
-        var hipsYaw = s * 0.09f * gaitW * (1 - aimB * 0.6f) - 0.22f * aimB;
-        var hipsRoll = s * 0.035f * gaitW;
-        var hipsPos = new Vector3(0, hipsY, 0).Lerp(new Vector3(0, 0.25f, 0), _downBlend);
-        var hipsRot = new Vector3(0, hipsYaw, hipsRoll).Lerp(new Vector3(-1.4f, 0, 0), _downBlend);
-        // Saisi : bassin ballotté (le corps se tord pour se dégager).
-        hipsRot += new Vector3(0.28f + Mathf.Sin(_t * 5.3f) * 0.14f, Mathf.Sin(_t * 3.7f) * 0.22f, Mathf.Sin(_t * 15.1f) * 0.22f + Mathf.Sin(_t * 6.1f) * 0.12f) * gb;
-        if (dt >= 0.5f) { _hips.Position = hipsPos; _hips.Rotation = hipsRot; }
-        else
-        {
-            _hips.Position = _hips.Position.Lerp(hipsPos, Ease(20f));
-            _hips.Rotation = hipsRot;
-        }
+        var toe = 1 - _airBlend * 0.5f;
+        var footAL = -(thL + knL) * 0.85f * toe + 0.25f * _flyBlend;
+        var footAR = -(thR + knR) * 0.85f * toe + 0.25f * _flyBlend;
+        _footL.Rotation = new Vector3(Mathf.Lerp(footAL, footGL, gw), 0, -abL);
+        _footR.Rotation = new Vector3(Mathf.Lerp(footAR, footGR, gw), 0, -abR);
 
         // ── Torse et tête ──
         var pitch = Mathf.Clamp(aimPitch, -1.2f, 1.2f) * (1 - _downBlend);
-        var lean = run * (0.17f - 0.11f * aimB) + 0.22f * _land + 0.25f * _flyBlend + 0.08f * _airBlend;
-        var torsoYaw = -s * 0.12f * gaitW * (1 - aimB * 0.7f) - 0.14f * aimB;
-        _torso.Rotation = new Vector3(-pitch * 0.45f - recoil * 0.06f + lean + breath * 0.012f, torsoYaw, -hipsRoll * 0.6f);
+        var fwdRun = spd > 0.35f ? hv.Z / spd : 0f;
+        var lean = gaitW * (Mathf.Lerp(0.05f, 0.17f, runW) * Mathf.Max(fwdRun, 0f) - 0.06f * Mathf.Max(-fwdRun, 0f)) * (1 - aimB * 0.65f)
+                   + 0.1f * sprintW * (1 - aimB) + Mathf.Clamp(_acc.Z * 0.012f, -0.12f, 0.15f) * ground * (1 - aimB * 0.5f)
+                   + 0.25f * land + 0.1f * _flyBlend + 0.3f * dashB + _airBlend * Mathf.Lerp(-0.05f, 0.1f, rise) + 0.85f * rollB;
+        var torsoYaw = -_legYaw - 1.6f * oscYaw - 0.14f * aimB;
+        _torso.Rotation = new Vector3(-pitch * 0.45f * (1 - rollB) - recoil * 0.06f + lean + breath * 0.012f, torsoYaw, -hipsRoll * 0.6f);
         var look = Mathf.Sin(_t * 0.37f) * 0.18f * still * (1 - aimB) * (1 - _downBlend) + 0.5f * _downBlend;
-        _head.Rotation = new Vector3(-pitch * 0.4f - lean * 0.7f + 0.16f * aimB, -(hipsYaw + torsoYaw) + look, 0.1f * aimB);
+        _head.Rotation = new Vector3(-pitch * 0.4f * (1 - rollB) - lean * 0.7f + 0.16f * aimB + 0.9f * rollB, -(hipsYaw + torsoYaw) + look, 0.1f * aimB);
 
         // ── Arme : pose cible dans le repère du bassin (sans lacet), convertie dans le repère du torse ──
         var aimR = new Basis(Vector3.Right, -pitch);
@@ -875,9 +954,12 @@ public partial class SoldierModel : Node3D
             var dx = new Transform3D(new Basis(Vector3.Back, 0.5f) * new Basis(Vector3.Right, Mathf.Pi / 2), p0 + V(0.0f, -0.12f, 0.2f));
             gx = gx.InterpolateWith(dx, Mathf.SmoothStep(0, 1, _downBlend));
         }
-        // Balancement de la course, recul, respiration.
-        gx.Origin += new Vector3(s * 0.015f, Mathf.Abs(c) * 0.018f - 0.009f, 0) * gaitW * (1 - aimB * 0.6f) + new Vector3(0, breath * 0.004f, 0);
-        gx.Basis = new Basis(Vector3.Up, s * 0.05f * gaitW * (1 - aimB * 0.7f)) * gx.Basis;
+        // Arme dans les mains : rebond à chaque appui, balancement du pas, pompage du sprint, inertie (ressort amorti),
+        // respiration, recul.
+        GunSpring(dt, gaitW * Mathf.Clamp(spd / 6f, 0.35f, 1.4f), stepL, stepR, aimB);
+        var swayK = gaitW * (1 - aimB * 0.75f);
+        gx.Origin += new Vector3(s * 0.018f, 0, Mathf.Sin(cyc * 2f) * 0.006f + c * 0.035f * sprintW) * swayK + _gOff + new Vector3(0, breath * 0.004f, 0);
+        gx.Basis = Basis.FromEuler(_gAng + new Vector3(0, s * 0.05f, s * 0.035f) * swayK) * gx.Basis;
         gx.Origin -= gx.Basis.Z * recoil * 0.05f;
         gx.Basis *= new Basis(Vector3.Right, -recoil * 0.1f);
         _reloadBlend = Mathf.MoveToward(_reloadBlend, Reloading ? 1f : 0f, dt * 6f);
@@ -891,6 +973,9 @@ public partial class SoldierModel : Node3D
         var frame = new Transform3D(Basis.FromEuler(new Vector3(_hips.Rotation.X, 0, 0)), _hips.Position);
         var torsoModel = _hips.Transform * _torso.Transform;
         var gunT = torsoModel.AffineInverse() * frame * gx;
+        // Roulade : arme serrée contre la poitrine.
+        if (rollB > 0.001f)
+            gunT = gunT.InterpolateWith(new Transform3D(new Basis(Vector3.Back, 0.5f) * new Basis(Vector3.Right, Mathf.Pi / 2), V(0f, 0.28f, 0.2f)), rollB);
         _gun.Transform = gunT;
 
         // ── Bras : IK à deux segments vers les poignées de l'arme ──
@@ -905,16 +990,16 @@ public partial class SoldierModel : Node3D
             supP = supP.Lerp(mp, Mathf.SmoothStep(0, 1, _reloadBlend));
         }
         var freeT = _rig.Hold == Hold.OneHand || _downBlend > 0.5f ? 1f
-            : (!aiming && _fireHold <= 0 && speed > 7.2f && !airborne && _rig.Hold == Hold.Shoulder ? 1f : 0f);
+            : (!aiming && _fireHold <= 0 && spd > 7.2f && !airborne && !rolling && _rig.Hold == Hold.Shoulder ? 1f : 0f);
         _freeL = Mathf.MoveToward(_freeL, freeT, dt * 5f);
 
         var poleR = new Vector3(-0.6f, -1f, -0.25f);
         var poleL = new Vector3(0.55f, -1f, -0.3f);
         SolveArm(_armR, _foreR, _handR, gripP - gripB * GripC, gripB, poleR, 0, default, default);
-        // Bras gauche libre : balancement opposé à la jambe gauche.
-        var swing = s * 0.55f * gaitW;
+        // Bras gauche libre : balancement opposé à la jambe gauche (plus ample en sprint).
+        var swing = c * Mathf.Lerp(0.55f, 0.8f, sprintW) * gaitW;
         var freeArm = Basis.FromEuler(new Vector3(swing - 0.05f + 0.2f * _flyBlend, 0, 0.12f));
-        var freeFore = Basis.FromEuler(new Vector3(-0.35f - 0.6f * gaitW - 0.3f * _flyBlend, 0, 0));
+        var freeFore = Basis.FromEuler(new Vector3(-0.35f - 0.6f * gaitW - 0.3f * _flyBlend - 0.4f * sprintW, 0, 0));
         if (!PoseShield(dt, frame, torsoModel, pitch, poleL))
             SolveArm(_armL, _foreL, _handL, supP - supB * GripC, supB, poleL, Mathf.SmoothStep(0, 1, _freeL), freeArm, freeFore);
 

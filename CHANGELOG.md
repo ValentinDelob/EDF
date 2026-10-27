@@ -1,5 +1,17 @@
 # Journal des versions
 
+## v0.19.0 — Animations du soldat
+
+- **Vraies foulées** : marche, trot, course et sprint avec des pas posés au sol (le pied ne glisse plus pendant l'appui),
+  rebond du corps, rotation du bassin et des épaules, déroulé du pied ; pas lourds et appuyés pour le Fencer.
+- **Déplacements en visée** : pas chassés de côté et recul à reculons (les jambes vont dans le sens du déplacement, le buste
+  et l'arme restent sur la cible) ; le corps se penche selon la vitesse, au démarrage et au freinage.
+- **Saut** (genou levé à la montée, jambes ramenées à la descente, réception amortie selon la hauteur), **roulade
+  d'esquive** (Ranger, Air Raider), fente pendant la ruée du Fencer et la poussée de la Wing Diver, corps couché dans le sens
+  du vol.
+- **L'arme bouge dans les mains** : elle rebondit à chaque pas, roule d'un côté à l'autre, traîne quand le soldat démarre,
+  s'arrête ou tourne (plus discrète en visée).
+
 ## v0.18.0 — Ranger, Fencer et Air Raider réalistes
 
 - **Nouveaux modèles pour les trois autres classes**, faits dans Blender sur la même base réaliste que la Wing Diver
