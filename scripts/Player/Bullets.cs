@@ -41,22 +41,14 @@ public partial class Bullets : Node3D
 
     public override void _Ready()
     {
-        var mat = new StandardMaterial3D
-        {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            BlendMode = BaseMaterial3D.BlendModeEnum.Add,
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            VertexColorUseAsAlbedo = true,
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-        };
         _mm = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseColors = true,
             InstanceCount = Capacity,
             VisibleInstanceCount = 0,
-            // Trait unitaire le long de −Z (de 0 à −1) : mis à l'échelle de la longueur et de l'épaisseur de chaque balle.
-            Mesh = new BoxMesh { Size = new Vector3(1, 1, 1), Material = mat },
+            // Traînée unitaire centrée le long de −Z (tête vers −Z), mise à l'échelle de la longueur et de l'épaisseur de chaque balle.
+            Mesh = MuzzleFx.BulletMesh(),
         };
         _mmi = new MultiMeshInstance3D { Multimesh = _mm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(_mmi);

@@ -22,6 +22,7 @@ uniform bool billboard = false;
 instance uniform vec3 tint = vec3(1.0, 0.7, 0.3);
 instance uniform float roll = 0.0;
 instance uniform float fade = 1.0;
+instance uniform float gain = 1.0;
 void vertex() {
     if (billboard) {
         float c = cos(roll), s = sin(roll);
@@ -34,7 +35,7 @@ void fragment() {
     vec4 t = texture(tex, UV);
     // Cœur presque blanc, bords à la teinte du tir ; au-delà de 1 : la lueur (bloom) prend le relais.
     vec3 col = mix(tint, vec3(1.0, 0.97, 0.9), t.r * t.r) * (1.5 + 3.0 * t.r);
-    ALBEDO = col * t.a * fade;
+    ALBEDO = col * t.a * fade * gain;
 }";
 
     private static ShaderMaterial Material(bool billboard, ImageTexture tex)
@@ -118,6 +119,64 @@ void fragment() {
     }
 
     private static ShaderMaterial _streak;
+    private static ArrayMesh _bulletMesh;
+
+    /// <summary>
+    /// Maillage d'une balle visible (MultiMesh des balles d'EDF 5, couleur par instance) : deux plans croisés le long de −Z
+    /// (queue en Z = +0,5, tête en Z = −0,5), traînée douce à tête brillante ; remplace le pavé plein.
+    /// </summary>
+    public static ArrayMesh BulletMesh()
+    {
+        if (_bulletMesh != null) return _bulletMesh;
+        var tex = BulletTexture();
+        var mat = new StandardMaterial3D
+        {
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            VertexColorUseAsAlbedo = true,
+            AlbedoTexture = tex,
+            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+        };
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        void Quad(Vector3 a)
+        {
+            // a : demi-largeur du plan (axe X ou Y) ; la largeur visible vaut environ la moitié (dégradé en travers).
+            Vector3[] p = { a + Vector3.Back * 0.5f, -a + Vector3.Back * 0.5f, -a + Vector3.Forward * 0.5f, a + Vector3.Forward * 0.5f };
+            Vector2[] uv = { new(0, 0), new(0, 1), new(1, 1), new(1, 0) };
+            foreach (var i in new[] { 0, 1, 2, 0, 2, 3 })
+            {
+                st.SetUV(uv[i]);
+                st.AddVertex(p[i]);
+            }
+        }
+        Quad(Vector3.Right);
+        Quad(Vector3.Up);
+        st.SetMaterial(mat);
+        _bulletMesh = st.Commit();
+        return _bulletMesh;
+    }
+
+    /// <summary>Traînée de balle : blanc au cœur (U = 1 tête), couverture gaussienne en travers et qui s'efface vers la queue.</summary>
+    private static ImageTexture BulletTexture()
+    {
+        const int w = 64, h = 16;
+        var img = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
+        for (var y = 0; y < h; y++)
+            for (var x = 0; x < w; x++)
+            {
+                var u = (x + 0.5f) / w;
+                var v = (y + 0.5f) / h * 2f - 1f;
+                var a = Mathf.Exp(-v * v * 7f) * Mathf.Pow(u, 1.3f) * Mathf.Clamp((1f - u) * 12f, 0f, 1f);
+                var core = Mathf.Exp(-v * v * 30f) * u;
+                var c = 0.75f + 0.25f * core;
+                img.SetPixel(x, y, new Color(c, c, c, Mathf.Clamp(a * 1.4f, 0f, 1f)));
+            }
+        img.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(img);
+    }
 
     private static void Init()
     {
@@ -153,9 +212,11 @@ void fragment() {
             var q = new MeshInstance3D { Mesh = _petalQuad, MaterialOverride = _streak, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
             root.AddChild(q);
             // Quad de X = 0 (queue) à X = 1 (tête) : la tête est au bout, côté cible.
-            q.Basis = new Basis(d * len, y * width * 4f, d.Cross(y));
+            q.Basis = new Basis(d * len, y * width * 3f, d.Cross(y));
             q.Position = -d * len;
             q.SetInstanceShaderParameter("tint", tint);
+            // Traînée : lueur bien plus faible qu'une flamme de bouche (sinon une planche blanche de près).
+            q.SetInstanceShaderParameter("gain", 0.3f);
         }
         var time = Mathf.Max(0.03f, dist / 650f);
         root.GlobalPosition = from + d * Mathf.Min(len, dist);
