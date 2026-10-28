@@ -3,6 +3,10 @@
 ## v0.22.0 — Phares
 
 - **Phares des véhicules** la nuit et sous terre : faisceaux du char, projecteur de recherche de l'hélicoptère.
+- **Fin de mission garantie** : les derniers ennemis viennent au joueur au lieu de tourner au loin autour d'une escouade ;
+  un insecte coincé (viaduc du quartier d'affaires) réapparaît près des soldats au lieu de retourner dans son piège — la
+  mission « Tours de verre » pouvait ne jamais se terminer.
+- **Vaisseau de largage** : 3 largages de 5 (au lieu de 4 de 6), missions d'aliens moins interminables.
 - Corrections de la relecture : traces de chenilles sur les pentes, caisses qui ne restent plus perchées sur un véhicule,
   phases minutées qui ne sont plus retardées par les fourmis des nids, pièces derrière les vitres sans points noirs.
 

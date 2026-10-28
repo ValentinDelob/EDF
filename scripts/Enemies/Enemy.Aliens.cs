@@ -257,7 +257,7 @@ public partial class Enemy
         }
         // Mêmes règles de cible que les insectes : allié nettement plus proche, ou élément de l'objectif.
         Ally ally = null;
-        if (!IgnoreAllies)
+        if (!IgnoreAllies && !Hunting)
         {
             var a = _world.Allies?.Nearest(GlobalPosition, 45f);
             if (a != null && a.GlobalPosition.DistanceTo(GlobalPosition) < target.DistanceTo(GlobalPosition) * 0.85f)

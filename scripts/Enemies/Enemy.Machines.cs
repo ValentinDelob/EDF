@@ -444,7 +444,8 @@ public partial class Enemy
     /// <summary>Soute ouverte (état logique, connu de chaque pair par les genres 60/61).</summary>
     public bool HatchOpen { get; private set; }
 
-    private const int ShipCycles = 4, ShipCargo = 6;
+    // Largages : 3 passages de 5 (4 de 6 auparavant : 24 fantassins prolongeaient d'un quart d'heure les missions d'aliens).
+    private const int ShipCycles = 3, ShipCargo = 5;
 
     private void TickShip(float dt)
     {

@@ -27,6 +27,7 @@ public class MissionDirector
     private float _nextWave = -1f, _surviveStart = -1f;
     private int _wave;
     private float _failDelay = -1f;
+    private float _lastLog = -10f;
 
     public MissionDirector(World w)
     {
@@ -118,6 +119,19 @@ public class MissionDirector
         }
 
         UpdateObjective(active);
+        // Derniers ennemis de la dernière phase (5 au plus) : ils viennent aux joueurs au lieu de traîner au loin.
+        if (_m.Goal is MissionGoal.Exterminate or MissionGoal.DestroyNests or MissionGoal.Boss && _phase == _m.Phases.Length - 1
+            && _queue.Count == 0 && active <= Mathf.RoundToInt(5 * PlayerScale))
+            foreach (var e in _w.EnemiesById.Values)
+                if (!e.IsStatic && !e.Def.Boss) e.Hunting = true;
+        // Test (--objlog) : déroulé toutes les 10 s ; derniers ennemis localisés (ennemis coincés, inaccessibles).
+        if (MissionObjective.Log && t - _lastLog >= 10f)
+        {
+            _lastLog = t;
+            var alive = _w.EnemiesById.Values.Where(e => e.State != EnemyState.Dead && !e.IsStatic).ToList();
+            GD.Print($"[mission] t={t:0} phase {_phase + 1}/{_m.Phases.Length} actifs {active} en file {_queue.Count}"
+                + (alive.Count is > 0 and <= 4 ? " : " + string.Join(", ", alive.Select(e => $"{e.Def.Type} {e.GlobalPosition:0} {e.State}")) : ""));
+        }
         if (CheckDefeat(dt)) return;
         CheckVictory(active, dt);
     }

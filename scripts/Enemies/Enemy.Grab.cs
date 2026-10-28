@@ -27,6 +27,11 @@ public partial class Enemy
 
     /// <summary>Test : les insectes ignorent les soldats alliés (--grab).</summary>
     public static bool IgnoreAllies;
+    /// <summary>
+    /// Derniers ennemis de la mission (MissionDirector) : ils ignorent les soldats alliés et foncent sur les joueurs, comme
+    /// dans EDF (une guêpe qui tournait sans fin autour d'une escouade au bout de la carte bloquait la fin de mission).
+    /// </summary>
+    public bool Hunting;
 
     private float _grabT = -1f;
     private int _grabBites;

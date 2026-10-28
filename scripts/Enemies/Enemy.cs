@@ -358,7 +358,7 @@ public partial class Enemy : StaticBody3D
 
         // Les soldats alliés plus proches que le joueur deviennent la cible.
         Ally ally = null;
-        if (!Def.Boss && !IgnoreAllies)
+        if (!Def.Boss && !IgnoreAllies && !Hunting)
         {
             var a = _world.Allies?.Nearest(GlobalPosition, 45f);
             if (a != null && a.GlobalPosition.DistanceTo(GlobalPosition) < target.DistanceTo(GlobalPosition) * 0.85f)

@@ -959,8 +959,20 @@ public partial class World : Node3D
         EnemiesById.Remove(e.Id);
         Net.I.BroadcastEnemyDespawn(e.Id);
         e.QueueFree();
-        var zone = City.Zones.Count > 0 ? City.Zones.Values.OrderBy(z => z.DistanceSquaredTo(from)).First() : Vector3.Zero;
-        HostSpawnEnemy(type, zone + new Vector3(Rng.RandfRange(-6, 6), 0, Rng.RandfRange(-6, 6)));
+        // Zone d'apparition la plus proche des soldats, hors du piège où l'insecte s'est coincé (sinon il y retourne :
+        // fourmis qui arpentaient sans fin le viaduc du quartier d'affaires, mission impossible à terminer).
+        var zones = City.Zones.Values.Where(z => z.DistanceTo(from) > 35f).ToList();
+        if (zones.Count == 0) zones = City.Zones.Values.ToList();
+        var hasPlayer = NearestPlayer(from, out _, out var target);
+        var zone = zones.Count == 0 ? Vector3.Zero
+            : zones.OrderBy(z => (hasPlayer ? z.DistanceSquaredTo(target) : z.DistanceSquaredTo(from))).First();
+        var at = zone;
+        for (var i = 0; i < 12; i++)
+        {
+            var p = zone + new Vector3(Rng.RandfRange(-14, 14), 0, Rng.RandfRange(-14, 14));
+            if (!Flow.IsBlocked(p)) { at = p; break; }
+        }
+        HostSpawnEnemy(type, at);
         if (Screenshot.CmdArg("fps") != null) GD.Print($"[ennemi] {type} bloqué en {from} : réapparition en {zone}");
     }
 
