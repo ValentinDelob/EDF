@@ -51,7 +51,8 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
   de l'image, sous le réticule. En visée : 2,6 m, épaule droite à 0,6 m. Champ de vision vertical 60° par défaut (clé de
   réglage `video/fov_v`, curseur 50-90°).
 - **Humidité** : paramètre global de shader `wetness` (déclaré dans `project.godot`, réglé par `World.BuildEnvironment`) :
-  flaques des matières `Weathered` × 1 sous la pluie et sous terre, × 0,3 par beau temps.
+  1 sous la pluie et sous terre, 0,3 par beau temps ; le seuil du masque des flaques monte quand il fait sec (quelques
+  petites flaques franches au lieu d'un voile partout).
 - **Ville** : enduits clairs (crème, sable, blanc cassé, gris perle), brique orangée, murs-rideaux bleutés (`Mats.StyleOf`) ;
   teinte propre à chaque immeuble tirée d'une palette bigarrée (`Building.Tint`, sans tirage aléatoire) ; fenêtres
   incendiées et vitres brisées rares, calque de dégâts sur un immeuble sur trois (lourd sur un sur dix), panneaux arrachés

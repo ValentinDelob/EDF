@@ -1,5 +1,12 @@
 # Journal des versions
 
+## v0.23.0 — Sols propres
+
+- **Flaques** : par beau temps, seulement quelques petites flaques franches (l'asphalte était tacheté de bleu partout).
+- **Pelouses** sans taches de boue sombre.
+- Fourmis noires : une caisse pour sept environ.
+- Vignettes des missions recapturées.
+
 ## v0.22.0 — Phares
 
 - **Phares des véhicules** la nuit et sous terre : faisceaux du char, projecteur de recherche de l'hélicoptère.
