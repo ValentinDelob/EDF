@@ -166,6 +166,7 @@ public partial class Tank : Vehicle
             }
         }
         Effects.Tracer(_world.FxRoot, from, end, new Color(1f, 0.75f, 0.35f), 0.05f);
+        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.7f, 0.3f), 0.3f, dir);
         Sfx.Ui("minigun", -6f);
         Net.I.SendShotFx(0, from, end);
     }

@@ -383,7 +383,7 @@ public partial class Helicopter : Vehicle
             }
         }
         Effects.Tracer(_world.FxRoot, from, end, new Color(1f, 0.75f, 0.35f), 0.05f);
-        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.7f, 0.3f), 0.35f);
+        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.7f, 0.3f), 0.35f, dir);
         Net.I.SendShotFx(8, from, end);
         if (Test == "down" && GD.Randf() < 0.05f)
             GD.Print($"[heli] minigun : bouche {from.Y - GlobalPosition.Y:0.0} m / centre, dir.y {dir.Y:0.00}, impact {end.Y - GlobalPosition.Y:0.0} m");
@@ -407,7 +407,7 @@ public partial class Helicopter : Vehicle
             pr.Impacted += (at, col) => GD.Print($"[heli] roquette : impact {heli.DistanceTo(at):0.0} m de l'appareil, {heli.Y - at.Y:0.0} m sous le centre, sur {(col as Node)?.Name ?? "-"} ({(col is Vehicle ? "VEHICULE" : "décor/ennemi")})");
         }
         Net.I.SendShotFx(10 + (int)ProjectileKind.Rocket, from, from + vel);
-        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.6f, 0.2f), 0.9f);
+        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.6f, 0.2f), 0.9f, dir);
         Effects.Smoke(_world, muzzle - dir * 1.5f, 1.2f, 1f);
         Sfx.Ui("heli_rocket", -2f, (float)GD.RandRange(0.95, 1.08));
         p.AddShake(0.08f);

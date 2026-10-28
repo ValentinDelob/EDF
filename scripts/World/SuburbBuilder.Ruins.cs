@@ -25,7 +25,7 @@ public static partial class SuburbBuilder
 
     /// <summary>Arbre mort à la place d'un arbre de jardin ou d'alignement (une fois sur trois).</summary>
     private static ArrayMesh DeadTreeAt(Vector3 p) =>
-        RuinKit.Hash(p.X, p.Z, 121) < 0.33f ? Props.DeadTree((int)(RuinKit.Hash(p.X, p.Z, 122) * 4)) : null;
+        RuinKit.Hash(p.X, p.Z, 121) < 0.12f ? Props.DeadTree((int)(RuinKit.Hash(p.X, p.Z, 122) * 4)) : null;
 
     /// <summary>Lampadaire abattu (couché en travers du trottoir), avec collision.</summary>
     private static bool RuinLamp(Vector3 p, float yaw)
