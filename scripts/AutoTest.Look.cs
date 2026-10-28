@@ -64,7 +64,10 @@ public static partial class AutoTest
         WhenPlayerReady(app, 1.5f, p =>
         {
             var fwd = (-p.Camera.GlobalBasis.Z with { Y = 0 }).Normalized();
-            Player.BotLookAt = p.GlobalPosition + fwd * 60f + Vector3.Up * 1.4f;
+            // Cible : le premier mur devant le soldat (à moins de 60 m), sinon un point à 60 m.
+            var eye = p.GlobalPosition + Vector3.Up * 1.4f;
+            var ray = p.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(eye, eye + fwd * 60f, 1));
+            Player.BotLookAt = ray.Count > 0 ? (Vector3)ray["position"] : eye + fwd * 60f;
             Player.BotForceFire = true;
             var cam = new Camera3D { Fov = 40, Current = true };
             app.CurrentWorld.AddChild(cam);
@@ -83,7 +86,9 @@ public static partial class AutoTest
                 var k = i;
                 At(app, 3.0f + i * 0.033f, () => Shot(app, $"fx_front_{k:00}"));
             }
-            At(app, 4.0f, () => { Player.BotForceFire = false; GD.Print("[fx] fin"); });
+            At(app, 4.0f, () => { Player.BotForceFire = false; follow.QueueFree(); cam.QueueFree(); p.Camera.MakeCurrent(); Player.BotAiming = true; });
+            // Impacts laissés sur la cible, vus par la caméra du jeu en visée.
+            At(app, 4.8f, () => { Shot(app, "fx_holes"); Player.BotAiming = false; GD.Print("[fx] fin"); });
         });
     }
 

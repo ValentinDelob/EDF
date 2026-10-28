@@ -255,6 +255,18 @@ public static class Effects
             Grad(new Color(0.5f, 0.48f, 0.44f, 0.6f), new Color(0.6f, 0.58f, 0.55f, 0)), 2.5f, 1f);
     }
 
+    /// <summary>
+    /// Impact de balle laissé sur le décor fixe touché (immeuble, sol, mobilier : corps statique, pas un bouclier d'alien),
+    /// près de la caméra seulement (voir <see cref="ImpactMarks"/>).
+    /// </summary>
+    public static void BulletHole(World world, Vector3 at, Vector3 normal, GodotObject collider, float size = 0.24f)
+    {
+        if (collider is not StaticBody3D || collider is AlienShield) return;
+        var cam = world.GetViewport()?.GetCamera3D();
+        if (cam == null || cam.GlobalPosition.DistanceSquaredTo(at) > 110f * 110f) return;
+        ImpactMarks.For(world).Add(at, normal, size * (0.8f + GD.Randf() * 0.4f));
+    }
+
     public static void Smoke(World world, Vector3 pos, float size, float life)
     {
         Burst(world.FxRoot, pos, 8, life, SmokeMat, size, Vector3.Up, 30, 0.5f, 2f, 1f,

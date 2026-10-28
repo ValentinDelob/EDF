@@ -56,6 +56,12 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
   teinte propre à chaque immeuble tirée d'une palette bigarrée (`Building.Tint`, sans tirage aléatoire) ; fenêtres
   incendiées et vitres brisées rares, calque de dégâts sur un immeuble sur trois (lourd sur un sur dix), panneaux arrachés
   des tours divisés par deux. Pelouses vertes de parc (`Mats.Grass`), brins croisés (aucune strie).
+- **Pièces derrière les vitres** (shader `Weathered`, paramètres `interior` 1 = fenêtres percées ou en bandeau, 2 = mur-
+  rideau, `win_rect`, `cell_m`, `room_depth`, réglés par `Mats.Facade`) : « interior mapping » sans tangentes de maillage
+  (repère de la façade par dérivées écran de la position et des UV en mètres), rayon de vue intersecté avec la boîte de la
+  pièce (murs latéraux, fond, sol, plafond à plafonnier), mobilier au fond, porte sur un côté, teinte par pièce et par
+  immeuble (couleur de sommet). La vitre garde son reflet (Fresnel) ; la pièce s'ajoute en émission (faible de jour,
+  éclairée la nuit quand la fenêtre l'est : la lueur plate de la fenêtre est alors réduite).
 - **Flamme de bouche et traçantes** (`scripts/Fx/MuzzleFx.cs`) : étoile de feu à cinq branches face à la caméra (roulis
   aléatoire) et deux pétales croisés le long du canon quand la direction du tir est connue ; lumière brève de 3,5 m
   (plus d'ombre orangée au sol). Traçantes : courtes traînées (deux plans croisés) qui filent vers la cible à 650 m/s ; les
@@ -505,6 +511,7 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--aliens-net` | Avec `--autohost` / `--autojoin` (ex. `--mission=18`) : chaque pair journalise toutes les 3 s les aliens et portails qu'il voit, avec la posture reçue (`[alien-net]`). |
 | `--crate-test` | Les trois caisses tombent devant le soldat (chemin hôte complet), caméra qui tourne autour : captures `crate_NN`, puis vue de la caméra du jeu `crate_game` ; journal `[caisses]` (hauteur de pose au-dessus du sol). |
 | `--fx-test` | Le soldat tire en continu vers un point dégagé, caméra de côté puis de trois quarts avant : captures `fx_side_NN` et `fx_front_NN` (flamme de bouche, traçantes). |
+| `--dmglog` | Journal `[dégâts]` de chaque dégât subi par le soldat local (instant, montant, distance de la source, ennemi le plus proche, armure restante) : équilibrage des missions au bot. |
 | `--hitch` | Journal `[à-coup]` des images de plus de 50 ms (avec l'heure de mission). |
 | `--heavy-sets` | Avec `--class=3` : trois bascules de jeu d'armes par la vraie touche, vérification des quatre armes, du blocage de 0,5 s (arme abaissée, seconde bascule ignorée) et de « arme suivante » limitée au jeu actif ; journal `[jeux]`, « [jeux] ok » à la fin. Avec `--shots`, captures `heavy_sets_*`. |
 | `--call-vehicle=tank\|heli` | Avec `--class=2` : crédits fournis, appel du véhicule au point visé, contrôle de la confirmation et du débit, de la pose (~8 s), puis appel de l'autre type (l'ancien est rapatrié) et montée à bord ; journal `[appel]`, « [appel] ok » à la fin. Autre classe (hôte d'un test LAN) : journal des livraisons seulement. Avec `--shots`, le bot regarde la livraison et capture `call_*`. |

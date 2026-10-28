@@ -378,6 +378,7 @@ public partial class Helicopter : Vehicle
             else
             {
                 Effects.Sparks(_world, end, (Vector3)hit["normal"]);
+                Effects.BulletHole(_world, end, (Vector3)hit["normal"], hit["collider"].AsGodotObject(), 0.32f);
                 _world.Decor?.LocalHit(hit, 13f * DamageScale(p), from);
             }
         }

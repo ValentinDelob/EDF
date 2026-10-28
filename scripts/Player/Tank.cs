@@ -161,6 +161,7 @@ public partial class Tank : Vehicle
             else
             {
                 Effects.Sparks(_world, end, (Vector3)hit["normal"]);
+                Effects.BulletHole(_world, end, (Vector3)hit["normal"], hit["collider"].AsGodotObject(), 0.3f);
                 _world.Decor?.LocalHit(hit, 14f * p.DamageMul, from);
             }
         }

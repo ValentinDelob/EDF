@@ -140,7 +140,11 @@ public partial class Bullets : Node3D
                     else if (col is Building b && !b.Destroyed) Net.I.SendBuildingDamage(b.Id, dmg * 0.06f, at);
                     else _world.Decor?.LocalHit(col, hit["shape"].AsInt32(), dmg, from);
                 }
-                if (s.Blast <= 0) Effects.Sparks(_world, at, normal);
+                if (s.Blast <= 0)
+                {
+                    Effects.Sparks(_world, at, normal);
+                    Effects.BulletHole(_world, at, normal, col);
+                }
                 if (s.Bounces > 0 && s.Blast <= 0)
                 {
                     s.Bounces--;
