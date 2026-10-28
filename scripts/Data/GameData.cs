@@ -810,9 +810,9 @@ public static class Enemies
         new(EnemyType.Wasp, "Guêpe", 40, 14f, 4, 28f, 1.8f, 0.8f, 0.1f, Flying: true, Ranged: true, Giant: 1.5f),
         new(EnemyType.Scavenger, "Charognard", 90, 13f, 5, 5f, 1.2f, 0.85f, 0.2f, Giant: 1.65f),
         new(EnemyType.Nest, "Nid", 3000, 0, 0, 0, 0, 1f, 1f, Static: true, Giant: 1.5f),
-        new(EnemyType.Queen, "Reine", 40000, 5.5f, 40, 12f, 1.8f, 3.8f, 1f, Ranged: true, Boss: true, Giant: 1.35f),
+        new(EnemyType.Queen, "Reine", 20000, 5.5f, 28, 12f, 2.6f, 3.8f, 1f, Ranged: true, Boss: true, Giant: 1.35f),
         new(EnemyType.Spider, "Araignée", 70, 12f, 7, 26f, 2.0f, 1f, 0.12f, Ranged: true, Giant: 2f),
-        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.3f, 1f, 0.12f, Flying: true, Ranged: true, Giant: 1.25f),
+        new(EnemyType.Drone, "Drone d'attaque", 80, 15f, 5, 34f, 1.7f, 1f, 0.12f, Flying: true, Ranged: true, Giant: 1.25f),
         // Forteresse marcheuse : Damage = un tir laser (missiles, piétinement et canon en multiples). Déjà colossale : pas de gigantisme.
         new(EnemyType.Fortress, "Forteresse marcheuse", 70000, 2.5f, 5, 170f, 4f, 12f, 1f, Ranged: true, Boss: true),
         // Mille-pattes : morsure au contact et courte giclée d'acide à mi-distance (Damage pour les deux).

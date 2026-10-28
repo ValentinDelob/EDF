@@ -273,8 +273,9 @@ public static class Effects
 
     public static void Emerge(World world, Vector3 pos, float size)
     {
-        Burst(world.FxRoot, pos, 16, 2.5f, DustMat, size * 2.5f, Vector3.Up, 50, 2f, 6f, -2f,
-            Grad(new Color(0.42f, 0.36f, 0.28f, 0.9f), new Color(0.5f, 0.45f, 0.38f, 0)), 2f, 1.2f, new Vector3(size, 0.3f, size));
+        // Gerbe de terre au ras du sol (elle ne doit pas masquer l'insecte qui sort ni le champ de bataille).
+        Burst(world.FxRoot, pos, 14, 2f, DustMat, size * 1.6f, Vector3.Up, 55, 2f, 6f, -2f,
+            Grad(new Color(0.46f, 0.4f, 0.32f, 0.7f), new Color(0.55f, 0.5f, 0.42f, 0)), 2f, 1.2f, new Vector3(size, 0.3f, size));
     }
 
     public static void Beam(World world, Vector3 from, Vector3 to, Color color, float width)

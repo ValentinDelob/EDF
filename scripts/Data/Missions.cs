@@ -93,11 +93,11 @@ public static class Missions
             new[]
             {
                 new PhaseDef(0, 0,
-                    new WaveDef("north", 2, "Contacts aériens ! Des drones d'attaque !", (EnemyType.Drone, 6))),
+                    new WaveDef("north", 2, "Contacts aériens ! Des drones d'attaque !", (EnemyType.Drone, 5))),
                 new PhaseDef(3, 0,
-                    new WaveDef("east", 0, "Guêpes et drones à l'est ! Tirez en l'air, elles plongent sur vous.", (EnemyType.Drone, 5), (EnemyType.Wasp, 6))),
+                    new WaveDef("east", 0, "Guêpes et drones à l'est ! Tirez en l'air, elles plongent sur vous.", (EnemyType.Drone, 4), (EnemyType.Wasp, 5))),
                 new PhaseDef(4, 0,
-                    new WaveDef("west", 0, "Escadrille lourde à l'ouest, tenez bon !", (EnemyType.Drone, 8), (EnemyType.Wasp, 8))),
+                    new WaveDef("west", 0, "Escadrille lourde à l'ouest, tenez bon !", (EnemyType.Drone, 6), (EnemyType.Wasp, 6))),
             }),
         new(5, "Les docks",
             "La colonie s'est installée dans le port de commerce. Détruisez les nids entre les conteneurs, sous la pluie, avant l'arrivée des renforts.",

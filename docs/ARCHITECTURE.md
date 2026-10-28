@@ -39,6 +39,33 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 - Volumes d'immeubles aux arêtes verticales chanfreinées (acrotère, corniche et toit suivent l'octogone) ; teinte propre à chaque immeuble et bande assombrie sous l'acrotère par couleur de sommet. Aucun tirage aléatoire supplémentaire (identifiants inchangés).
 - Arbres : majorité d'arbres morts (charpente ramifiée, ramilles ajourées), feuillage restant en touffes découpées (`Mats.Leaves`, alpha scissor) ; seules les charpentières sont solides.
 
+## Direction visuelle (Monster Attack au rendu actuel)
+
+- **Étalonnage** (`scripts/Fx/Grade.cs`) : par beau temps, ciel bleu profond à cumulus épars, soleil franc et chaud, ombres
+  bleutées (ambiance en couleur fixe), brume claire qui bleuit le lointain, ACES, saturation 1,12, courbes `ClearLut`
+  (noirs à peine bleutés, hautes lumières légèrement chaudes). Crépuscule : bande orangée, zénith bleu-violet. Nuit : ciel
+  bleu nuit, lune froide et lisible. Pluie et orage : plafond gris bas, courbes grises `Lut`, saturation 0,78. Les cartes à
+  lumière propre (désert, forêt, souterrain, capitale) s'appliquent ensuite. Vignettage 0,3 et grain 0,02.
+- **Caméra** (`Player.CamDistance`, `AimShoulder`) : cadrage d'EDF, caméra dans l'axe du soldat au-dessus de la tête
+  (pivot à 1,95 m + 0,35 m, 2,25 m pour le Fencer), à 4,5 m (5,2 m pour le Fencer) : le soldat entier occupe le tiers bas
+  de l'image, sous le réticule. En visée : 2,6 m, épaule droite à 0,6 m. Champ de vision vertical 60° par défaut (clé de
+  réglage `video/fov_v`, curseur 50-90°).
+- **Humidité** : paramètre global de shader `wetness` (déclaré dans `project.godot`, réglé par `World.BuildEnvironment`) :
+  flaques des matières `Weathered` × 1 sous la pluie et sous terre, × 0,3 par beau temps.
+- **Ville** : enduits clairs (crème, sable, blanc cassé, gris perle), brique orangée, murs-rideaux bleutés (`Mats.StyleOf`) ;
+  teinte propre à chaque immeuble tirée d'une palette bigarrée (`Building.Tint`, sans tirage aléatoire) ; fenêtres
+  incendiées et vitres brisées rares, calque de dégâts sur un immeuble sur trois (lourd sur un sur dix), panneaux arrachés
+  des tours divisés par deux. Pelouses vertes de parc (`Mats.Grass`), brins croisés (aucune strie).
+- **Flamme de bouche et traçantes** (`scripts/Fx/MuzzleFx.cs`) : étoile de feu à cinq branches face à la caméra (roulis
+  aléatoire) et deux pétales croisés le long du canon quand la direction du tir est connue ; lumière brève de 3,5 m
+  (plus d'ombre orangée au sol). Traçantes : courtes traînées (deux plans croisés) qui filent vers la cible à 650 m/s ; les
+  traits épais ou durables des ennemis (`Effects.Tracer` avec largeur > 0,15 m ou durée > 0,1 s) restent des faisceaux.
+  Matériau additif partagé, paramètres par instance (teinte, roulis, fondu). Banc : `--fx-test`.
+- **Véhicules** : char vert-gris de l'armée ; traces de chenilles (`scripts/Fx/TrackMarks.cs`, une empreinte par chenille
+  tous les 0,8 m à moins de 160 m de la caméra, anneau de 720 instances d'un MultiMesh, effacement en 40 s) ; coup de canon
+  avec poussière au sol ; fumée de dégâts sous 50 % du blindage et étincelles sous 25 % (`Vehicle.DamageFx`, point
+  `DamageFxPoint` propre au véhicule).
+
 ## Insectes grimpeurs
 
 Fourmis, araignée, mille-pattes et charognard (`Enemy.Climbs` : ni volants, ni nid, ni boss) marchent sur toute surface solide (voir `Enemy.Climb.cs`) :
@@ -262,7 +289,13 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
 - **Aucune rareté, aucun recyclage, aucun crédit, aucune expérience ni niveau de classe** : la progression vient de l'armure ramassée (`Profile.Armor` = armure de base de la classe + `ArmorBonus`) et du niveau et des étoiles des armes tirés au butin.
 - **Un exemplaire par modèle** : l'arsenal ne contient jamais deux armes du même modèle. `Profile.Grant` ajoute une arme nouvelle (`IsNew`) ; une arme déjà possédée améliore l'exemplaire existant (`WeaponInstance.MergeFrom` : niveau le plus haut, et pour chaque caractéristique le plus grand nombre d'étoiles). Il renvoie un `LootResult` (exemplaire, arme tirée, instantanés `Before` / `After`, `IsNew`, `Improved`, `ImprovedStats`).
 - **Butin** (`Loot.RollWeapon`, fin de mission dans `MissionReport.Build`) : niveau selon la difficulté et l'avancement, puis pour chaque caractéristique utile `MaxStars` tirages indépendants de probabilité `Loot.StarChance(difficulté, niveau)` (≈ 0,15 en Facile au niveau 0 → ≈ 0,7 en Inferno au niveau 100). Garantie : au bout de 30 armes sans caractéristique au maximum, la suivante en reçoit une. Le bilan (`ResultsScreen`) affiche une arme nouvelle avec l'étiquette « NEW », une arme possédée améliorée suivie d'une ligne en retrait par amélioration (« Niveau 12 → 18 », « Dégâts ☆2 → ☆3 (+10) », bonus tiré de `Describe`), une arme possédée sans amélioration assombrie (« déjà possédée »), puis une ligne « Armure avant → après (+gain) » si de l'armure a été gagnée.
-- **Caisses** : arme, armure, soin. `CrateType` circule en entier sur le réseau et indexe les compteurs (`Crates.Count` = 4) : la valeur 3 (anciennes caisses de crédits) est réservée (`Reserved3`) et n'est plus jamais tirée ; ne pas la réutiliser sans changer le protocole LAN.
+- **Caisses** : arme, armure, soin, modélisées sous Blender (`tools/blender/weapons/crates.py` →
+  `assets/models/crates/crate_*.glb` + texture de détail cuite) comme dans EDF 5 : conteneur d'arme vert, caisse d'armure
+  rouge à butoirs et écusson, mallette de soin blanche à croix rouge ; matières du jeu (`SoldierModel.ApplyMats`, couleurs
+  `Crates.Paint` / `Crates.Accent`, voyants à la teinte `Crates.Tint`). Éjectées du cadavre, elles rebondissent deux fois,
+  basculent puis se posent à plat (cap fixe) ; halo pulsé au sol, fin faisceau visible seulement au-delà de 9 m. Butin
+  rare : `EnemyDef.DropChance` de 0,1 à 0,2 pour les insectes ordinaires, une caisse (arme) par élite. Banc :
+  `--crate-test`. `CrateType` circule en entier sur le réseau et indexe les compteurs (`Crates.Count` = 4) : la valeur 3 (anciennes caisses de crédits) est réservée (`Reserved3`) et n'est plus jamais tirée ; ne pas la réutiliser sans changer le protocole LAN.
 - **Sauvegarde** (`user://profile.json`, `ProfileData.Version` = 4) : migration automatique dans `Profile.Migrate`. Version 1 (rareté + 5 étoiles de 1 à 5) → `WeaponInstance.MigrateLegacy` : étoile − 2 + bonus de rareté (Standard/Renforcée 0, Élite/Prototype +1, Légendaire +2), bornée à 0..5 puis ramenée à l'échelle de `MaxStars` ; la portée prend la moyenne des anciennes étoiles. Les tableaux d'étoiles de mauvaise longueur sont complétés et bornés (changer `MaxStars` ne casse pas un profil). Version 3 : `Profile.MergeDuplicates` fusionne les doublons d'un même modèle dans le premier exemplaire (niveau max, étoiles max par caractéristique) et redirige les références de `Equipped` (sans doublon d'emplacement) ; les anciens champs JSON `Credits` et `ClassXp` sont ignorés à la lecture et disparaissent à la sauvegarde suivante. Version 4 : `Profile.FillEquipped` (à chaque chargement, idempotent) complète les emplacements vides de chaque classe — le Grenadier passe de 2 à 4 — avec les armes de départ non équipées puis les autres armes de la classe, sans toucher aux emplacements occupés.
 - **Réseau** : aucun exemplaire d'arme ne circule ; chaque joueur tire avec ses propres armes et n'envoie que l'indice de l'arme tenue (`PlayerState`) et les dégâts infligés. Le format LAN est inchangé.
 - **Deux jeux d'armes du Grenadier blindé** (`Classes.HasWeaponSets`, `Classes.SetSize` = 2, `ClassDef.WeaponSlots` = 4) : emplacements 1-2 = jeu 1, 3-4 = jeu 2 (`Player.HasSets`, `ActiveSet`). `weapon_set` → `Player.SwapSet` : changement de jeu (l'arme tenue de chaque jeu est retenue), `SetSwapLeft` = 0,5 s de blocage (pas de tir, pas de changement d'arme, arme abaissée via `SoldierModel.Reloading`) ; les rechargements continuent dans les deux jeux. `weapon_swap`, la molette et `weapon_1` / `weapon_2` restent dans le jeu actif. Réseau : rien de nouveau, l'indice d'arme (0..3) et le style d'arme voyagent déjà dans `PlayerState`, et le bit « rechargement » (11) est levé pendant la bascule pour que les autres pairs abaissent l'arme. HUD (`HudWeapons.FromSets`) : jeu actif comme les autres classes, autre jeu en bande compacte au-dessus de la pile ; arsenal : filet et repères J1 / J2 dans la carte d'équipement.
@@ -379,6 +412,21 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
 - **Banc d'essai** (`--weapon-audit[=filtre] --class=N`, `AutoTest.Audit.cs` ; plan : [PLAN_TEST_ARMES.md](PLAN_TEST_ARMES.md)) : chaque arme au maximum d'étoiles contre une fourmi immobile de 5 000 000 PV sans point faible (`Enemy.NoWeakPoints`), ligne de tir dégagée, soldat ramené à son point de départ, escouades sans tir (`Ally.HoldFire`) ; journal `[audit]` (BEGIN, SHOT, HIT, AIM, RELOAD, END) ; `tools/weapon_audit.py` en tire le rapport [AUDIT_ARMES.md](AUDIT_ARMES.md).
 - **Cadence exacte** : le retard sur le prochain coup est reporté (`WeaponState.NextShot`) ; en tir automatique tenu, il est rattrapé jusqu'à `MaxLag` (plusieurs coups dans la même image pour les armes à 30 ou 60 coups/s, même à faible fréquence d'images). Explosions : dégâts pleins dans tout le rayon, comme dans EDF 5.
 
+## Progression de la difficulté
+
+- **Vagues** (`Missions.cs`) : la campagne commence par des fourmis noires seules (32 en mission 1), puis introduit un seul
+  type nouveau à la fois (fourmi rouge, araignée, guêpe et drone, fourmi acide, charognard, mille-pattes, machines,
+  aliens) ; deux types par vague au début, trois au plus ensuite ; 25 à 90 ennemis par mission en solo (× taille de
+  l'escouade : 1, 1,4, 1,7, 2). Survie : vagues de 7 à 9, intervalle 34 s, +7 % par vague.
+- **Phases minutées** (`MissionDirector`) : à l'heure prévue, elles attendent en plus que le terrain se dégage (au plus
+  14 ennemis actifs × taille de l'escouade), avec 60 s de retard au maximum : jamais deux vagues empilées sur une escouade
+  débordée. Nids : une fourmi toutes les 8 s jusqu'à la mission 8 (5 s ensuite) ÷ taille de l'escouade, 3 (puis 5) ×
+  taille de l'escouade au plus autour d'un nid.
+- **Montée en puissance de la campagne** (`World.Campaign`) : PV et dégâts des ennemis × 0,55 en mission 1, + 0,045 par
+  mission, × 1 à partir de la mission 11 (en plus de la difficulté choisie ; le multiplicateur de PV est diffusé à
+  l'apparition, identique chez tous les pairs). Reine : 20 000 PV, 28 dégâts par tir ou morsure toutes les 2,6 s, éventail d'acide à demi-dégâts.
+- **Élites** (PV ×3, une caisse d'arme) : aucune dans les deux premières missions, puis 2 % + 0,2 % par mission (6 % au plus).
+
 ## Objectifs de mission
 
 `MissionGoal` : Extermination, Nids, Boss, puis **Défense**, **Escorte** et **Survie**, réglés par `ObjectiveDef` (`scripts/Data/Objectives.cs`, champ `MissionDef.Objective`). `MissionObjective` (`scripts/World/MissionObjective.cs`, nœud enfant du monde sur chaque pair) porte les éléments à protéger (`Guard`) et les minuteurs ; `MissionDirector` (hôte) décide des vagues, de la victoire et de l'échec. Modèles : `ObjectiveModels.cs`.
@@ -455,6 +503,8 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--showcase=aliens` | Vitrine figée : fantassin, garde, volant et portail en rang, dimensions et triangles (`[taille]`) et pose de l'armature (`[pose]`) dans le journal. `--aliens-pose=aim\|crouch\|walk\|run` (liste séparée par des virgules : une pose par humanoïde). |
 | `--aliens=AlienTrooper,AlienGuard,AlienFlyer,Portal` | Les aliens apparaissent devant le soldat (bot immobile, sans tirer) et combattent normalement ; `Type*N` pour N exemplaires (test de charge, ex. `--aliens=AlienTrooper*24,AlienGuard*8,AlienFlyer*8 --perf --novsync`). Journal `[alien]` : état de l'IA (Advance, ToCover, Cover, Peek, Fire, Open ; Approach, Charge, Recover ; orbite, passe), posture, PV, plus les événements (abri trouvé, charge, coup de bouclier, passe, passage du portail). Options : `--aliens-only` (vagues de la mission retirées), `--aliens-dist=D`, `--aliens-at=X,Z,Cap`, `--aliens-cam=D,H,Azimut[,deg/s]`, `--aliens-shots=T1,T2`, `--aliens-weak=T` (rafale sur les points faibles), `--aliens-kill=T` (morts : chutes, explosions), `--aliens-fire` (le bot tire), `--freeze`, `--god`. Exemple : `--autostart=0 --bot --god --aliens-only --aliens=AlienTrooper,AlienTrooper,AlienGuard,AlienFlyer --aliens-dist=45 --aliens-cam=14,5,140 --aliens-shots=8,12`. |
 | `--aliens-net` | Avec `--autohost` / `--autojoin` (ex. `--mission=18`) : chaque pair journalise toutes les 3 s les aliens et portails qu'il voit, avec la posture reçue (`[alien-net]`). |
+| `--crate-test` | Les trois caisses tombent devant le soldat (chemin hôte complet), caméra qui tourne autour : captures `crate_NN`, puis vue de la caméra du jeu `crate_game` ; journal `[caisses]` (hauteur de pose au-dessus du sol). |
+| `--fx-test` | Le soldat tire en continu vers un point dégagé, caméra de côté puis de trois quarts avant : captures `fx_side_NN` et `fx_front_NN` (flamme de bouche, traçantes). |
 | `--hitch` | Journal `[à-coup]` des images de plus de 50 ms (avec l'heure de mission). |
 | `--heavy-sets` | Avec `--class=3` : trois bascules de jeu d'armes par la vraie touche, vérification des quatre armes, du blocage de 0,5 s (arme abaissée, seconde bascule ignorée) et de « arme suivante » limitée au jeu actif ; journal `[jeux]`, « [jeux] ok » à la fin. Avec `--shots`, captures `heavy_sets_*`. |
 | `--call-vehicle=tank\|heli` | Avec `--class=2` : crédits fournis, appel du véhicule au point visé, contrôle de la confirmation et du débit, de la pose (~8 s), puis appel de l'autre type (l'ancien est rapatrié) et montée à bord ; journal `[appel]`, « [appel] ok » à la fin. Autre classe (hôte d'un test LAN) : journal des livraisons seulement. Avec `--shots`, le bot regarde la livraison et capture `call_*`. |

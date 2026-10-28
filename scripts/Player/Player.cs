@@ -70,6 +70,8 @@ public partial class Player : CharacterBody3D
     public static bool God;
     /// <summary>Test : le bot vise sans tirer (--holdfire) et reste sur place (--roof).</summary>
     public static bool BotHoldFire, BotStill;
+    /// <summary>Test (--dmglog) : chaque dégât subi est journalisé (« [dégâts] » : montant, distance, ennemi le plus proche de la source).</summary>
+    public static bool DamageLog;
     /// <summary>Test : point que le bot regarde (captures d'une livraison), null = comportement normal.</summary>
     public static Vector3? BotLookAt;
     /// <summary>Test (--edf5-fire) : avec <see cref="BotLookAt"/>, le bot tire aussi sur le point regardé.</summary>
@@ -1117,6 +1119,7 @@ public partial class Player : CharacterBody3D
         // Zone de protection de l'Air Raider.
         dmg *= 1f - SupportZone.GuardAt(GlobalPosition);
         Health -= dmg;
+        if (DamageLog) GD.Print($"[dégâts] t={World.Elapsed:0.0} {dmg:0.0} depuis {from.DistanceTo(GlobalPosition):0} m ({World.NearestEnemy(from, 30f)?.Def.Type}), reste {Health:0}");
         DamageFlash = Mathf.Min(1f, DamageFlash + 0.35f + dmg / MaxHealth);
         AddShake(Mathf.Clamp(dmg / MaxHealth * 4f, 0.1f, 0.6f));
         Sfx.Ui("hurt", -4f, (float)GD.RandRange(0.9, 1.1), 120);

@@ -8,6 +8,8 @@ namespace Rempart;
 /// rugosité, émission, UV ou triplanaire) et ajoute des salissures en coordonnées monde, qui ne se répètent donc
 /// pas d'un immeuble à l'autre : coulures verticales sur les murs, taches à deux échelles, pied des murs encrassé,
 /// poussière et flaques sur les surfaces horizontales, rouille sur les métaux, variation de teinte à grande échelle.
+/// Façades : pièces derrière les vitres (« interior mapping » : murs, sol, plafond et mobilier en perspective, couleur
+/// propre à chaque pièce, éclairées la nuit quand la fenêtre l'est).
 /// </summary>
 public static partial class Mats
 {
@@ -40,6 +42,11 @@ uniform float macro_var = 1.0;  // variation de teinte à grande échelle
 uniform float desat = 0.0;      // désaturation de l'albédo
 uniform float rust = 0.0;       // rouille (métaux peints)
 uniform float emission_patch = 0.0; // émission limitée à des plaques (échelle du masque monde ; 0 : partout)
+// Pièces derrière les vitres (façades) : 0 = aucune, 1 = fenêtres percées ou en bandeau, 2 = mur-rideau.
+uniform int interior = 0;
+uniform vec4 win_rect = vec4(2.0, 0.25, 0.26, 0.8); // travées par U, demi-largeur, haut et bas de la vitre (fractions d'étage)
+uniform vec2 cell_m = vec2(3.5, 3.2);               // taille d'une travée et d'un étage (m)
+uniform float room_depth = 4.0;
 
 varying vec3 v_wpos;
 varying vec3 v_wnrm;
@@ -62,6 +69,54 @@ void vertex() {
 		v_tw /= dot(v_tw, vec3(1.0));
 		v_tpos = (mapping == 2 ? v_wpos : VERTEX) * uv_scale * vec3(1.0, -1.0, 1.0);
 	}
+}
+
+float h21(vec2 p) {
+	p = fract(p * vec2(0.1031, 0.1030));
+	p += dot(p, p.yx + 33.33);
+	return fract((p.x + p.y) * p.x);
+}
+
+// Pièce derrière une vitre : rayon de vue dans le repère de la travée (x le long du mur, y vers le haut, z vers l'intérieur,
+// en mètres), point d'entrée (px, py) ; renvoie la couleur vue et, en .a, 1 si le plafond (lampe) est touché.
+vec4 room(vec3 r, vec2 p, vec2 cell, float id) {
+	vec2 c = cell_m;
+	float tx = r.x > 0.0 ? (c.x - p.x) / r.x : -p.x / min(r.x, -1e-4);
+	float ty = r.y > 0.0 ? (c.y - p.y) / r.y : -p.y / min(r.y, -1e-4);
+	float tz = room_depth / max(r.z, 1e-3);
+	float t = min(min(tx, ty), tz);
+	vec3 h = vec3(p, 0.0) + r * t;
+	// Teinte de la pièce : enduit pâle (beige, gris, bleuté, vert d'eau, rosé).
+	vec3 wallc = mix(vec3(0.62, 0.58, 0.5), vec3(0.5, 0.55, 0.6), h21(cell + id));
+	wallc = mix(wallc, vec3(0.55, 0.6, 0.52), step(0.7, h21(cell * 1.7 + id)));
+	wallc = mix(wallc, vec3(0.64, 0.52, 0.5), step(0.85, h21(cell * 2.3 + id)));
+	vec3 col;
+	float ceil = 0.0;
+	if (t == tz) {
+		col = wallc * 0.9;
+		// Mobilier le long du mur du fond : meuble bas, cadre ou étagère.
+		float f = h21(cell * 3.1 + id);
+		float u = h.x / c.x;
+		if (h.y < 0.95 && abs(u - 0.3 - f * 0.4) < 0.22) col = mix(vec3(0.22, 0.16, 0.11), vec3(0.3, 0.3, 0.32), step(0.5, f)) * (0.8 + 0.2 * step(0.9, h.y));
+		else if (h.y > 1.3 && h.y < 2.0 && abs(u - 0.7 + f * 0.3) < 0.1) col = vec3(0.2, 0.26, 0.3);
+	} else if (t == tx) {
+		col = wallc * 0.72;
+		// Porte sur un mur de côté.
+		float dz = h.z / room_depth;
+		if (h.y < 2.1 && abs(dz - 0.7) < 0.12 && h21(cell + id + 5.0) > 0.5) col = vec3(0.3, 0.22, 0.15);
+	} else if (r.y < 0.0) {
+		// Sol : parquet ou moquette, plus sombre au fond.
+		col = mix(vec3(0.3, 0.21, 0.13), vec3(0.28, 0.28, 0.3), step(0.5, h21(cell * 0.7 + id)));
+		col *= 0.75 + 0.25 * step(0.5, fract(h.x * 1.6));
+	} else {
+		col = vec3(0.8, 0.79, 0.76);
+		vec2 lc = h.xz - vec2(c.x * 0.5, room_depth * 0.5);
+		ceil = step(abs(lc.x), 0.5) * step(abs(lc.y), 0.35);
+		col = mix(col, vec3(1.0), ceil);
+	}
+	// Assombri vers le fond (la lumière vient de la fenêtre).
+	col *= mix(1.0, 0.55, clamp(h.z / room_depth, 0.0, 1.0));
+	return vec4(col, ceil);
 }
 
 vec4 tri(sampler2D s) {
@@ -127,6 +182,42 @@ void fragment() {
 	rr = mix(rr, 0.04, pud);
 	nm = mix(nm, vec3(0.5, 0.5, 1.0), pud);
 
+	// Pièces derrière les vitres : la vitre ne garde que son reflet (Fresnel), la pièce vue en perspective est ajoutée
+	// en émission (elle ne reçoit ni soleil ni ombre de la façade), faible de jour, éclairée la nuit si la fenêtre l'est.
+	vec3 room_em = vec3(0.0);
+	if (interior > 0 && mapping == 0 && r < 0.3) {
+		vec2 uvm = UV / uv_scale.xy;
+		float fx = uvm.x * win_rect.x;
+		vec2 cell = vec2(floor(fx), floor(uvm.y));
+		vec2 l = vec2(fract(fx), fract(uvm.y));
+		bool inwin = interior == 2
+			? (l.x > 0.035 && l.x < 0.965 && l.y < 0.775)
+			: (abs(l.x - 0.5) < win_rect.y && l.y > win_rect.z && l.y < win_rect.w);
+		if (inwin) {
+			// Repère de la façade par dérivées écran (aucune tangente de maillage) : axes U et V (V descend) en monde.
+			vec3 dpx = dFdx(v_wpos), dpy = dFdy(v_wpos);
+			vec2 dux = dFdx(uvm), duy = dFdy(uvm);
+			float det = dux.x * duy.y - dux.y * duy.x;
+			if (abs(det) > 1e-12) {
+				vec3 tu = normalize((dpx * duy.y - dpy * dux.y) / det);
+				vec3 tv = normalize((dpy * dux.x - dpx * duy.x) / det);
+				vec3 rd = normalize(v_wpos - CAMERA_POSITION_WORLD);
+				vec3 rl = vec3(dot(rd, tu), -dot(rd, tv), -dot(rd, n));
+				if (rl.z > 0.02) {
+					vec2 p = vec2(l.x * cell_m.x, (1.0 - l.y) * cell_m.y);
+					// Identifiant d'immeuble : sa teinte (couleur de sommet), sinon la même série de pièces partout.
+					vec4 rm = room(rl, p, cell, vertex_color ? dot(COLOR.rgb, vec3(13.1, 7.7, 3.3)) : 0.0);
+					float fres = 0.18 + 0.6 * pow(1.0 - clamp(rl.z, 0.0, 1.0), 4.0);
+					float lit = dot(em, vec3(0.33));
+					vec3 inside = rm.rgb * (0.22 + lit * 1.8) + vec3(1.0, 0.92, 0.75) * rm.a * lit * 2.5;
+					room_em = inside * (1.0 - fres);
+					em *= 0.35; // la lueur plate de la fenêtre éclairée cède la place à la pièce
+					col *= fres + 0.25;
+				}
+			}
+		}
+	}
+
 	ALBEDO = col;
 	ROUGHNESS = clamp(rr, 0.02, 1.0);
 	METALLIC = metallic * (1.0 - rs) * (1.0 - pud);
@@ -135,7 +226,7 @@ void fragment() {
 	NORMAL_MAP_DEPTH = normal_depth;
 	// Lueur par plaques (paroi de ruche) : masque de variation lente en coordonnées monde (0 : partout).
 	if (emission_patch > 0.0) em *= smoothstep(0.5, 0.72, texture(grime_tex, wp * emission_patch + vec2(0.41, 0.17)).b);
-	EMISSION = em * emission_energy;
+	EMISSION = em * emission_energy + room_em;
 }
 ";
 

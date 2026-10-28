@@ -401,6 +401,7 @@ public static partial class AutoTest
         Player.Bot = Screenshot.CmdArg("bot") != null;
         Player.God = Screenshot.CmdArg("god") != null;
         Player.BotHoldFire = Screenshot.CmdArg("holdfire") != null;
+        Player.DamageLog = Screenshot.CmdArg("dmglog") != null;
         RoofTest(app);
         GrabTest(app);
         ClassTests(app); // --heavy-sets, --call-vehicle (AutoTest.Classes.cs)

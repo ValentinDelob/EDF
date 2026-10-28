@@ -622,7 +622,7 @@ public partial class Enemy : StaticBody3D
             for (var i = -3; i <= 3; i++)
             {
                 var side = Basis.X * i * 5f;
-                _world.HostEnemyProjectile(this, 0, Center + Basis.Z * (1.05f * Def.Size) + Vector3.Up * (0.5f * Def.Size), target + side, 1);
+                _world.HostEnemyProjectile(this, 0, Center + Basis.Z * (1.05f * Def.Size) + Vector3.Up * (0.5f * Def.Size), target + side, 1, 0.5f);
             }
             Net.I.BroadcastEnemyAttack(Id, 2, target);
             Sfx.At("screech", pos, 8f, 0.6f);

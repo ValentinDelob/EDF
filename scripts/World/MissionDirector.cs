@@ -82,10 +82,12 @@ public class MissionDirector
             if (nest.State == EnemyState.Dead || nest.IsPortal) continue;
             _nestTimers[nest] -= dt;
             if (_nestTimers[nest] > 0) continue;
-            _nestTimers[nest] = 4.5f / PlayerScale;
+            // Début de campagne : nids bien plus lents (une fourmi toutes les 8 s, 3 au plus autour du nid), puis 5 s et 5.
+            var early = _m.Index < 8;
+            _nestTimers[nest] = (early ? 8f : 5f) / PlayerScale;
             if (active >= MaxActive) continue;
             var near = _w.EnemiesById.Values.Count(e => !e.IsStatic && e.GlobalPosition.DistanceTo(nest.GlobalPosition) < 40f);
-            if (near >= Mathf.RoundToInt(6 * PlayerScale)) continue;
+            if (near >= Mathf.RoundToInt((early ? 3 : 5) * PlayerScale)) continue;
             var type = _w.Rng.Randf() < 0.2f ? EnemyType.RedAnt : EnemyType.BlackAnt;
             var a = _w.Rng.Randf() * Mathf.Tau;
             var ring = 9f * nest.Def.Size + 2f * Enemies.Get(type).Size;

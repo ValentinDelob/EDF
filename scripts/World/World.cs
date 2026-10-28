@@ -32,8 +32,13 @@ public partial class World : Node3D
     public bool Paused;
     public bool Ended;
     public float Elapsed;
-    public float DamageMul => Difficulties.EnemyDamage[(int)Difficulty];
-    public float HealthMul => Difficulties.EnemyHealth[(int)Difficulty] * (1f + 0.35f * (Net.I.Players.Count - 1));
+    public float DamageMul => Difficulties.EnemyDamage[(int)Difficulty] * Campaign;
+    public float HealthMul => Difficulties.EnemyHealth[(int)Difficulty] * Campaign * (1f + 0.35f * (Net.I.Players.Count - 1));
+    /// <summary>
+    /// Montée en puissance de la campagne (en plus de la difficulté choisie) : ennemis moins résistants et moins dangereux
+    /// au début (× 0,55 en mission 1), comme dans le jeu d'origine, puis × 1 à partir de la mission 11.
+    /// </summary>
+    public float Campaign => Mathf.Clamp(0.55f + 0.045f * (Mission?.Index ?? 10), 0.55f, 1f);
 
     // Butin d'équipe ramassé pendant la mission.
     public readonly int[] CratesCollected = new int[Crates.Count];
@@ -1015,7 +1020,7 @@ public partial class World : Node3D
         return flat / t + Vector3.Up * vy;
     }
 
-    public void HostEnemyProjectile(Enemy e, int kind, Vector3 from, Vector3 target, int size)
+    public void HostEnemyProjectile(Enemy e, int kind, Vector3 from, Vector3 target, int size, float dmgScale = 1f)
     {
         Projectile p;
         if (kind == 2)
@@ -1031,7 +1036,7 @@ public partial class World : Node3D
         else if (kind == 0)
         {
             var pk = size >= 3 ? ProjectileKind.AcidBig : ProjectileKind.Acid;
-            p = Projectile.Spawn(this, pk, from, BallisticVelocity(from, target, size >= 3 ? 26f : 30f, 9f), true, e.Def.Damage * DamageMul * e.DamageScale, size >= 3 ? 5f : 2.5f);
+            p = Projectile.Spawn(this, pk, from, BallisticVelocity(from, target, size >= 3 ? 26f : 30f, 9f), true, e.Def.Damage * DamageMul * e.DamageScale * dmgScale, size >= 3 ? 5f : 2.5f);
             Sfx.At("spit", from, 0f);
         }
         else

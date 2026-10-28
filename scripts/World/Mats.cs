@@ -570,7 +570,10 @@ public static partial class Mats
 
         var mat = Weathered(ImageTexture.CreateFromImage(alb.ToImage()), BumpToNormal(bump, curtain ? 1.5f : 3f), ImageTexture.CreateFromImage(rough.ToImage()), 0, new Vector3(1f / uSpan, 1f / floors, 1f))
             .With("roughness", 1f).With("metallic", curtain ? 0.35f : 0.03f).With("specular", 0.6f).With("normal_depth", 0.9f)
-            .With("vertex_color", true).With("streaks", curtain ? 0.2f : 0.5f).With("grime", curtain ? 0.4f : 0.55f);
+            .With("vertex_color", true).With("streaks", curtain ? 0.2f : 0.5f).With("grime", curtain ? 0.4f : 0.55f)
+            // Pièces derrière les vitres (shader Weathered) : trame des fenêtres de la variante.
+            .With("interior", curtain ? 2 : 1).With("win_rect", new Vector4(s.Cols, s.WinW * 0.5f, s.WinTop, s.WinBot))
+            .With("cell_m", new Vector2(7f / s.Cols, 3.2f)).With("room_depth", curtain ? 5f : 3.6f);
         if (night)
         {
             mat.With("emission_tex", ImageTexture.CreateFromImage(emit.ToImage())).With("emission_energy", 1.4f);
