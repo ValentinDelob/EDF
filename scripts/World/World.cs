@@ -1219,6 +1219,7 @@ public partial class World : Node3D
     {
         RemoveCrate(id);
         CratesCollected[(int)type]++;
+        Crate.PickupFx(this, pos, type);
         if (by == Net.I.MyId)
         {
             Sfx.Ui(type == CrateType.Weapon ? "pickup_weapon" : "pickup", -2f);

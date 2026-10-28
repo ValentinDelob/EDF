@@ -132,6 +132,27 @@ void fragment() {
         return m;
     }
 
+    /// <summary>Ramassage (tous les pairs) : éclat à la teinte de la caisse et anneau qui monte en s'élargissant.</summary>
+    public static void PickupFx(World world, Vector3 pos, CrateType type)
+    {
+        var color = Crates.Tint(type);
+        MuzzleFx.Spawn(world.FxRoot, pos + Vector3.Up * 0.5f, color, 1.4f, null);
+        var ring = new MeshInstance3D
+        {
+            Mesh = new TorusMesh { InnerRadius = 0.85f, OuterRadius = 1f, Rings = 32, RingSegments = 6 },
+            MaterialOverride = Mats.Glow(color, 4f),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Scale = Vector3.One * 0.4f,
+        };
+        world.FxRoot.AddChild(ring);
+        ring.GlobalPosition = pos + Vector3.Up * 0.15f;
+        var tw = ring.CreateTween().SetParallel();
+        tw.TweenProperty(ring, "scale", new Vector3(1.5f, 0.6f, 1.5f), 0.4f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        tw.TweenProperty(ring, "global_position", pos + Vector3.Up * 1.8f, 0.45f);
+        tw.Chain().TweenProperty(ring, "scale", new Vector3(1.7f, 0.01f, 1.7f), 0.12f);
+        tw.Chain().TweenCallback(Callable.From(ring.QueueFree));
+    }
+
     /// <summary>Glisse vers le joueur (effet d'aimant local).</summary>
     public void Attract(Vector3 target, float dt)
     {

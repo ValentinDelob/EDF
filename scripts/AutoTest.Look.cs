@@ -48,7 +48,12 @@ public static partial class AutoTest
             {
                 foreach (var c in w.CratesById.Values)
                     GD.Print($"[caisses] {c.Type} posée à {c.GlobalPosition.Y - World.GroundAt(c.GlobalPosition.X, c.GlobalPosition.Z):0.00} m du sol");
+                // Ramassage : le soldat avance jusqu'aux caisses (aimant, effet de ramassage).
+                p.GlobalPosition = at - fwd * 2.5f;
             });
+            At(app, 5.45f, () => Shot(app, "crate_pick_0"));
+            At(app, 5.6f, () => Shot(app, "crate_pick_1"));
+            At(app, 6.5f, () => GD.Print($"[caisses] restantes : {w.CratesById.Count}, ramassées : {string.Join(", ", w.CratesCollected)}"));
         });
     }
 

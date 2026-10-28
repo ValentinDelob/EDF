@@ -1,5 +1,27 @@
 # Journal des versions
 
+## v0.20.0 — Monster Attack au rendu actuel
+
+- **Lumière et couleurs** inspirées de Monster Attack : grand ciel bleu à cumulus, plein soleil, ombres bleutées, couleurs
+  vives et brume claire au loin ; coucher de soleil orangé, nuit bleue lisible ; ciel gris seulement sous la pluie et
+  l'orage. Vignettage et grain allégés.
+- **Ville** : immeubles clairs et bigarrés (crème, sable, saumon, gris bleuté, brique orangée, tours vitrées bleutées),
+  beaucoup moins de suie et de vitres brisées ; pièces visibles derrière les fenêtres (murs, sol, plafond et mobilier en
+  perspective, éclairées la nuit) ; pelouses vertes ; flaques seulement sous la pluie (elles passaient pour de la neige).
+- **Caméra comme dans EDF** : soldat centré dans le tiers bas de l'image, caméra plus loin et plus haute, épaule seulement
+  en visée ; champ de vision de 60° par défaut.
+- **Difficulté progressive** : la campagne commence par des fourmis noires seules, puis un nouveau type d'ennemi à la fois ;
+  vagues bien moins nombreuses (32 ennemis en mission 1 au lieu de 88) ; ennemis moins résistants et moins dangereux au
+  début de la campagne (× 0,55 en mission 1, puissance normale à partir de la mission 11) ; une vague minutée attend que
+  le terrain se dégage ; nids plus lents ; reine plus abordable ; pas d'élites dans les deux premières missions.
+- **Butin réduit** (environ trois fois moins de caisses) et **nouvelles caisses modélisées** comme dans EDF 5 : conteneur
+  d'arme vert, caisse d'armure rouge, mallette de soin blanche à croix rouge ; elles rebondissent et se posent à plat,
+  avec un halo au sol et un faisceau visible seulement de loin.
+- **Effets de tir** : flamme de bouche en étoile avec flammes le long du canon, traçantes en courtes traînées qui filent
+  vers la cible, impacts de balles qui restent sur les murs et le sol.
+- **Véhicules** : char vert-gris de l'armée, traces de chenilles au sol, poussière soulevée par le coup de canon, fumée et
+  étincelles quand le blindage faiblit.
+
 ## v0.19.0 — Animations du soldat
 
 - **Vraies foulées** : marche, trot, course et sprint avec des pas posés au sol (le pied ne glisse plus pendant l'appui),
