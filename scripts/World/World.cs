@@ -1176,12 +1176,10 @@ public partial class World : Node3D
     {
         if (CratesById.ContainsKey(id)) return;
         var c = Crate.Create(id, type, pos);
-        // Sous terre : la caisse se pose sur le quai, l'éboulis ou la dalle où elle tombe (pas dans le volume).
-        if (Underground)
-        {
-            var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(pos + Vector3.Up * 1.5f, pos + Vector3.Down * 3f, 1));
-            if (hit.Count > 0) c.Floor = Mathf.Max(0f, ((Vector3)hit["position"]).Y);
-        }
+        // La caisse se pose sur la surface sous son point d'apparition : toit (insecte abattu sur un immeuble), trottoir, quai,
+        // éboulis ou dalle sous terre (jamais dans le volume, jamais à travers un toit jusqu'à la rue).
+        var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(pos + Vector3.Up * 1.5f, pos + Vector3.Down * (Underground ? 3f : 60f), 1));
+        if (hit.Count > 0) c.Floor = Mathf.Max(0f, ((Vector3)hit["position"]).Y);
         AddChild(c);
         CratesById[id] = c;
     }

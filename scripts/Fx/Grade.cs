@@ -187,14 +187,14 @@ void sky() {
                 // Crépuscule d'orage : une bande rouille sous des nuages gris-violet.
                 Clouds(new Color(0.12f, 0.12f, 0.14f), new Color(0.5f, 0.3f, 0.2f), new Color(0.08f, 0.07f, 0.07f),
                     new Color(0.52f, 0.36f, 0.28f), new Color(0.12f, 0.11f, 0.12f), 0.85f);
-                sun.RotationDegrees = new Vector3(-16, 70, 0);
-                sun.LightEnergy = 1.8f;
-                sun.LightColor = new Color(1f, 0.66f, 0.46f);
-                env.AmbientLightColor = new Color(0.4f, 0.36f, 0.36f);
-                env.AmbientLightEnergy = 0.9f;
-                env.FogLightColor = new Color(0.42f, 0.32f, 0.27f);
-                env.FogDensity = fog * 1.1f + 0.002f;
-                env.TonemapExposure = 1.15f;
+                sun.RotationDegrees = new Vector3(-18, 70, 0);
+                sun.LightEnergy = 2.4f;
+                sun.LightColor = new Color(1f, 0.74f, 0.56f);
+                env.AmbientLightColor = new Color(0.46f, 0.45f, 0.5f);
+                env.AmbientLightEnergy = 1.0f;
+                env.FogLightColor = new Color(0.46f, 0.41f, 0.4f);
+                env.FogDensity = fog * 1.0f + 0.002f;
+                env.TonemapExposure = 1.3f;
                 break;
             default:
                 // Nuit claire : ciel bleu nuit, nuages argentés par la lune, éclairage lunaire froid et lisible.

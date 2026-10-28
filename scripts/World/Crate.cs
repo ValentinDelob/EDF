@@ -23,7 +23,7 @@ public partial class Crate : Node3D
     // Bascule pendant la chute (roulis, tangage), amortie au sol ; cap fixe tiré à l'apparition.
     private Vector3 _tilt, _tiltVel;
     private float _yaw;
-    /// <summary>Hauteur minimale du sol sous la caisse (sous terre : quai ou éboulis où elle tombe).</summary>
+    /// <summary>Hauteur du sol sous la caisse : surface sondée sous son point d'apparition (toit, trottoir, quai, éboulis).</summary>
     public float Floor = 0f;
 
     private static readonly Dictionary<CrateType, PackedScene> Scenes = new();

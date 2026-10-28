@@ -64,7 +64,7 @@ public static partial class BusinessBuilder
                 if (hb < 0.25f) RuinKit.DamageFacades(b, false, b.Id);
                 var roofY = b.Position.Y + b.Size.Y + 0.04f;
                 var rs = Mathf.Min(b.Size.X, b.Size.Z) * 0.9f;
-                r.Decal(hb < 0.25f ? Mats.Decal.Crater : Mats.Decal.Scorch, b.Position + new Vector3((hb - 0.3f) * b.Size.X * 0.5f, 0, 0), rs * (hb < 0.25f ? 0.8f : 1f), b.Id, roofY);
+                if (hb < 0.25f) r.Decal(Mats.Decal.Crater, b.Position + new Vector3((hb - 0.3f) * b.Size.X * 0.5f, 0, 0), rs * 0.8f, b.Id, roofY);
             }
             if (RuinKit.Hash(b.Id, 4, 2) < (hb < 0.25f ? 0.7f : 0.15f)) RubbleAt(c, b, hb < 0.25f, hot);
             if (hb < 0.25f && RuinKit.Hash(b.Id, 13, 2) < 0.35f && b.Size.Y > 9f)

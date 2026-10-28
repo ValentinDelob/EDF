@@ -67,6 +67,10 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
   (plus d'ombre orangée au sol). Traçantes : courtes traînées (deux plans croisés) qui filent vers la cible à 650 m/s ; les
   traits épais ou durables des ennemis (`Effects.Tracer` avec largeur > 0,15 m ou durée > 0,1 s) restent des faisceaux.
   Matériau additif partagé, paramètres par instance (teinte, roulis, fondu). Banc : `--fx-test`.
+- **Impacts de balles** (`scripts/Fx/ImpactMarks.cs`, `Effects.BulletHole`) : cratère sombre à éclats clairs plaqué sur
+  le corps statique touché (immeuble, sol, mobilier ; jamais un bouclier d'alien) à moins de 110 m de la caméra, par les
+  armes du soldat (`Player`, `Bullets`), la mitrailleuse du char et le minigun de l'hélicoptère ; anneau de 600 instances
+  d'un MultiMesh, effacement en 30 s ; `Building.Collapse` retire ceux de l'immeuble qui s'effondre.
 - **Véhicules** : char vert-gris de l'armée ; traces de chenilles (`scripts/Fx/TrackMarks.cs`, une empreinte par chenille
   tous les 0,8 m à moins de 160 m de la caméra, anneau de 720 instances d'un MultiMesh, effacement en 40 s) ; coup de canon
   avec poussière au sol ; fumée de dégâts sous 50 % du blindage et étincelles sous 25 % (`Vehicle.DamageFx`, point

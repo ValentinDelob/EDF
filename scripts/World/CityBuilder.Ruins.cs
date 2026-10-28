@@ -256,11 +256,11 @@ public static partial class CityBuilder
                 // Calque de façade sur un immeuble sur trois seulement (lourd sur un sur dix) ; les autres gardent leurs
                 // couleurs intactes, comme la ville de Monster Attack au début de l'invasion.
                 if (hd < 0.3f) RuinKit.DamageFacades(b, hd < 0.1f, b.Id);
-                // Toit noirci (et percé pour les plus touchés) : lisible depuis les hauteurs.
+                // Toit noirci (et percé pour les plus touchés), sur les mêmes immeubles que le calque de façade.
                 var roofY = b.Position.Y + b.Size.Y + 0.04f;
                 var rs = Mathf.Min(b.Size.X, b.Size.Z) * 0.9f;
-                r.Decal(hd < 0.24f ? Mats.Decal.Crater : Mats.Decal.Scorch, b.Position + new Vector3((hd - 0.3f) * b.Size.X * 0.5f, 0, 0), rs * (hd < 0.24f ? 0.8f : 1f), b.Id, roofY);
-                if (hd < 0.4f) r.Decal(Mats.Decal.Ash, b.Position, rs * 1.1f, b.Id * 0.7f, roofY - 0.01f);
+                if (hd < 0.3f) r.Decal(hd < 0.24f ? Mats.Decal.Crater : Mats.Decal.Scorch, b.Position + new Vector3((hd - 0.3f) * b.Size.X * 0.5f, 0, 0), rs * (hd < 0.24f ? 0.8f : 1f), b.Id, roofY);
+                if (hd < 0.15f) r.Decal(Mats.Decal.Ash, b.Position, rs * 1.1f, b.Id * 0.7f, roofY - 0.01f);
             }
             if (RuinKit.Hash(b.Id, 4, 2) < (hd < 0.24f ? 0.75f : 0.16f)) RubbleAt(b, hd < 0.24f, hot);
             // Incendie dans les étages : flammes à une fenêtre, fumée noire au-dessus du toit.
