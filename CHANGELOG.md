@@ -18,7 +18,8 @@
   d'arme vert, caisse d'armure rouge, mallette de soin blanche à croix rouge ; elles rebondissent et se posent à plat,
   avec un halo au sol et un faisceau visible seulement de loin.
 - **Effets de tir** : flamme de bouche en étoile avec flammes le long du canon, traçantes en courtes traînées qui filent
-  vers la cible, impacts de balles qui restent sur les murs et le sol.
+  vers la cible, impacts de balles qui restent sur les murs et le sol ; les insectes abattus laissent une flaque
+  d'hémolymphe (vert acide pour les fourmis acides) ; fourmis noires vraiment noires sous le grand ciel bleu.
 - **Véhicules** : char vert-gris de l'armée, traces de chenilles au sol, poussière soulevée par le coup de canon, fumée et
   étincelles quand le blindage faiblit.
 

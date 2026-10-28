@@ -12,6 +12,7 @@ public static partial class AutoTest
     private static void LookTests(App app)
     {
         FxTest(app);
+        SplatTest(app);
         if (Screenshot.CmdArg("crate-test") == null) return;
         Enemy.Frozen = true;
         Player.BotStill = true;
@@ -94,6 +95,37 @@ public static partial class AutoTest
             At(app, 4.0f, () => { Player.BotForceFire = false; follow.QueueFree(); cam.QueueFree(); p.Camera.MakeCurrent(); Player.BotAiming = true; });
             // Impacts laissés sur la cible, vus par la caméra du jeu en visée.
             At(app, 4.8f, () => { Shot(app, "fx_holes"); Player.BotAiming = false; GD.Print("[fx] fin"); });
+        });
+    }
+
+    /// <summary>
+    /// --splat-test (avec --shots=dossier) : trois insectes (fourmi noire, acide, rouge) sortent à 14 m devant le soldat, figés,
+    /// puis sont abattus par l'hôte : captures « splat_NN » des cadavres, puis des flaques d'hémolymphe vues de plus haut.
+    /// </summary>
+    private static void SplatTest(App app)
+    {
+        if (Screenshot.CmdArg("splat-test") == null) return;
+        Enemy.Frozen = true;
+        Player.BotStill = true;
+        Player.BotHoldFire = true;
+        WhenPlayerReady(app, 1.5f, p =>
+        {
+            var w = app.CurrentWorld;
+            var fwd = (-p.Camera.GlobalBasis.Z with { Y = 0 }).Normalized();
+            var side = fwd.Cross(Vector3.Up).Normalized();
+            var ants = new System.Collections.Generic.List<Enemy>();
+            foreach (var (t, k) in new[] { (EnemyType.BlackAnt, -1f), (EnemyType.AcidAnt, 0f), (EnemyType.RedAnt, 1f) })
+                ants.Add(w.HostSpawnEnemy(t, p.GlobalPosition + fwd * 16f + side * k * 10f));
+            At(app, 4f, () =>
+            {
+                foreach (var e in ants)
+                    if (GodotObject.IsInstanceValid(e)) w.HostDamageEnemy(e.Id, 1e6f, e.Center, Net.I.MyId, false);
+            });
+            At(app, 5f, () => GD.Print($"[splat] marques : {ImpactMarks.For(w).Multimesh.VisibleInstanceCount}"));
+            At(app, 6f, () => Shot(app, "splat_00"));
+            At(app, 7f, () => { Player.BotLookAt = p.GlobalPosition + fwd * 9f; });
+            At(app, 9f, () => Shot(app, "splat_01"));
+            At(app, 9.5f, () => GD.Print("[splat] fin"));
         });
     }
 

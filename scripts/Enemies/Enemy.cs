@@ -760,6 +760,9 @@ public partial class Enemy : StaticBody3D
         if (Def.Type != EnemyType.Nest) Model.DeathPose();
         // Le cadavre tombe sur la surface en dessous (pied du mur, toit, sol) et se remet à plat.
         LandingPoint = Def.Static ? GlobalPosition : GroundBelow(GlobalPosition);
+        // Flaque d'hémolymphe là où le cadavre retombe (près de la caméra seulement).
+        if (!Def.Flying && Def.Type != EnemyType.Nest && GetViewport()?.GetCamera3D() is { } cam && cam.GlobalPosition.DistanceSquaredTo(LandingPoint) < 150f * 150f)
+            ImpactMarks.For(_world).Splat(LandingPoint, Def.Size * (Def.Boss ? 5f : 3.2f) * (0.85f + GD.Randf() * 0.3f), Def.Type == EnemyType.AcidAnt ? 2 : 1);
         var tw = CreateTween();
         if (Def.Flying)
         {

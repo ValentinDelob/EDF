@@ -70,7 +70,9 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 - **Impacts de balles** (`scripts/Fx/ImpactMarks.cs`, `Effects.BulletHole`) : cratère sombre à éclats clairs plaqué sur
   le corps statique touché (immeuble, sol, mobilier ; jamais un bouclier d'alien) à moins de 110 m de la caméra, par les
   armes du soldat (`Player`, `Bullets`), la mitrailleuse du char et le minigun de l'hélicoptère ; anneau de 600 instances
-  d'un MultiMesh, effacement en 30 s ; `Building.Collapse` retire ceux de l'immeuble qui s'effondre.
+  d'un MultiMesh, effacement en 30 s ; `Building.Collapse` retire ceux de l'immeuble qui s'effondre. Même anneau pour les
+  flaques d'hémolymphe des insectes abattus (`ImpactMarks.Splat`, posées par `Enemy.Die` au point où retombe le cadavre,
+  ambrées ou vert acide, luisantes puis sèches, 45 s).
 - **Véhicules** : char vert-gris de l'armée ; traces de chenilles (`scripts/Fx/TrackMarks.cs`, une empreinte par chenille
   tous les 0,8 m à moins de 160 m de la caméra, anneau de 720 instances d'un MultiMesh, effacement en 40 s) ; coup de canon
   avec poussière au sol ; fumée de dégâts sous 50 % du blindage et étincelles sous 25 % (`Vehicle.DamageFx`, point
@@ -514,6 +516,7 @@ Les arguments placés après `--` pilotent le jeu sans intervention :
 | `--aliens=AlienTrooper,AlienGuard,AlienFlyer,Portal` | Les aliens apparaissent devant le soldat (bot immobile, sans tirer) et combattent normalement ; `Type*N` pour N exemplaires (test de charge, ex. `--aliens=AlienTrooper*24,AlienGuard*8,AlienFlyer*8 --perf --novsync`). Journal `[alien]` : état de l'IA (Advance, ToCover, Cover, Peek, Fire, Open ; Approach, Charge, Recover ; orbite, passe), posture, PV, plus les événements (abri trouvé, charge, coup de bouclier, passe, passage du portail). Options : `--aliens-only` (vagues de la mission retirées), `--aliens-dist=D`, `--aliens-at=X,Z,Cap`, `--aliens-cam=D,H,Azimut[,deg/s]`, `--aliens-shots=T1,T2`, `--aliens-weak=T` (rafale sur les points faibles), `--aliens-kill=T` (morts : chutes, explosions), `--aliens-fire` (le bot tire), `--freeze`, `--god`. Exemple : `--autostart=0 --bot --god --aliens-only --aliens=AlienTrooper,AlienTrooper,AlienGuard,AlienFlyer --aliens-dist=45 --aliens-cam=14,5,140 --aliens-shots=8,12`. |
 | `--aliens-net` | Avec `--autohost` / `--autojoin` (ex. `--mission=18`) : chaque pair journalise toutes les 3 s les aliens et portails qu'il voit, avec la posture reçue (`[alien-net]`). |
 | `--crate-test` | Les trois caisses tombent devant le soldat (chemin hôte complet), caméra qui tourne autour : captures `crate_NN`, puis vue de la caméra du jeu `crate_game` ; journal `[caisses]` (hauteur de pose au-dessus du sol). |
+| `--splat-test` | Fourmi noire, acide et rouge sortent à 16 m devant le soldat, figées, puis abattues par l'hôte : captures `splat_00` (cadavres) et `splat_01` (flaques, vue plongeante). |
 | `--fx-test` | Le soldat tire en continu vers un point dégagé, caméra de côté puis de trois quarts avant : captures `fx_side_NN` et `fx_front_NN` (flamme de bouche, traçantes). |
 | `--dmglog` | Journal `[dégâts]` de chaque dégât subi par le soldat local (instant, montant, distance de la source, ennemi le plus proche, armure restante) : équilibrage des missions au bot. |
 | `--hitch` | Journal `[à-coup]` des images de plus de 50 ms (avec l'heure de mission). |
