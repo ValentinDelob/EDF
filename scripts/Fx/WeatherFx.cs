@@ -34,7 +34,13 @@ public partial class WeatherFx : Node3D
         };
         var mat = new StandardMaterial3D
         {
-            AlbedoColor = new Color(0.75f, 0.8f, 0.88f, _weather == Weather.Storm ? 0.32f : 0.25f),
+            // Gouttes non éclairées : teinte selon l'heure (la nuit, elles ne doivent pas briller comme en plein jour).
+            AlbedoColor = _world.Mission.Time switch
+            {
+                TimeOfDay.Night => new Color(0.42f, 0.46f, 0.55f, _weather == Weather.Storm ? 0.22f : 0.18f),
+                TimeOfDay.Dusk => new Color(0.62f, 0.62f, 0.66f, _weather == Weather.Storm ? 0.28f : 0.22f),
+                _ => new Color(0.75f, 0.8f, 0.88f, _weather == Weather.Storm ? 0.32f : 0.25f),
+            },
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,

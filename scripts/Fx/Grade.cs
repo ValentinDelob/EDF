@@ -219,6 +219,8 @@ void sky() {
             env.AdjustmentSaturation = 0.78f;
             env.AdjustmentContrast = 1.1f;
             env.AdjustmentColorCorrection = Lut;
+            // Nuit d'orage : un peu plus d'exposition (la lune ne perce plus, la scène doit rester lisible).
+            if (time == TimeOfDay.Night) env.TonemapExposure *= 1.15f;
             sky.SetShaderParameter("wind", 0.012f);
         }
     }
