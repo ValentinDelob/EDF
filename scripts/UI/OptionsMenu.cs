@@ -254,7 +254,7 @@ public partial class OptionsMenu : MenuScreen
         Row("Échelle de rendu", Slider(0.5f, 1f, 0.05f, Settings.I.RenderScale, f => { Settings.I.RenderScale = f; Settings.I.ApplyVideo(); }, f => $"{f * 100:0} %"),
             "En dessous de 100 %, l'image est calculée en plus petit puis agrandie avec FSR 2 : gain de performances.");
         Row("Champ de vision", Slider(50, 90, 1, Settings.I.Fov, f => { Settings.I.Fov = f; Settings.I.NotifyChanged(); }, f => $"{f:0}°"),
-            "Angle de vue horizontal de la caméra.");
+            "Angle de vue vertical de la caméra (60° : cadrage d'EDF).");
         Section("Affichage");
         Row("Plein écran", Selector(OnOff, Settings.I.Fullscreen ? 1 : 0, i => { Settings.I.Fullscreen = i == 1; Settings.I.ApplyVideo(); }), "Bascule entre fenêtre et plein écran.");
         Row("Synchronisation verticale", Selector(OnOff, Settings.I.VSync ? 1 : 0, i => { Settings.I.VSync = i == 1; Settings.I.ApplyVideo(); }), "Évite les déchirures d'image au prix d'un peu de latence.");

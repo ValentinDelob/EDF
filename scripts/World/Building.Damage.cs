@@ -146,10 +146,8 @@ public partial class Building
         foreach (var c in GetChildren())
             if (c is CollisionShape3D cs) cs.SetDeferred(CollisionShape3D.PropertyName.Disabled, true);
         world.FxRoot.AddChild(new BuildingCollapse(this, world));
-        // Les impacts de balles sur ses façades partent avec lui (boîte englobante, rotation comprise).
-        var half = Mathf.Max(Size.X, Size.Z) * 0.75f;
-        if (world.GetNodeOrNull<ImpactMarks>("ImpactMarks") is { } marks)
-            marks.ClearInside(new Aabb(GlobalPosition - new Vector3(half, 0, half), new Vector3(half * 2, Size.Y + 1f, half * 2)));
+        // Les impacts de balles sur ses façades partent avec lui (son emprise exacte, rotation comprise).
+        if (world.GetNodeOrNull<ImpactMarks>("ImpactMarks") is { } marks) marks.ClearInside(GlobalTransform, Size);
     }
 
     /// <summary>Libère les incendies des paliers (fin d'effondrement).</summary>

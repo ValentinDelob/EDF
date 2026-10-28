@@ -128,7 +128,7 @@ void fragment() {
 }",
         };
         var m = new ShaderMaterial { Shader = _haloShader };
-        m.SetShaderParameter("tint", new Vector3(c.R, c.G, c.B));
+        m.SetShaderParameter("tint", c);
         return m;
     }
 
@@ -162,7 +162,7 @@ void fragment() {
         var d = to.Length();
         if (d < 0.1f) return;
         var np = Position + to / d * Mathf.Min(d, (14f - d) * dt);
-        // Glisse en suivant le relief (la caisse est toujours posée sur le terrain) ; sur une carte plate, hauteur inchangée.
+        // Glisse en suivant le relief ; sur un toit ou un quai, elle reste à sa hauteur de pose.
         np.Y = Mathf.Max(World.GroundAt(np.X, np.Z), Floor);
         Position = np;
     }

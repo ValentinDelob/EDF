@@ -181,7 +181,7 @@ public partial class Tank
         {
             var at = GlobalPosition + basis * new Vector3(s * ProbeX, 0, -0.4f);
             at.Y = s < 0 ? left : right;
-            marks.Stamp(at, basis.Z, up, 0.72f, 0.9f);
+            marks.Stamp(at, basis.Z, basis * up, 0.72f, 0.9f); // normale sondée dans le repère de cap → monde
         }
     }
 

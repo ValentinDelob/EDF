@@ -1,5 +1,15 @@
 # Journal des versions
 
+## v0.21.0 — Finitions visuelles
+
+- **Arbres verts** : rues, squares et parvis plantés d'arbres feuillus, quelques arbres morts seulement (la capitale en
+  ruines garde les siens).
+- **Balles visibles** des armes d'EDF 5 en traînées lumineuses douces (plus de rectangle blanc à la bouche du canon) ;
+  flammes de bouche orientées sur le minigun et les roquettes de l'hélicoptère, flamme de la mitrailleuse du char.
+- **Façades** : plus de bandes noires flottant le long des arêtes des immeubles.
+- **Pluie** discrète la nuit et au crépuscule, nuits d'orage plus lisibles.
+- **Vignettes des missions** refaites avec le nouveau rendu.
+
 ## v0.20.0 — Monster Attack au rendu actuel
 
 - **Lumière et couleurs** inspirées de Monster Attack : grand ciel bleu à cumulus, plein soleil, ombres bleutées, couleurs

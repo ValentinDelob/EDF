@@ -13,6 +13,8 @@ public class MissionDirector
     private float _phaseStart;
     private readonly List<(float at, EnemyType type, Vector3 pos)> _queue = new();
     private readonly List<Enemy> _nests = new();
+    /// <summary>Ennemis apparus par les vagues (les fourmis des nids n'empêchent pas une phase minutée de partir).</summary>
+    private readonly HashSet<Enemy> _waveSpawned = new();
     private readonly Dictionary<Enemy, float> _nestTimers = new();
     private Enemy _boss;
     private bool _bossKilled;
@@ -70,6 +72,7 @@ public class MissionDirector
             if (_queue[i].at > t) continue;
             var (_, type, pos) = _queue[i];
             var e = _w.HostSpawnEnemy(type, pos);
+            _waveSpawned.Add(e);
             if (e.Def.Boss) _boss = e;
             _queue.RemoveAt(i--);
             active++;
@@ -107,8 +110,9 @@ public class MissionDirector
             var pendingThisPhase = _queue.Count;
             // Phase minutée : elle attend en plus que le terrain se soit dégagé (au plus 60 s de retard), pour ne jamais
             // empiler les vagues sur une escouade débordée.
+            _waveSpawned.RemoveWhere(e => !GodotObject.IsInstanceValid(e) || e.State == EnemyState.Dead);
             var ready = next.TriggerTime > 0
-                ? t >= next.TriggerTime && (active <= Mathf.RoundToInt(TimedPhaseCrowd * PlayerScale) || t >= next.TriggerTime + 60f)
+                ? t >= next.TriggerTime && (_waveSpawned.Count <= Mathf.RoundToInt(TimedPhaseCrowd * PlayerScale) || t >= next.TriggerTime + 60f)
                 : pendingThisPhase == 0 && active <= next.TriggerRemaining && t - _phaseStart > 4f;
             if (ready) StartPhase(_phase + 1);
         }

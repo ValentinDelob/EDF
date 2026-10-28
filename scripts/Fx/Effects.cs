@@ -256,12 +256,12 @@ public static class Effects
     }
 
     /// <summary>
-    /// Impact de balle laissé sur le décor fixe touché (immeuble, sol, mobilier : corps statique, pas un bouclier d'alien),
-    /// près de la caméra seulement (voir <see cref="ImpactMarks"/>).
+    /// Impact de balle laissé sur le décor fixe touché (immeuble, sol, ouvrages : corps statique ; ni bouclier d'alien, ni
+    /// accessoire destructible, qui peut disparaître), près de la caméra seulement (voir <see cref="ImpactMarks"/>).
     /// </summary>
     public static void BulletHole(World world, Vector3 at, Vector3 normal, GodotObject collider, float size = 0.24f)
     {
-        if (collider is not StaticBody3D || collider is AlienShield) return;
+        if (collider is not StaticBody3D sb || collider is AlienShield || sb.Name.ToString().StartsWith("Props_")) return;
         var cam = world.GetViewport()?.GetCamera3D();
         if (cam == null || cam.GlobalPosition.DistanceSquaredTo(at) > 110f * 110f) return;
         ImpactMarks.For(world).Add(at, normal, size * (0.8f + GD.Randf() * 0.4f));

@@ -185,8 +185,12 @@ void fragment() {
 	// Pièces derrière les vitres : la vitre ne garde que son reflet (Fresnel), la pièce vue en perspective est ajoutée
 	// en émission (elle ne reçoit ni soleil ni ombre de la façade), faible de jour, éclairée la nuit si la fenêtre l'est.
 	vec3 room_em = vec3(0.0);
+	// Repère de la façade par dérivées écran (aucune tangente de maillage) : calculées pour tous les pixels, avant tout
+	// branchement (dans un flot non uniforme, dFdx et dFdy sont indéfinis : points noirs au bord des fenêtres).
+	vec2 uvm = UV / uv_scale.xy;
+	vec3 dpx = dFdx(v_wpos), dpy = dFdy(v_wpos);
+	vec2 dux = dFdx(uvm), duy = dFdy(uvm);
 	if (interior > 0 && mapping == 0 && r < 0.3) {
-		vec2 uvm = UV / uv_scale.xy;
 		float fx = uvm.x * win_rect.x;
 		vec2 cell = vec2(floor(fx), floor(uvm.y));
 		vec2 l = vec2(fract(fx), fract(uvm.y));
@@ -194,9 +198,7 @@ void fragment() {
 			? (l.x > 0.035 && l.x < 0.965 && l.y < 0.775)
 			: (abs(l.x - 0.5) < win_rect.y && l.y > win_rect.z && l.y < win_rect.w);
 		if (inwin) {
-			// Repère de la façade par dérivées écran (aucune tangente de maillage) : axes U et V (V descend) en monde.
-			vec3 dpx = dFdx(v_wpos), dpy = dFdy(v_wpos);
-			vec2 dux = dFdx(uvm), duy = dFdy(uvm);
+			// Axes U et V (V descend) de la façade en monde.
 			float det = dux.x * duy.y - dux.y * duy.x;
 			if (abs(det) > 1e-12) {
 				vec3 tu = normalize((dpx * duy.y - dpy * dux.y) / det);

@@ -110,13 +110,18 @@ void fragment() {
         mm.VisibleInstanceCount = _count;
     }
 
-    /// <summary>Retire les impacts contenus dans une boîte (immeuble qui s'effondre).</summary>
-    public void ClearInside(Aabb box)
+    /// <summary>Retire les marques posées sur un volume (immeuble qui s'effondre) : boîte <paramref name="size"/> (base au sol)
+    /// dans le repère <paramref name="xf"/>, à 0,5 m près.</summary>
+    public void ClearInside(Transform3D xf, Vector3 size)
     {
         var mm = Multimesh;
-        var grown = box.Grow(0.5f);
+        var inv = xf.AffineInverse();
         for (var i = 0; i < _count; i++)
-            if (grown.HasPoint(_pos[i])) mm.SetInstanceTransform(i, new Transform3D(new Basis(Vector3.Zero, Vector3.Zero, Vector3.Zero), _pos[i]));
+        {
+            var l = inv * _pos[i];
+            if (Mathf.Abs(l.X) <= size.X / 2 + 0.5f && Mathf.Abs(l.Z) <= size.Z / 2 + 0.5f && l.Y >= -0.5f && l.Y <= size.Y + 0.5f)
+                mm.SetInstanceTransform(i, new Transform3D(new Basis(Vector3.Zero, Vector3.Zero, Vector3.Zero), _pos[i]));
+        }
     }
 
     public override void _Process(double delta)
