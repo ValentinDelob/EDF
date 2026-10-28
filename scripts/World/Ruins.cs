@@ -249,10 +249,14 @@ public sealed class RuinKit
             (new Vector3(-hx, 0, -hz), Vector3.Back, Vector3.Left, s.Z),
         };
         var fi = 0;
-        foreach (var (start, along, normal, len) in faces)
+        // Calque retenu en deçà des pans coupés des angles (0,22 m) : sinon il dépasse de la silhouette dans le vide.
+        const float inset = 0.3f;
+        foreach (var (start0, along, normal, len0) in faces)
         {
             fi++;
             var off = normal * 0.04f;
+            var start = start0 + along * inset;
+            var len = len0 - 2f * inset;
             var a = start + Vector3.Up * y0 + off;
             var bb = start + along * len + Vector3.Up * y0 + off;
             var c = bb with { Y = h };
@@ -262,10 +266,12 @@ public sealed class RuinKit
                 // Décalage par face : nombre entier d'U (7 m) et d'étages, pour rester aligné sur les fenêtres.
                 var du = Mathf.Floor(Hash(seed, fi, 11) * 4f);
                 var dv = Mathf.Floor(Hash(seed, fi, 12) * 8f);
-                var u = len / 7f;
+                // U compté depuis l'angle du mur (comme la façade) : le retrait décale d'autant le début du calque.
+                var u0 = du + inset / 7f;
+                var u1 = u0 + len / 7f;
                 var v0 = (h - y0) / 3.2f;
                 k.Quad(Mats.FacadeDamage(variant, heavy && Hash(seed, fi, 13) < 0.7f), a, bb, c, d,
-                    new Vector2(du, dv + v0), new Vector2(du + u, dv + v0), new Vector2(du + u, dv), new Vector2(du, dv));
+                    new Vector2(u0, dv + v0), new Vector2(u1, dv + v0), new Vector2(u1, dv), new Vector2(u0, dv));
             }
             else
             {
