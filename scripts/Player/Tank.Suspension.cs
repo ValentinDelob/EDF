@@ -21,6 +21,8 @@ public partial class Tank
     private Node3D _sprung;
     private float _sp, _spV, _sr, _srV, _sh, _shV;
     private float _lastSpeed, _accelSm, _lastGround = float.NaN;
+    /// <summary>Distance parcourue depuis la dernière empreinte de chenilles.</summary>
+    private float _trackDist;
     private readonly float[] _probe = new float[5];
     private GpuParticles3D[] _haze, _puffs;
     /// <summary>Hauteur d'origine visée pour franchir un obstacle bas touché de face (décroît une fois passé).</summary>
@@ -145,6 +147,7 @@ public partial class Tank
             var g = (front + rear) * 0.5f;
             if (!float.IsNaN(_lastGround)) _shV += Mathf.Clamp((g - _lastGround) / dt, -6f, 6f) * 0.35f;
             _lastGround = g;
+            TrackPrints(dt, left, right, n, yawRate);
         }
         // Accélération longitudinale lissée (les pairs distants reçoivent la vitesse par à-coups).
         var accel = (_speed - _lastSpeed) / dt;
@@ -161,6 +164,25 @@ public partial class Tank
         _sprung.Position = new Vector3(0, 1.0f + _sh, 0);
         _sprung.Rotation = new Vector3(_sp, 0, _sr);
         Exhaust(dt);
+    }
+
+    /// <summary>Empreintes des deux chenilles tous les 0,8 m (sol sondé de chaque côté), près de la caméra seulement.</summary>
+    private void TrackPrints(float dt, float left, float right, Vector3 up, float yawRate)
+    {
+        if (Delivering) return;
+        _trackDist += Mathf.Abs(_speed) * dt + Mathf.Abs(yawRate) * ProbeX * dt;
+        if (_trackDist < 0.8f) return;
+        _trackDist = 0f;
+        var cam = GetViewport()?.GetCamera3D();
+        if (cam == null || cam.GlobalPosition.DistanceSquaredTo(GlobalPosition) > 160f * 160f) return;
+        var basis = new Basis(Vector3.Up, Rotation.Y);
+        var marks = TrackMarks.For(_world);
+        for (var s = -1; s <= 1; s += 2)
+        {
+            var at = GlobalPosition + basis * new Vector3(s * ProbeX, 0, -0.4f);
+            at.Y = s < 0 ? left : right;
+            marks.Stamp(at, basis.Z, up, 0.72f, 0.9f);
+        }
     }
 
     public float Speed => _speed;

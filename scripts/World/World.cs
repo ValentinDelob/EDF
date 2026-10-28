@@ -220,6 +220,7 @@ public partial class World : Node3D
             ShadowBlur = 1.2f,
         };
         Grade.Apply(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
+        RenderingServer.GlobalShaderParameterSet("wetness", Mission.Weather is Weather.Rain or Weather.Storm || Underground ? 1f : 0.3f);
         if (Mission.Map == MapId.Desert) DesertBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         if (Mission.Map == MapId.Forest) ForestBuilder.ApplyGrade(env, _sun, Mission.Time, Mission.Weather, Mission.Fog);
         if (Underground) UndergroundBuilder.ApplyGrade(env, _sun);

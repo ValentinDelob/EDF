@@ -180,13 +180,13 @@ public static partial class DesertBuilder
                 Clouds(new Color(0.3f, 0.5f, 0.82f), new Color(0.86f, 0.8f, 0.68f), new Color(0.4f, 0.35f, 0.28f),
                     new Color(1f, 0.98f, 0.94f), new Color(0.62f, 0.6f, 0.6f), 0.2f);
                 sun.RotationDegrees = new Vector3(-56, -28, 0);
-                sun.LightEnergy = 2.6f;
+                sun.LightEnergy = 2.1f;
                 sun.LightColor = new Color(1f, 0.93f, 0.8f);
-                env.AmbientLightColor = new Color(0.62f, 0.62f, 0.66f);
-                env.AmbientLightEnergy = 0.6f;
-                env.FogLightColor = new Color(0.86f, 0.8f, 0.68f);
+                env.AmbientLightColor = new Color(0.6f, 0.62f, 0.68f);
+                env.AmbientLightEnergy = 0.5f;
+                env.FogLightColor = new Color(0.8f, 0.76f, 0.68f);
                 env.FogDensity = fog * 1.0f + 0.0012f;
-                env.TonemapExposure = 1.0f;
+                env.TonemapExposure = 0.85f;
                 break;
             case TimeOfDay.Dusk:
                 // Soleil bas cuivré dans la poussière, ombres longues.

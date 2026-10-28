@@ -67,8 +67,9 @@ void fragment() {
         _trackShader ??= new Shader { Code = TrackCode };
         var mats = new Dictionary<string, Material>
         {
-            ["Paint"] = Mats.CarPaint(new Color(0.33f, 0.36f, 0.39f)),
-            ["Accent"] = Mats.CarPaint(new Color(0.5f, 0.48f, 0.26f)),
+            // Vert-gris de l'armée (chars d'EDF), sombre : il garde du modelé en plein soleil.
+            ["Paint"] = Mats.CarPaint(new Color(0.2f, 0.23f, 0.18f)),
+            ["Accent"] = Mats.CarPaint(new Color(0.38f, 0.35f, 0.21f)),
             ["Dark"] = Mats.Metal(new Color(0.07f, 0.07f, 0.07f), 0.55f),
             ["Rubber"] = Mats.Painted(new Color(0.035f, 0.035f, 0.035f), 0.95f),
             ["Glass"] = Mats.Painted(new Color(0.03f, 0.05f, 0.06f), 0.08f, 0.5f),

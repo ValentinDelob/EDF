@@ -32,7 +32,7 @@ public partial class BugModel : Node3D
         var m = new BugModel { Type = type };
         switch (type)
         {
-            case EnemyType.BlackAnt: m.BuildAnt(new Color(0.07f, 0.065f, 0.06f), 1f, 1f); break;
+            case EnemyType.BlackAnt: m.BuildAnt(new Color(0.075f, 0.062f, 0.05f), 1f, 1f); break;
             case EnemyType.RedAnt: m.BuildAnt(new Color(0.45f, 0.09f, 0.05f), 1.15f, 1.05f); break;
             case EnemyType.AcidAnt: m.BuildAnt(new Color(0.42f, 0.4f, 0.08f), 1f, 1f, acid: true); break;
             case EnemyType.Scavenger: m.BuildAnt(new Color(0.48f, 0.38f, 0.27f), 0.85f, 1.35f); break;

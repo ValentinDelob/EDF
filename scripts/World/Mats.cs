@@ -187,14 +187,14 @@ public static partial class Mats
     }
 
     /// <summary>
-    /// Herbe morte et boue (8 m) : paille terne, touffes encore vertes mais grises, plaques de boue humide.
+    /// Pelouse (8 m) : herbe verte de parc et touffes jaunies, quelques plaques de terre piétinée.
     /// </summary>
     public static ShaderMaterial Grass()
     {
         if (TryCache<ShaderMaterial>("grass", out var c)) return c;
         var (alb, bump, rough) = DeadGrass(false);
         var mat = Weathered(alb, bump, rough, 2, Vector3.One / 8f)
-            .With("roughness", 1f).With("normal_depth", 1f).With("puddles", 0.55f).With("desat", 0.15f);
+            .With("roughness", 1f).With("normal_depth", 1f).With("puddles", 0.3f).With("grime", 0.5f);
         Cache["grass"] = mat;
         return mat;
     }
@@ -206,24 +206,25 @@ public static partial class Mats
         var alb = new Px(s, s);
         var rough = new Px(s, s, 1);
         var bump = new Px(s, s);
-        var straw = neutral ? new Color(1f, 0.92f, 0.78f) : new Color(0.34f, 0.31f, 0.22f);
-        var dry = neutral ? new Color(0.72f, 0.7f, 0.6f) : new Color(0.21f, 0.2f, 0.14f);
-        var green = neutral ? new Color(0.62f, 0.66f, 0.56f) : new Color(0.17f, 0.2f, 0.13f);
-        var mud = neutral ? new Color(0.55f, 0.43f, 0.36f) : new Color(0.17f, 0.14f, 0.11f);
+        var straw = neutral ? new Color(1f, 0.92f, 0.78f) : new Color(0.4f, 0.4f, 0.2f);
+        var dry = neutral ? new Color(0.72f, 0.7f, 0.6f) : new Color(0.24f, 0.32f, 0.13f);
+        var green = neutral ? new Color(0.62f, 0.66f, 0.56f) : new Color(0.17f, 0.33f, 0.1f);
+        var mud = neutral ? new Color(0.55f, 0.43f, 0.36f) : new Color(0.24f, 0.2f, 0.15f);
         System.Threading.Tasks.Parallel.For(0, s, y =>
         {
             for (var x = 0; x < s; x++)
             {
-                var blades = VNoise(x, y, 1, 8, s, 401) * 0.5f + VNoise(x, y, 2, 4, s, 402) * 0.3f + Hash(x, y, 403) * 0.2f;
+                // Brins dans toutes les directions (des bruits étirés en x et en y croisés) : aucune strie de loin.
+                var blades = VNoise(x, y, 1, 4, s, 401) * 0.25f + VNoise(x, y, 4, 1, s, 414) * 0.25f + VNoise(x, y, 2, 2, s, 402) * 0.3f + Hash(x, y, 403) * 0.2f;
                 var patch = ValueNoise(x, y, 64, s / 64, 404) * 0.6f + ValueNoise(x, y, 16, s / 16, 405) * 0.4f;
                 var greenM = ValueNoise(x, y, 32, s / 32, 406) * 0.7f + ValueNoise(x, y, 8, s / 8, 407) * 0.3f;
                 var mudM = ValueNoise(x, y, 128, s / 128, 408) * 0.55f + ValueNoise(x, y, 32, s / 32, 409) * 0.3f + ValueNoise(x, y, 4, s / 4, 410) * 0.15f;
                 var col = dry.Lerp(straw, Mathf.SmoothStep(0.3f, 0.7f, patch));
-                col = col.Lerp(green, Mathf.SmoothStep(0.55f, 0.75f, greenM) * 0.8f);
+                col = col.Lerp(green, Mathf.SmoothStep(neutral ? 0.55f : 0.35f, neutral ? 0.75f : 0.6f, greenM) * (neutral ? 0.8f : 0.9f));
                 col *= 0.72f + blades * 0.5f;
                 var hgt = 0.35f + blades * 0.6f;
                 var r = 0.95f;
-                var m = Mathf.SmoothStep(0.58f, 0.66f, mudM);
+                var m = neutral ? Mathf.SmoothStep(0.58f, 0.66f, mudM) : Mathf.SmoothStep(0.66f, 0.72f, mudM);
                 if (m > 0)
                 {
                     var mc = mud * (0.8f + Hash(x, y, 411) * 0.15f + ValueNoise(x, y, 8, s / 8, 412) * 0.2f);
@@ -381,7 +382,7 @@ public static partial class Mats
         var dirt = new Color(0.17f, 0.16f, 0.145f);
 
         // Quelques fenêtres incendiées ou brisées seulement : la ville est encore debout quand l'invasion commence.
-        bool Burnt(int cx, int f) => Hash(cx, ((f % floors) + floors) % floors, variant * 31 + 9) < (curtain ? 0.015f : 0.03f);
+        bool Burnt(int cx, int f) => Hash(cx, ((f % floors) + floors) % floors, variant * 31 + 9) < (curtain ? 0.008f : 0.03f);
 
         System.Threading.Tasks.Parallel.For(0, h, y =>
         {
@@ -400,7 +401,7 @@ public static partial class Mats
             var wh2 = Hash(cellX, fl, variant * 31 + 2);
             var wh3 = Hash(cellX, fl, variant * 31 + 3);
             var burnt = Burnt(cellX, fl);
-            var broken = !burnt && Hash(cellX, fl, variant * 31 + 10) < 0.05f;
+            var broken = !burnt && Hash(cellX, fl, variant * 31 + 10) < (curtain ? 0.012f : 0.05f);
             // Suie : panache de la fenêtre de l'étage (au-dessus du linteau) ou de celle de l'étage du dessous.
             var sn = VNoise(x, y, 3, 16, w, variant + 31);
             var sootK = 0f;

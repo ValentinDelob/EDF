@@ -250,11 +250,33 @@ public abstract partial class Vehicle : CharacterBody3D
         }
         if (!IsLocalDriver && !Wrecked) RemoteTick(dt);
         VisualTick(dt);
+        DamageFx(dt);
         // Invite « monter à bord » pour le joueur local à proximité.
         var lp = _world.LocalPlayer;
         var near = !Wrecked && Driver == 0 && lp != null && !lp.Downed && lp.Vehicle == null && lp.GlobalPosition.DistanceTo(GlobalPosition) < InteractRadius;
         _prompt.Visible = near;
         if (near) _prompt.Text = $"[{UiKit.KeyName("interact")}] {PromptText}";
+    }
+
+    /// <summary>Point d'où sort la fumée de dégâts (repère du véhicule : compartiment moteur).</summary>
+    protected virtual Vector3 DamageFxPoint => new(0, 2f, -2.5f);
+    private float _dmgFxT;
+
+    /// <summary>
+    /// Véhicule endommagé (tous les pairs, d'après le blindage diffusé) : fumée grise sous 50 % du blindage, de plus en plus
+    /// dense et sombre, gerbes d'étincelles sous 25 % ; l'épave a ses propres effets.
+    /// </summary>
+    private void DamageFx(float dt)
+    {
+        if (Wrecked || MaxHealth <= 0f) return;
+        var frac = Health / MaxHealth;
+        if (frac >= 0.5f) return;
+        _dmgFxT -= dt;
+        if (_dmgFxT > 0f) return;
+        _dmgFxT = Mathf.Lerp(0.12f, 0.4f, frac * 2f);
+        var at = GlobalTransform * (DamageFxPoint + new Vector3(GD.Randf() - 0.5f, 0, GD.Randf() - 0.5f) * 0.6f);
+        Effects.Smoke(_world, at, Mathf.Lerp(2.2f, 1.2f, frac * 2f), Mathf.Lerp(3f, 1.8f, frac * 2f));
+        if (frac < 0.25f && GD.Randf() < 0.3f) Effects.Sparks(_world, at, Vector3.Up);
     }
 
     /// <summary>

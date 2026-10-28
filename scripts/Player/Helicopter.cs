@@ -169,6 +169,8 @@ public partial class Helicopter : Vehicle
     public override float ArmorFactor => 0.7f;
     public override float CameraDistance(bool aiming) => 14f;
     public override float CameraLift => 1.8f;
+    /// <summary>Fumée de dégâts : turbines, sous le moyeu du rotor (le rotor est à ~0,9 × sa hauteur, vers l'arrière).</summary>
+    protected override Vector3 DamageFxPoint => (_rotor != null ? _rotor.Position * 0.85f : new Vector3(0, 2.4f, 0)) + new Vector3(0, 0, -1.2f);
     public override float AimZoom => 1f;
     public override bool CanExit => _agl < 1.2f && Velocity.Length() < 4f;
     public override float RearmRadius => 14f;

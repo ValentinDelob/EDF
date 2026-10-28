@@ -199,16 +199,16 @@ public static partial class CapitalBuilder
                 // Crépuscule de fin du monde : bande de feu sale sous un plafond de fumée.
                 Clouds(new Color(0.1f, 0.095f, 0.1f), new Color(0.46f, 0.25f, 0.15f), new Color(0.07f, 0.06f, 0.055f),
                     new Color(0.5f, 0.3f, 0.2f), new Color(0.09f, 0.085f, 0.09f), 0.74f);
-                sun.RotationDegrees = new Vector3(-11, 62, 0);
-                sun.LightEnergy = 1.25f;
-                sun.LightColor = new Color(1f, 0.6f, 0.38f);
-                env.AmbientLightColor = new Color(0.36f, 0.32f, 0.31f);
-                env.AmbientLightEnergy = 0.85f;
-                env.FogLightColor = new Color(0.38f, 0.28f, 0.23f);
+                sun.RotationDegrees = new Vector3(-14, 62, 0);
+                sun.LightEnergy = 1.9f;
+                sun.LightColor = new Color(1f, 0.7f, 0.5f);
+                env.AmbientLightColor = new Color(0.4f, 0.38f, 0.42f);
+                env.AmbientLightEnergy = 1.05f;
+                env.FogLightColor = new Color(0.36f, 0.3f, 0.28f);
                 // Brume modérée : le vaisseau-mère, à 165 m au-dessus des têtes, doit rester lisible (tourelles, canon).
                 env.FogDensity = fog * 1.2f + 0.0012f;
                 env.TonemapExposure = 1.15f;
-                env.AdjustmentSaturation = 0.85f;
+                env.AdjustmentSaturation = 0.72f;
                 break;
             case TimeOfDay.Day:
                 // Jour cendré : soleil voilé de fumée, lumière plate et sale.

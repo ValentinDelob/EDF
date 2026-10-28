@@ -127,8 +127,11 @@ public partial class Tank : Vehicle
         Projectile.Spawn(_world, ProjectileKind.Shell, from, dir * 140f, true, CannonDamage * p.DamageMul * (1f + 0.25f * (int)_world.Difficulty), CannonRadius)
             .IgnoreBody(this);
         Net.I.SendShotFx(10 + (int)ProjectileKind.Shell, from, from + dir * 140f);
-        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.6f, 0.2f), 1.6f);
+        Effects.MuzzleFlash(_world.FxRoot, from, new Color(1f, 0.6f, 0.2f), 1.6f, dir);
         Effects.Smoke(_world, from, 2f, 1.5f);
+        // Souffle du coup de canon : poussière soulevée au sol sous la bouche.
+        var ground = World.GroundAt(from.X, from.Z);
+        if (from.Y - ground < 4f) Effects.Dust(_world, new Vector3(from.X, ground, from.Z) + dir with { Y = 0 } * 2f, new Vector3(5f, 1.2f, 5f));
         Sfx.Ui("explosion_small", 0f, 0.7f);
         p.AddShake(0.35f);
         Recoil();

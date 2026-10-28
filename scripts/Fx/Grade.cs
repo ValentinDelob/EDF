@@ -151,7 +151,7 @@ void sky() {
                 sun.RotationDegrees = new Vector3(-50, -35, 0);
                 sun.LightEnergy = 2.3f;
                 sun.LightColor = new Color(1f, 0.95f, 0.87f);
-                env.AmbientLightColor = new Color(0.56f, 0.64f, 0.8f);
+                env.AmbientLightColor = new Color(0.6f, 0.66f, 0.76f);
                 env.AmbientLightEnergy = 0.6f;
                 env.FogLightColor = new Color(0.72f, 0.8f, 0.9f);
                 env.FogDensity = fog * 0.9f + 0.001f;
@@ -176,11 +176,11 @@ void sky() {
                     new Color(1f, 0.72f, 0.5f), new Color(0.3f, 0.25f, 0.36f), 0.42f);
                 sun.RotationDegrees = new Vector3(-15, 70, 0);
                 sun.LightEnergy = 2.0f;
-                sun.LightColor = new Color(1f, 0.68f, 0.42f);
-                env.AmbientLightColor = new Color(0.5f, 0.46f, 0.58f);
-                env.AmbientLightEnergy = 0.65f;
-                env.FogLightColor = new Color(0.82f, 0.6f, 0.48f);
-                env.FogDensity = fog * 1.0f + 0.0015f;
+                sun.LightColor = new Color(1f, 0.8f, 0.6f);
+                env.AmbientLightColor = new Color(0.46f, 0.5f, 0.64f);
+                env.AmbientLightEnergy = 0.7f;
+                env.FogLightColor = new Color(0.66f, 0.56f, 0.54f);
+                env.FogDensity = fog * 0.7f + 0.001f;
                 env.TonemapExposure = 1.05f;
                 break;
             case TimeOfDay.Dusk:

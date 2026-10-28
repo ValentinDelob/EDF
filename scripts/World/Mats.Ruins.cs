@@ -410,6 +410,8 @@ public static partial class Mats
         var seed = variant * 17 + (heavy ? 900 : 400);
         // Dégâts ponctuels (quelques fenêtres soufflées ou incendiées) : la ville reste lisible et colorée.
         float burnRate = heavy ? 0.1f : 0.035f, breakRate = heavy ? 0.22f : 0.1f;
+        // Mur-rideau : cinq vitrages par travée, autant de carreaux noirs possibles ; taux divisés d'autant.
+        if (curtain) { burnRate *= 0.35f; breakRate *= 0.35f; }
         // Brèches : un ou deux trous irréguliers dans la tuile (version lourde).
         var breaches = new System.Collections.Generic.List<(float u, float fl, float ru, float rf)>();
         if (heavy)
