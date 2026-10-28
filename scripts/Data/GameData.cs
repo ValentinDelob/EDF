@@ -804,7 +804,7 @@ public static class Enemies
     // DropChance : butin rare comme dans EDF (une caisse pour sept à dix insectes ordinaires, davantage pour les gros).
     public static readonly EnemyDef[] All =
     {
-        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 5.4f, 1.25f, 1f, 0.12f, Giant: 2f),
+        new(EnemyType.BlackAnt, "Fourmi noire", 60, 10f, 6, 5.4f, 1.25f, 1f, 0.15f, Giant: 2f),
         new(EnemyType.RedAnt, "Fourmi rouge", 150, 8.8f, 9, 6.6f, 1.3f, 1.15f, 0.18f, Giant: 1.95f),
         new(EnemyType.AcidAnt, "Fourmi acide", 50, 8.2f, 6, 32f, 2.4f, 1f, 0.13f, Ranged: true, Giant: 2f),
         new(EnemyType.Wasp, "Guêpe", 40, 14f, 4, 28f, 1.8f, 0.8f, 0.1f, Flying: true, Ranged: true, Giant: 1.5f),

@@ -209,7 +209,7 @@ public static partial class Mats
         var straw = neutral ? new Color(1f, 0.92f, 0.78f) : new Color(0.4f, 0.4f, 0.2f);
         var dry = neutral ? new Color(0.72f, 0.7f, 0.6f) : new Color(0.24f, 0.32f, 0.13f);
         var green = neutral ? new Color(0.62f, 0.66f, 0.56f) : new Color(0.17f, 0.33f, 0.1f);
-        var mud = neutral ? new Color(0.55f, 0.43f, 0.36f) : new Color(0.24f, 0.2f, 0.15f);
+        var mud = neutral ? new Color(0.55f, 0.43f, 0.36f) : new Color(0.27f, 0.25f, 0.16f);
         System.Threading.Tasks.Parallel.For(0, s, y =>
         {
             for (var x = 0; x < s; x++)
@@ -224,7 +224,7 @@ public static partial class Mats
                 col *= 0.72f + blades * 0.5f;
                 var hgt = 0.35f + blades * 0.6f;
                 var r = 0.95f;
-                var m = neutral ? Mathf.SmoothStep(0.58f, 0.66f, mudM) : Mathf.SmoothStep(0.66f, 0.72f, mudM);
+                var m = neutral ? Mathf.SmoothStep(0.58f, 0.66f, mudM) : Mathf.SmoothStep(0.72f, 0.78f, mudM) * 0.7f;
                 if (m > 0)
                 {
                     var mc = mud * (0.8f + Hash(x, y, 411) * 0.15f + ValueNoise(x, y, 8, s / 8, 412) * 0.2f);

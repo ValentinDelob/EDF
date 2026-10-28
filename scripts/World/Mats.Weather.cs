@@ -17,8 +17,8 @@ public static partial class Mats
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
 
-// Humidité de la mission (paramètre global déclaré dans project.godot, réglé par World.BuildEnvironment) : flaques franches
-// sous la pluie, rares par beau temps.
+// Humidité de la mission (paramètre global déclaré dans project.godot, réglé par World.BuildEnvironment) : flaques
+// nombreuses sous la pluie, rares et petites par beau temps.
 global uniform float wetness;
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform sampler2D albedo_tex : source_color, hint_default_white, filter_linear_mipmap_anisotropic, repeat_enable;
@@ -177,7 +177,9 @@ void fragment() {
 	// Masque tourné et déformé : contours sinueux, sans alignement sur la grille du bruit.
 	vec2 pw = mat2(vec2(0.88, 0.47), vec2(-0.47, 0.88)) * wp * 0.037 + (g2.rg - 0.5) * 0.08;
 	float pa = texture(grime_tex, pw).a;
-	float pud = puddles * wetness * (1.0 - wall) * step(0.0, n.y) * smoothstep(0.6, 0.65, pa + (g2.a - 0.5) * 0.14);
+	// Par temps sec, seuil relevé : quelques petites flaques franches (et non des taches translucides partout).
+	float pth = 0.6 + (1.0 - wetness) * 0.3;
+	float pud = puddles * (1.0 - wall) * step(0.0, n.y) * smoothstep(pth, pth + 0.05, pa + (g2.a - 0.5) * 0.14);
 	col = mix(col, col * 0.42, pud);
 	rr = mix(rr, 0.04, pud);
 	nm = mix(nm, vec3(0.5, 0.5, 1.0), pud);
