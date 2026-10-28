@@ -305,7 +305,8 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
   `assets/models/crates/crate_*.glb` + texture de détail cuite) comme dans EDF 5 : conteneur d'arme vert, caisse d'armure
   rouge à butoirs et écusson, mallette de soin blanche à croix rouge ; matières du jeu (`SoldierModel.ApplyMats`, couleurs
   `Crates.Paint` / `Crates.Accent`, voyants à la teinte `Crates.Tint`). Éjectées du cadavre, elles rebondissent deux fois,
-  basculent puis se posent à plat (cap fixe) ; halo pulsé au sol, fin faisceau visible seulement au-delà de 9 m. Butin
+  basculent puis se posent à plat (cap fixe) sur le sol, ou sur le toit de l'immeuble où l'insecte est tombé (jamais
+  sur un véhicule ni un accessoire destructible ; sous terre, sur le quai ou l'éboulis) ; halo pulsé au sol, fin faisceau visible seulement au-delà de 9 m. Butin
   rare : `EnemyDef.DropChance` de 0,1 à 0,2 pour les insectes ordinaires, une caisse (arme) par élite. Banc :
   `--crate-test`. `CrateType` circule en entier sur le réseau et indexe les compteurs (`Crates.Count` = 4) : la valeur 3 (anciennes caisses de crédits) est réservée (`Reserved3`) et n'est plus jamais tirée ; ne pas la réutiliser sans changer le protocole LAN.
 - **Sauvegarde** (`user://profile.json`, `ProfileData.Version` = 4) : migration automatique dans `Profile.Migrate`. Version 1 (rareté + 5 étoiles de 1 à 5) → `WeaponInstance.MigrateLegacy` : étoile − 2 + bonus de rareté (Standard/Renforcée 0, Élite/Prototype +1, Légendaire +2), bornée à 0..5 puis ramenée à l'échelle de `MaxStars` ; la portée prend la moyenne des anciennes étoiles. Les tableaux d'étoiles de mauvaise longueur sont complétés et bornés (changer `MaxStars` ne casse pas un profil). Version 3 : `Profile.MergeDuplicates` fusionne les doublons d'un même modèle dans le premier exemplaire (niveau max, étoiles max par caractéristique) et redirige les références de `Equipped` (sans doublon d'emplacement) ; les anciens champs JSON `Credits` et `ClassXp` sont ignorés à la lecture et disparaissent à la sauvegarde suivante. Version 4 : `Profile.FillEquipped` (à chaque chargement, idempotent) complète les emplacements vides de chaque classe — le Grenadier passe de 2 à 4 — avec les armes de départ non équipées puis les autres armes de la classe, sans toucher aux emplacements occupés.
@@ -431,7 +432,7 @@ Carte de la finale : missions 27 « Dernier rempart » (boss, crépuscule) et 26
   aliens) ; deux types par vague au début, trois au plus ensuite ; 25 à 90 ennemis par mission en solo (× taille de
   l'escouade : 1, 1,4, 1,7, 2). Survie : vagues de 7 à 9, intervalle 34 s, +7 % par vague.
 - **Phases minutées** (`MissionDirector`) : à l'heure prévue, elles attendent en plus que le terrain se dégage (au plus
-  14 ennemis actifs × taille de l'escouade), avec 60 s de retard au maximum : jamais deux vagues empilées sur une escouade
+  14 ennemis des vagues encore en vie × taille de l'escouade ; les fourmis des nids ne comptent pas), avec 60 s de retard au maximum : jamais deux vagues empilées sur une escouade
   débordée. Nids : une fourmi toutes les 8 s jusqu'à la mission 8 (5 s ensuite) ÷ taille de l'escouade, 3 (puis 5) ×
   taille de l'escouade au plus autour d'un nid.
 - **Montée en puissance de la campagne** (`World.Campaign`) : PV et dégâts des ennemis × 0,55 en mission 1, + 0,045 par
