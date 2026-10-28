@@ -37,7 +37,7 @@ public static partial class Props
         if (key.StartsWith("contwreck")) return PropKind.Container;
         if (key.StartsWith("lamp") || key.StartsWith("tl") || key.StartsWith("pole") || key == "stop") return PropKind.Pole;
         if (key.StartsWith("conifer") && !key.StartsWith("coniferfar") || key.StartsWith("broadleaf") && !key.StartsWith("broadleaffar")
-            || key.StartsWith("gardentree") || key.StartsWith("deadtree") || key.StartsWith("burntpalm")) return PropKind.Tree;
+            || key.StartsWith("gardentree") || key.StartsWith("deadtree") || key.StartsWith("leafytree") || key.StartsWith("burntpalm")) return PropKind.Tree;
         if (key.StartsWith("busstop") || key == "shed") return PropKind.Shelter;
         if (key is "jersey" || key.StartsWith("barrier") || key == "hesco") return PropKind.Barrier;
         if (key is "bench" or "swing" or "trampoline" or "goal" or "sofa" or "lounger") return PropKind.Furniture;
@@ -424,15 +424,15 @@ public static partial class Props
     }
 
     /// <summary>
-    /// Arbre d'alignement ou de square : la plupart sont morts ou mourants (charpente nue et ramilles grises) ;
-    /// les autres gardent un feuillage clairsemé, sombre et terne, en touffes ajourées au bout des branches.
+    /// Arbre d'alignement ou de square : la plupart gardent un feuillage vert et fourni en touffes au bout des branches,
+    /// comme les rues arborées de Monster Attack ; quelques-uns sont morts (charpente nue et ramilles grises).
     /// </summary>
     public static ArrayMesh Tree(float hgt, (float r, Vector3 off)[] blobs, float seed)
     {
         var k = new MeshKit();
         var bark = Mats.Detail();
         var r = new RandomNumberGenerator { Seed = (ulong)(Mathf.Abs(seed) * 1000f) + 17 };
-        var dead = r.Randf() < 0.6f;
+        var dead = r.Randf() < 0.15f;
         k.Col = BarkGray;
         var top = new Vector3(r.RandfRange(-0.35f, 0.35f), hgt * 0.5f, r.RandfRange(-0.35f, 0.35f));
         k.Cylinder(bark, Vector3.Zero, 0.42f, 0.3f, 0.6f, 9, false);
@@ -445,17 +445,38 @@ public static partial class Props
             Branch(k, bark, r, top, dir, hgt * 0.42f + rad * 0.3f, 0.15f, dead ? 3 : 2, tips);
         }
         if (dead) TwigClumps(k, r, tips, 1.1f, seed);
-        else LeafClumps(k, r, tips, Ico1, 1.05f, seed, new Color(0.11f, 0.135f, 0.08f));
+        else LeafClumps(k, r, tips, Ico1, 1.2f, seed, new Color(0.15f, 0.25f, 0.08f), 0.92f);
         return k.Commit();
     }
 
-    /// <summary>Feuillage clairsemé : touffes ajourées, sombres et ternes (parfois roussies) au bout des branches.</summary>
+    /// <summary>Arbre d'alignement feuillu en cache (variantes 0 à 3, hauteur croissante), pour les rues et places du mobilier.</summary>
+    public static ArrayMesh LeafyTree(int v) => Cached($"leafytree{v}", k =>
+    {
+        var bark = Mats.Detail();
+        var r = new RandomNumberGenerator { Seed = (ulong)(7919 + v * 131) };
+        var hgt = 7f + v * 0.8f;
+        k.Col = BarkGray;
+        var top = new Vector3(r.RandfRange(-0.25f, 0.25f), hgt * 0.5f, r.RandfRange(-0.25f, 0.25f));
+        k.Cylinder(bark, Vector3.Zero, 0.36f, 0.26f, 0.6f, 9, false);
+        k.Tube(bark, Vector3.Up * 0.5f, top, 0.24f, 8);
+        var tips = new List<Vector3>();
+        for (var i = 0; i < 4; i++)
+        {
+            var a = i * Mathf.Tau / 4f + r.RandfRange(-0.4f, 0.4f);
+            var dir = new Vector3(Mathf.Cos(a) * 0.7f, 1f, Mathf.Sin(a) * 0.7f).Normalized();
+            k.Col = BarkGray;
+            Branch(k, bark, r, top, dir, hgt * 0.4f, 0.13f, 2, tips);
+        }
+        LeafClumps(k, r, tips, Ico1, 1.25f, v * 3.3f, new Color(0.15f, 0.25f, 0.08f), 0.92f);
+    });
+
+    /// <summary>Feuillage en touffes ajourées au bout des branches (quelques-unes roussies).</summary>
     private static void LeafClumps(MeshKit k, RandomNumberGenerator r, List<Vector3> tips, Vector3[] ico, float size, float seed, Color leaf, float keep = 0.72f)
     {
         for (var i = 0; i < tips.Count; i++)
         {
             if (r.Randf() > keep) continue;
-            var c = r.Randf() < 0.25f ? new Color(0.2f, 0.17f, 0.11f) : leaf * r.RandfRange(0.85f, 1.15f);
+            var c = r.Randf() < 0.1f ? new Color(0.24f, 0.2f, 0.1f) : leaf * r.RandfRange(0.85f, 1.15f);
             CanopyLow(k, ico, tips[i] + Vector3.Up * (size * 0.2f), new Vector3(1f, 0.85f, 1f) * (size * r.RandfRange(0.75f, 1.25f)), seed + i * 1.7f, c, Mats.Leaves());
         }
     }

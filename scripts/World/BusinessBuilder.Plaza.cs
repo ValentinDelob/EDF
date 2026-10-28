@@ -4,7 +4,7 @@ namespace Rempart;
 
 /// <summary>
 /// Parvis central du quartier d'affaires : dalle de granit, deux tours d'angle (l'une avec hélisurface), pavillons
-/// vitrés bas avec escalier de secours (accès aux toits), bassin asséché et sculpture, bacs d'arbres morts, entrée
+/// vitrés bas avec escalier de secours (accès aux toits), bassin asséché et sculpture, bacs d'arbres feuillus, entrée
 /// de métro. L'aire de départ (joueurs, char, hélicoptère, escouades alliées) reste dégagée.
 /// </summary>
 public static partial class BusinessBuilder
@@ -38,7 +38,7 @@ public static partial class BusinessBuilder
         PlazaFountain(c, new Vector3(0, Walk, -38));
         BuildMetro(c);
 
-        // Bacs d'arbres (béton, terre, arbre mort ou calciné) le long des bords du parvis, ouverts sur les axes.
+        // Bacs d'arbres (béton, terre, arbre feuillu) le long des bords du parvis, ouverts sur les axes.
         foreach (var x in new[] { -26f, -16f, 16f, 26f })
         {
             Planter(c, new Vector3(x, Walk, -57f), rng);
@@ -82,7 +82,7 @@ public static partial class BusinessBuilder
         Q(hole.End.X, Mathf.Max(min.Y, hole.Position.Y), max.X, Mathf.Min(max.Y, hole.End.Y));
     }
 
-    /// <summary>Bac en béton (solide), terre sèche, arbre mort destructible.</summary>
+    /// <summary>Bac en béton (solide), terre, arbre feuillu destructible.</summary>
     private static void Planter(Ctx c, Vector3 p, RandomNumberGenerator rng)
     {
         var k = c.Solid.At(p);
@@ -93,7 +93,7 @@ public static partial class BusinessBuilder
         k.Col = Colors.White;
         k.BoxMinMax(Mats.Dirt(), p + new Vector3(-1.05f, 0, -1.05f), p + new Vector3(1.05f, 0.55f, 1.05f), false);
         var v = rng.RandiRange(0, 3);
-        c.Props.Add(Props.DeadTree(v), p + Vector3.Up * 0.55f, rng.RandfRange(0, Mathf.Tau), null, 320, true, rng.RandfRange(0.75f, 0.95f));
+        c.Props.Add(Props.LeafyTree(v), p + Vector3.Up * 0.55f, rng.RandfRange(0, Mathf.Tau), null, 320, true, rng.RandfRange(0.75f, 0.95f));
     }
 
     /// <summary>Bassin asséché (margelle solide, fond taché) et sculpture de dalles de granit inclinées, dont une tombée.</summary>

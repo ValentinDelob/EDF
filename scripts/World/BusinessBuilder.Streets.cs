@@ -273,11 +273,11 @@ public static partial class BusinessBuilder
         c.Props.Add(Props.TrafficLightDead(), p, yaw, range: 200);
     }
 
-    /// <summary>Arbre d'alignement mort (destructible) dans une grille de fonte.</summary>
+    /// <summary>Arbre d'alignement feuillu (destructible) dans une grille de fonte.</summary>
     private static void StreetTree(Ctx c, Vector3 p, RandomNumberGenerator deco)
     {
         var v = deco.RandiRange(0, 3);
-        c.Props.Add(Props.DeadTree(v), p, deco.RandfRange(0, Mathf.Tau), null, 320, true, deco.RandfRange(0.7f, 0.9f));
+        c.Props.Add(Props.LeafyTree(v), p, deco.RandfRange(0, Mathf.Tau), null, 320, true, deco.RandfRange(0.7f, 0.9f));
         var k = c.Ground.At(p);
         k.Col = new Color(0.12f, 0.12f, 0.12f);
         k.Box(Mats.DetailMetal(), p + Vector3.Up * 0.012f, new Vector3(1.6f, 0.02f, 1.6f), null, false);

@@ -117,7 +117,7 @@ public static partial class CityBuilder
 
     /// <summary>Arbre du square ou de la place : mort (sans feuilles) une fois sur trois.</summary>
     private static ArrayMesh RuinTree(Vector3 p) =>
-        RuinKit.Hash(p.X, p.Z, 85) < 0.38f ? Props.DeadTree((int)(RuinKit.Hash(p.X, p.Z, 86) * 4)) : null;
+        RuinKit.Hash(p.X, p.Z, 85) < 0.1f ? Props.DeadTree((int)(RuinKit.Hash(p.X, p.Z, 86) * 4)) : null;
 
     private static ArrayMesh RuinPalm(Vector3 p, float hgt) =>
         RuinKit.Hash(p.X, p.Z, 87) < 0.5f ? Props.BurntPalm(hgt) : null;
