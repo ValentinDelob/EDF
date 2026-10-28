@@ -102,6 +102,9 @@ void fragment() {
         _muzzle = model.FindChild("Muzzle", true, false) as Node3D;
         _tubeRestZ = _tube.Position.Z;
         BuildSuspension(model);
+        // Phares de route (nuit, souterrain) : deux faisceaux bas devant la caisse.
+        foreach (var x in new[] { -1.05f, 1.05f })
+            AddHeadlight(_sprung, new Vector3(x, 0.55f, 3.7f), 7f, 38f, 30f, 3.5f);
     }
 
     /// <summary>

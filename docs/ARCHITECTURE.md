@@ -76,7 +76,8 @@ Rempart est un projet Godot 4.7 .NET entièrement écrit en C#. La quasi-totalit
 - **Véhicules** : char vert-gris de l'armée ; traces de chenilles (`scripts/Fx/TrackMarks.cs`, une empreinte par chenille
   tous les 0,8 m à moins de 160 m de la caméra, anneau de 720 instances d'un MultiMesh, effacement en 40 s) ; coup de canon
   avec poussière au sol ; fumée de dégâts sous 50 % du blindage et étincelles sous 25 % (`Vehicle.DamageFx`, point
-  `DamageFxPoint` propre au véhicule).
+  `DamageFxPoint` propre au véhicule). La nuit et sous terre, phares allumés avec un conducteur (`Vehicle.AddHeadlight` :
+  deux faisceaux bas sur le char, projecteur de recherche sous le nez de l'hélicoptère ; sans ombre, éclat dans la brume).
 
 ## Insectes grimpeurs
 

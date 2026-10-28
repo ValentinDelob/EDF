@@ -57,5 +57,7 @@ public partial class Helicopter
         _pods[1] = minus;
         _podMuzzles[0] = plus.FindChild("PodMuzzle_*", false, false) as Node3D;
         _podMuzzles[1] = minus.FindChild("PodMuzzle_*", false, false) as Node3D;
+        // Projecteur de recherche sous le nez (nuit, souterrain), braqué vers l'avant et le bas.
+        if (_gun?.GetParent() is Node3D gp) AddHeadlight(gp, _gun.Position + new Vector3(0, -0.4f, 0.6f), 32f, 75f, 20f, 7f);
     }
 }

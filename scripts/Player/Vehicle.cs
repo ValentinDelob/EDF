@@ -258,6 +258,31 @@ public abstract partial class Vehicle : CharacterBody3D
         if (near) _prompt.Text = $"[{UiKit.KeyName("interact")}] {PromptText}";
     }
 
+    /// <summary>Phares (nuit et souterrain) : allumés seulement avec un conducteur.</summary>
+    private readonly System.Collections.Generic.List<SpotLight3D> _headlights = new();
+
+    /// <summary>Ajoute un phare sous <paramref name="parent"/> (nuit ou souterrain seulement), braqué vers +Z incliné de <paramref name="pitch"/>°.</summary>
+    protected void AddHeadlight(Node3D parent, Vector3 at, float pitch, float range, float angle, float energy)
+    {
+        var w = World.Current;
+        if (w == null || !(w.Mission.Time == TimeOfDay.Night || w.Underground)) return;
+        var l = new SpotLight3D
+        {
+            Position = at,
+            RotationDegrees = new Vector3(-pitch, 180, 0),
+            SpotRange = range,
+            SpotAngle = angle,
+            SpotAttenuation = 0.8f,
+            LightEnergy = energy,
+            LightColor = new Color(1f, 0.95f, 0.85f),
+            LightVolumetricFogEnergy = 0.8f,
+            ShadowEnabled = false,
+            Visible = false,
+        };
+        parent.AddChild(l);
+        _headlights.Add(l);
+    }
+
     /// <summary>Point d'où sort la fumée de dégâts (repère du véhicule : compartiment moteur).</summary>
     protected virtual Vector3 DamageFxPoint => new(0, 2f, -2.5f);
     private float _dmgFxT;
@@ -268,6 +293,9 @@ public abstract partial class Vehicle : CharacterBody3D
     /// </summary>
     private void DamageFx(float dt)
     {
+        var lit = Driver != 0 && !Wrecked && !Delivering;
+        foreach (var l in _headlights)
+            if (l.Visible != lit) l.Visible = lit;
         if (Wrecked || MaxHealth <= 0f) return;
         var frac = Health / MaxHealth;
         if (frac >= 0.5f) return;

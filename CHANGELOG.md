@@ -1,5 +1,11 @@
 # Journal des versions
 
+## v0.22.0 — Phares
+
+- **Phares des véhicules** la nuit et sous terre : faisceaux du char, projecteur de recherche de l'hélicoptère.
+- Corrections de la relecture : traces de chenilles sur les pentes, caisses qui ne restent plus perchées sur un véhicule,
+  phases minutées qui ne sont plus retardées par les fourmis des nids, pièces derrière les vitres sans points noirs.
+
 ## v0.21.0 — Finitions visuelles
 
 - **Arbres verts** : rues, squares et parvis plantés d'arbres feuillus, quelques arbres morts seulement (la capitale en
